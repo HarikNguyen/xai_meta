@@ -14,7 +14,7 @@ from algos.maml import MAML
 _GLOBAL_ALGO = None
 
 
-def init_worker(algo_conf, state=None):
+def init_worker(algo_conf):
     """Initialize a local algo instance on the worker.
 
     Called remotely by the master once before training starts. This avoids
