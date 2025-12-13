@@ -7,6 +7,34 @@ import torch.distributed.rpc as rpc
 from algos.utils import put_on_device
 import typing
 
+
+def tensor_info(tensor):
+    """Return a dict with useful tensor diagnostics."""
+    if not isinstance(tensor, torch.Tensor):
+        return {"type": str(type(tensor))}
+    try:
+        numel = int(tensor.numel())
+        elem_size = int(tensor.element_size())
+        return {
+            "shape": tuple(tensor.shape),
+            "dtype": str(tensor.dtype),
+            "device": str(tensor.device),
+            "numel": numel,
+            "bytes": numel * elem_size,
+            "requires_grad": bool(tensor.requires_grad),
+        }
+    except Exception:
+        return {"type": "uninspectable_tensor"}
+
+
+def format_tensor_info(info):
+    if "type" in info:
+        return info["type"]
+    return (
+        f"device={info['device']} dtype={info['dtype']} shape={info['shape']} "
+        f"numel={info['numel']} bytes={info['bytes']} requires_grad={info['requires_grad']}"
+    )
+
 # Worker-local algorithm reference (set via `init_worker`)
 _GLOBAL_ALGO = None
 
@@ -110,9 +138,18 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
         processed += part_size
 
     pre_losses, post_losses = [], []
-    for pre_loss, post_loss in results:
+    # Inspect returned loss tensors from workers for device/size info
+    for i, (pre_loss, post_loss) in enumerate(results):
+        pre_info = tensor_info(pre_loss)
+        post_info = tensor_info(post_loss)
+        print(f"[meta_batch] result[{i}] pre: {format_tensor_info(pre_info)} post: {format_tensor_info(post_info)}")
         pre_losses.append(pre_loss)
         post_losses.append(post_loss)
+
+    # pre_losses, post_losses = [], []
+    # for pre_loss, post_loss in results:
+    #     pre_losses.append(pre_loss)
+    #     post_losses.append(post_loss)
 
     pre_losses = torch.stack(pre_losses)
     post_losses = torch.stack(post_losses)
