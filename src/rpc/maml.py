@@ -24,14 +24,14 @@ def init_worker(model_conf, state=None):
     if state is not None:
         _GLOBAL_ALGO.load_state(state)
 
-    # debug: show which worker/process initialized the algo and the object id
-    try:
-        worker_name = rpc.get_worker_info().name
-    except Exception:
-        worker_name = f"pid:{os.getpid()}"
-    print(
-        f"[init_worker] worker={worker_name} pid={os.getpid()} _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)} device={getattr(_GLOBAL_ALGO, 'device', None)}"
-    )
+    # # debug: show which worker/process initialized the algo and the object id
+    # try:
+    #     worker_name = rpc.get_worker_info().name
+    # except Exception:
+    #     worker_name = f"pid:{os.getpid()}"
+    # print(
+    #     f"[init_worker] worker={worker_name} pid={os.getpid()} _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)} device={getattr(_GLOBAL_ALGO, 'device', None)}"
+    # )
 
     return True
 
@@ -130,14 +130,14 @@ def run_task_remote(task_data):
     if _GLOBAL_ALGO is None:
         raise RuntimeError("Worker algorithm not initialized. Call init_worker first.")
 
-    # debug: indicate which worker is executing and which local algo object it uses
-    try:
-        worker_name = rpc.get_worker_info().name
-    except Exception:
-        worker_name = f"pid:{os.getpid()}"
-    print(
-        f"[run_task_remote] worker={worker_name} pid={os.getpid()} using _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)}"
-    )
+    # # debug: indicate which worker is executing and which local algo object it uses
+    # try:
+    #     worker_name = rpc.get_worker_info().name
+    # except Exception:
+    #     worker_name = f"pid:{os.getpid()}"
+    # print(
+    #     f"[run_task_remote] worker={worker_name} pid={os.getpid()} using _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)}"
+    # )
 
     device = _GLOBAL_ALGO.device
     support, query = task_data
