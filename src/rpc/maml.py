@@ -25,6 +25,64 @@ def init_worker(algo_conf):
     return True
 
 
+def get_pid():
+    """Return current process pid (worker helper)."""
+    return os.getpid()
+
+
+def check_memory():
+    """Return simple memory stats for the current process (worker helper)."""
+    gpu_alloc = None
+    gpu_reserved = None
+    try:
+        if torch.cuda.is_available():
+            gpu_alloc = int(torch.cuda.memory_allocated())
+            gpu_reserved = int(torch.cuda.memory_reserved())
+    except Exception:
+        pass
+    return {"pid": os.getpid(), "gpu_alloc": gpu_alloc, "gpu_reserved": gpu_reserved}
+
+
+def do_task_report(task_data, zero_state):
+    """Run the task on the worker and return a small report (no tensors).
+
+    Useful for checking allocator changes on the worker without transferring
+    large tensors back to the master.
+    """
+    global _GLOBAL_ALGO
+    if _GLOBAL_ALGO is None:
+        raise RuntimeError("Worker algorithm not initialized. Call init_worker first.")
+
+    # load the zero state so worker uses the same initialization
+    _GLOBAL_ALGO.load_state(zero_state)
+
+    device = _GLOBAL_ALGO.device
+    support, query = task_data
+    # move inputs to device
+    train_x, train_y, test_x, test_y = put_on_device(
+        device, [support[0], support[1], query[0], query[1]]
+    )
+
+    before = None
+    after = None
+    try:
+        if torch.cuda.is_available():
+            before = int(torch.cuda.memory_allocated())
+    except Exception:
+        before = None
+
+    # run inner train but do not return tensors
+    _ = _GLOBAL_ALGO.inner_train(train_x, train_y, test_x, test_y, rpc_mode=True)
+
+    try:
+        if torch.cuda.is_available():
+            after = int(torch.cuda.memory_allocated())
+    except Exception:
+        after = None
+
+    return {"pid": os.getpid(), "cuda_alloc_before": before, "cuda_alloc_after": after}
+
+
 def run_train_master(algo_obj, worker_list, train_loader):
     print("........")
     start_time = time.time()
@@ -74,6 +132,7 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
 
     pre_losses, post_losses = [], []
     for pre_loss, post_loss in results:
+        print(os.getpid(), id(pre_loss), id(post_loss))
         pre_losses.append(pre_loss)
         post_losses.append(post_loss)
 
@@ -109,5 +168,6 @@ def run_task_remote(task_data, zero_state):
         rpc_mode=True,
     )
 
-    return pre_loss, post_loss
+    print(os.getpid(), id(pre_loss), id(post_loss))
+    return pre_out, post_out
 
