@@ -48,19 +48,6 @@ def _task_collate(batch):
         batch_support[1] = batch_support_labels
         batch_query[1] = batch_query_labels
 
-        # Debug: show approximate memory footprint of support/query tensors
-        try:
-            def bytes_of(t):
-                return int(t.numel() * t.element_size()) if hasattr(t, "numel") else 0
-
-            support_img = batch_support[0]
-            query_img = batch_query[0]
-            support_bytes = bytes_of(support_img)
-            query_bytes = bytes_of(query_img)
-            print(f"[collate] support_shape={tuple(support_img.shape)} support_bytes={support_bytes} query_shape={tuple(query_img.shape)} query_bytes={query_bytes}")
-        except Exception:
-            pass
-
         task_batches_collated.append((batch_support, batch_query))
 
     return task_batches_collated
