@@ -102,6 +102,7 @@ class MAML(BaseAlgorithm):
         test_y,
         train_mode,
         T,
+        rpc_mode=False,
     ):
         """Run DOSO on a single task to get the loss on the query set
 
@@ -132,7 +133,10 @@ class MAML(BaseAlgorithm):
         """
         learner = self.baselearner
         # Copy initialization parameters to fast_weights parameters
-        fast_weights = [p.clone() for p in self.initialization]
+        if rpc_mode:
+            fast_weights = self.initialization
+        else:
+            fast_weights = [p.clone() for p in self.initialization]
 
         # ----- Pre-update (theta_0) -----
         with torch.no_grad():
@@ -173,7 +177,7 @@ class MAML(BaseAlgorithm):
     def set_val_mode(self):
         self.baselearner.eval()
 
-    def inner_train(self, train_x, train_y, test_x, test_y):
+    def inner_train(self, train_x, train_y, test_x, test_y, rpc_mode=False):
         return self._deploy(train_x, train_y, test_x, test_y, True, self.T)
 
     def outer_train(self, pre_losses, post_losses):

@@ -1,29 +1,27 @@
+import os
 import time
 import copy
-import os
-import torch
-from queue import Queue
-import torch.distributed.rpc as rpc
-from algos.utils import put_on_device
 import typing
+from queue import Queue
+
+import torch
+import torch.distributed.rpc as rpc
+
+from algos.utils import put_on_device
+from algos.maml import MAML
 
 # Worker-local algorithm reference (set via `init_worker`)
 _GLOBAL_ALGO = None
 
 
-def init_worker(model_conf, state=None):
+def init_worker(algo_conf, state=None):
     """Initialize a local algo instance on the worker.
 
     Called remotely by the master once before training starts. This avoids
     repeatedly serializing the whole `algo_obj` to workers.
     """
     global _GLOBAL_ALGO
-    from algos.maml import MAML
-
-    _GLOBAL_ALGO = MAML(**model_conf)
-    if state is not None:
-        _GLOBAL_ALGO.load_state(state)
-
+    _GLOBAL_ALGO = MAML(**algo_conf)
     return True
 
 
@@ -46,6 +44,8 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
     processed = 0
     total_task = algo_obj.meta_batch_size
 
+    zero_state = algo_obj.dump_state()
+
     results = []
     while processed < total_task:
         remaining = total_task - processed
@@ -59,7 +59,7 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
             fut = rpc.rpc_async(
                 f"worker{w}",
                 run_task_remote,
-                args=(task_data,),
+                args=(task_data,zero_state),
             )
             futs.append(fut)
         
@@ -80,7 +80,7 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
     return algo_obj.outer_train(pre_losses, post_losses)
 
 
-def run_task_remote(task_data):
+def run_task_remote(task_data, zero_state):
     """Run task on worker using the worker-local algo instance.
 
     This function should be executed on the worker process which has called
@@ -90,51 +90,21 @@ def run_task_remote(task_data):
     if _GLOBAL_ALGO is None:
         raise RuntimeError("Worker algorithm not initialized. Call init_worker first.")
 
+    _GLOBAL_ALGO.load_state(zero_state)
+
     device = _GLOBAL_ALGO.device
     support, query = task_data
-    # Helper to describe a tensor/array
-    def _info(x):
-        if isinstance(x, torch.Tensor):
-            try:
-                numel = int(x.numel())
-                b = int(numel * x.element_size())
-                return f"device={x.device} shape={tuple(x.shape)} numel={numel} bytes={b} dtype={x.dtype}"
-            except Exception:
-                return f"tensor(type={type(x)})"
-        try:
-            import numpy as _np
-
-            if isinstance(x, _np.ndarray):
-                numel = int(x.size)
-                b = int(x.itemsize * numel)
-                return f"ndarray shape={x.shape} numel={numel} bytes={b} dtype={x.dtype}"
-        except Exception:
-            pass
-        return f"type={type(x)}"
-
-    # Log original task_data items (before moving to device)
-    try:
-        print(f"[task_data-before] support_x {_info(support[0])}")
-        print(f"[task_data-before] support_y {_info(support[1])}")
-        print(f"[task_data-before] query_x {_info(query[0])}")
-        print(f"[task_data-before] query_y {_info(query[1])}")
-    except Exception:
-        pass
-
     train_x, train_y, test_x, test_y = put_on_device(
         device, [support[0], support[1], query[0], query[1]]
     )
 
-    # Log tensors after put_on_device (should show device)
-    try:
-        print(f"[task_data-after] train_x {_info(train_x)}")
-        print(f"[task_data-after] train_y {_info(train_y)}")
-        print(f"[task_data-after] test_x {_info(test_x)}")
-        print(f"[task_data-after] test_y {_info(test_y)}")
-    except Exception:
-        pass
-
-    pre_loss, post_loss, _, _ = _GLOBAL_ALGO.inner_train(train_x, train_y, test_x, test_y)
+    pre_loss, post_loss, _, _ = _GLOBAL_ALGO.inner_train(
+        train_x, 
+        train_y, 
+        test_x, 
+        test_y,
+        rpc_mode=True,
+    )
 
     return pre_loss, post_loss
 

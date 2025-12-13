@@ -43,16 +43,15 @@ def run_process(rank, world_size, validate):
     )
 
     if rank == 0:
-        train_loader, val_loader, model_conf = warm_up()
+        train_loader, val_loader, algo_conf = warm_up()
 
-        maml = MAML(**model_conf)
+        maml = MAML(**algo_conf)
         workers = [f"worker{i}" for i in range(1, world_size)]
 
         # Initialize worker-local algo instances so we don't send the full
-        # `maml` object with every RPC. Send only the lightweight state.
-        weights = maml.dump_state()
+        # `maml` object with every RPC.
         for w in workers:
-            rpc.rpc_sync(w, init_worker, args=(model_conf, weights))
+            rpc.rpc_sync(w, init_worker, args=(algo_conf))
 
         run_train_master(maml, workers, train_loader)
 
