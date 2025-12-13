@@ -14,9 +14,12 @@ from algos.utils import put_on_device
 from rpc.maml import run_train_master
 
 
-def run(validate):
+def run(
+    validate,
+    world_size,
+):
     mp.set_start_method("spawn", force=True)
-    world_size = 3
+    world_size = world_size
     mp.spawn(run_process, args=(world_size, validate), nprocs=world_size, join=True)
 
 
