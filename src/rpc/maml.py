@@ -110,29 +110,9 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
         processed += part_size
 
     pre_losses, post_losses = [], []
-    # Inspect returned loss tensors from workers for device/size info
-    for i, (pre_loss, post_loss) in enumerate(results):
-        def _info(t):
-            if isinstance(t, torch.Tensor):
-                try:
-                    numel = int(t.numel())
-                    b = int(numel * t.element_size())
-                    dev = t.device
-                    dtype = t.dtype
-                    req = t.requires_grad
-                    return f"device={dev} dtype={dtype} numel={numel} bytes={b} requires_grad={req}"
-                except Exception:
-                    return f"tensor (unable to inspect) type={type(t)}"
-            return f"type={type(t)}"
-
-        print(f"[meta_batch] result[{i}] pre: {_info(pre_loss)} post: {_info(post_loss)}")
+    for pre_loss, post_loss in results:
         pre_losses.append(pre_loss)
         post_losses.append(post_loss)
-
-    # pre_losses, post_losses = [], []
-    # for pre_loss, post_loss in results:
-    #     pre_losses.append(pre_loss)
-    #     post_losses.append(post_loss)
 
     pre_losses = torch.stack(pre_losses)
     post_losses = torch.stack(post_losses)
