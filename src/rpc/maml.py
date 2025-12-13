@@ -25,14 +25,15 @@ def init_worker(model_conf, state=None):
 
 
 def run_train_master(algo_obj, worker_list, train_loader):
+    start_time = time.time()
     for batch_id, task_batch in enumerate(train_loader):
-        start_time = time.time()
         mean_pre_losses, mean_post_losses = train_on_meta_batch(algo_obj, worker_list, task_batch)
-        end_time = time.time()
 
         if batch_id % 100 == 0:
+            end_time = time.time()
             elapsed = end_time - start_time
             print(f"Meta-batch {batch_id}: {mean_pre_losses}, {mean_post_losses} | Time: {elapsed:.3f}s")
+            start_time = time.time()
 
         weights = algo_obj.dump_state()
         torch.save(weights, "meta_init.pt")
