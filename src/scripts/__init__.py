@@ -51,7 +51,7 @@ def run_process(rank, world_size, validate):
         # Initialize worker-local algo instances so we don't send the full
         # `maml` object with every RPC.
         for w in workers:
-            rpc.rpc_sync(w, init_worker, args=(algo_conf))
+            rpc.rpc_sync(w, init_worker, args=(algo_conf,))
 
         run_train_master(maml, workers, train_loader)
 

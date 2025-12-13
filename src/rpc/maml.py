@@ -59,7 +59,7 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
             fut = rpc.rpc_async(
                 f"worker{w}",
                 run_task_remote,
-                args=(task_data,zero_state),
+                args=(task_data,zero_state,),
             )
             futs.append(fut)
         
