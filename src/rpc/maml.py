@@ -5,6 +5,7 @@ import torch
 from queue import Queue
 import torch.distributed.rpc as rpc
 from algos.utils import put_on_device
+import typing
 
 # Worker-local algorithm reference (set via `init_worker`)
 _GLOBAL_ALGO = None
@@ -33,6 +34,37 @@ def init_worker(model_conf, state=None):
     )
 
     return True
+
+
+def check_memory() -> dict:
+    """Return simple memory stats for the current process (worker).
+
+    This helper is intended to be invoked remotely via RPC from the master
+    to inspect worker memory (e.g. to verify DataLoader or prefetch effects).
+    """
+    pid = os.getpid()
+    rss_kb = None
+    vms_kb = None
+    try:
+        with open(f"/proc/{pid}/status", "r") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    parts = line.split()
+                    rss_kb = int(parts[1])
+                elif line.startswith("VmSize:"):
+                    parts = line.split()
+                    vms_kb = int(parts[1])
+    except Exception:
+        pass
+
+    gpu_alloc = None
+    try:
+        if torch.cuda.is_available():
+            gpu_alloc = torch.cuda.memory_allocated()
+    except Exception:
+        gpu_alloc = None
+
+    return {"pid": pid, "rss_kb": rss_kb, "vms_kb": vms_kb, "gpu_alloc_bytes": gpu_alloc}
 
 
 def run_train_master(algo_obj, worker_list, train_loader):
