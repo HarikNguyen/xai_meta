@@ -31,7 +31,7 @@ def run_train_master(algo_obj, worker_list, train_loader):
     for batch_id, task_batch in enumerate(train_loader):
         mean_pre_losses, mean_post_losses = train_on_meta_batch(algo_obj, worker_list, task_batch)
 
-        if batch_id == 1:
+        if batch_id in [1,2,3,4,5,6,7,8,9,10]:
             print("........")
         if batch_id % 100 == 0:
             end_time = time.time()
