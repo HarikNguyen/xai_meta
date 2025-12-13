@@ -1,9 +1,11 @@
 import time
 import copy
+import os
 import torch
 from queue import Queue
 import torch.distributed.rpc as rpc
 from algos.utils import put_on_device
+import typing
 
 # Worker-local algorithm reference (set via `init_worker`)
 _GLOBAL_ALGO = None
@@ -21,7 +23,48 @@ def init_worker(model_conf, state=None):
     _GLOBAL_ALGO = MAML(**model_conf)
     if state is not None:
         _GLOBAL_ALGO.load_state(state)
+
+    # # debug: show which worker/process initialized the algo and the object id
+    # try:
+    #     worker_name = rpc.get_worker_info().name
+    # except Exception:
+    #     worker_name = f"pid:{os.getpid()}"
+    # print(
+    #     f"[init_worker] worker={worker_name} pid={os.getpid()} _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)} device={getattr(_GLOBAL_ALGO, 'device', None)}"
+    # )
+
     return True
+
+
+def check_memory() -> dict:
+    """Return simple memory stats for the current process (worker).
+
+    This helper is intended to be invoked remotely via RPC from the master
+    to inspect worker memory (e.g. to verify DataLoader or prefetch effects).
+    """
+    pid = os.getpid()
+    rss_kb = None
+    vms_kb = None
+    try:
+        with open(f"/proc/{pid}/status", "r") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    parts = line.split()
+                    rss_kb = int(parts[1])
+                elif line.startswith("VmSize:"):
+                    parts = line.split()
+                    vms_kb = int(parts[1])
+    except Exception:
+        pass
+
+    gpu_alloc = None
+    try:
+        if torch.cuda.is_available():
+            gpu_alloc = torch.cuda.memory_allocated()
+    except Exception:
+        gpu_alloc = None
+
+    return {"pid": pid, "rss_kb": rss_kb, "vms_kb": vms_kb, "gpu_alloc_bytes": gpu_alloc}
 
 
 def run_train_master(algo_obj, worker_list, train_loader):
@@ -106,6 +149,15 @@ def run_task_remote(task_data):
     global _GLOBAL_ALGO
     if _GLOBAL_ALGO is None:
         raise RuntimeError("Worker algorithm not initialized. Call init_worker first.")
+
+    # # debug: indicate which worker is executing and which local algo object it uses
+    # try:
+    #     worker_name = rpc.get_worker_info().name
+    # except Exception:
+    #     worker_name = f"pid:{os.getpid()}"
+    # print(
+    #     f"[run_task_remote] worker={worker_name} pid={os.getpid()} using _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)}"
+    # )
 
     device = _GLOBAL_ALGO.device
     support, query = task_data
