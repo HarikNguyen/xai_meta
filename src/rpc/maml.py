@@ -7,34 +7,6 @@ import torch.distributed.rpc as rpc
 from algos.utils import put_on_device
 import typing
 
-
-def tensor_info(tensor):
-    """Return a dict with useful tensor diagnostics."""
-    if not isinstance(tensor, torch.Tensor):
-        return {"type": str(type(tensor))}
-    try:
-        numel = int(tensor.numel())
-        elem_size = int(tensor.element_size())
-        return {
-            "shape": tuple(tensor.shape),
-            "dtype": str(tensor.dtype),
-            "device": str(tensor.device),
-            "numel": numel,
-            "bytes": numel * elem_size,
-            "requires_grad": bool(tensor.requires_grad),
-        }
-    except Exception:
-        return {"type": "uninspectable_tensor"}
-
-
-def format_tensor_info(info):
-    if "type" in info:
-        return info["type"]
-    return (
-        f"device={info['device']} dtype={info['dtype']} shape={info['shape']} "
-        f"numel={info['numel']} bytes={info['bytes']} requires_grad={info['requires_grad']}"
-    )
-
 # Worker-local algorithm reference (set via `init_worker`)
 _GLOBAL_ALGO = None
 
@@ -52,47 +24,7 @@ def init_worker(model_conf, state=None):
     if state is not None:
         _GLOBAL_ALGO.load_state(state)
 
-    # # debug: show which worker/process initialized the algo and the object id
-    # try:
-    #     worker_name = rpc.get_worker_info().name
-    # except Exception:
-    #     worker_name = f"pid:{os.getpid()}"
-    # print(
-    #     f"[init_worker] worker={worker_name} pid={os.getpid()} _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)} device={getattr(_GLOBAL_ALGO, 'device', None)}"
-    # )
-
     return True
-
-
-def check_memory() -> dict:
-    """Return simple memory stats for the current process (worker).
-
-    This helper is intended to be invoked remotely via RPC from the master
-    to inspect worker memory (e.g. to verify DataLoader or prefetch effects).
-    """
-    pid = os.getpid()
-    rss_kb = None
-    vms_kb = None
-    try:
-        with open(f"/proc/{pid}/status", "r") as f:
-            for line in f:
-                if line.startswith("VmRSS:"):
-                    parts = line.split()
-                    rss_kb = int(parts[1])
-                elif line.startswith("VmSize:"):
-                    parts = line.split()
-                    vms_kb = int(parts[1])
-    except Exception:
-        pass
-
-    gpu_alloc = None
-    try:
-        if torch.cuda.is_available():
-            gpu_alloc = torch.cuda.memory_allocated()
-    except Exception:
-        gpu_alloc = None
-
-    return {"pid": pid, "rss_kb": rss_kb, "vms_kb": vms_kb, "gpu_alloc_bytes": gpu_alloc}
 
 
 def run_train_master(algo_obj, worker_list, train_loader):
@@ -138,18 +70,9 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
         processed += part_size
 
     pre_losses, post_losses = [], []
-    # Inspect returned loss tensors from workers for device/size info
-    for i, (pre_loss, post_loss) in enumerate(results):
-        pre_info = tensor_info(pre_loss)
-        post_info = tensor_info(post_loss)
-        print(f"[meta_batch] result[{i}] pre: {format_tensor_info(pre_info)} post: {format_tensor_info(post_info)}")
+    for pre_loss, post_loss in results:
         pre_losses.append(pre_loss)
         post_losses.append(post_loss)
-
-    # pre_losses, post_losses = [], []
-    # for pre_loss, post_loss in results:
-    #     pre_losses.append(pre_loss)
-    #     post_losses.append(post_loss)
 
     pre_losses = torch.stack(pre_losses)
     post_losses = torch.stack(post_losses)
@@ -167,20 +90,49 @@ def run_task_remote(task_data):
     if _GLOBAL_ALGO is None:
         raise RuntimeError("Worker algorithm not initialized. Call init_worker first.")
 
-    # # debug: indicate which worker is executing and which local algo object it uses
-    # try:
-    #     worker_name = rpc.get_worker_info().name
-    # except Exception:
-    #     worker_name = f"pid:{os.getpid()}"
-    # print(
-    #     f"[run_task_remote] worker={worker_name} pid={os.getpid()} using _GLOBAL_ALGO_id={id(_GLOBAL_ALGO)}"
-    # )
-
     device = _GLOBAL_ALGO.device
     support, query = task_data
+    # Helper to describe a tensor/array
+    def _info(x):
+        if isinstance(x, torch.Tensor):
+            try:
+                numel = int(x.numel())
+                b = int(numel * x.element_size())
+                return f"device={x.device} shape={tuple(x.shape)} numel={numel} bytes={b} dtype={x.dtype}"
+            except Exception:
+                return f"tensor(type={type(x)})"
+        try:
+            import numpy as _np
+
+            if isinstance(x, _np.ndarray):
+                numel = int(x.size)
+                b = int(x.itemsize * numel)
+                return f"ndarray shape={x.shape} numel={numel} bytes={b} dtype={x.dtype}"
+        except Exception:
+            pass
+        return f"type={type(x)}"
+
+    # Log original task_data items (before moving to device)
+    try:
+        print(f"[task_data-before] support_x {_info(support[0])}")
+        print(f"[task_data-before] support_y {_info(support[1])}")
+        print(f"[task_data-before] query_x {_info(query[0])}")
+        print(f"[task_data-before] query_y {_info(query[1])}")
+    except Exception:
+        pass
+
     train_x, train_y, test_x, test_y = put_on_device(
         device, [support[0], support[1], query[0], query[1]]
     )
+
+    # Log tensors after put_on_device (should show device)
+    try:
+        print(f"[task_data-after] train_x {_info(train_x)}")
+        print(f"[task_data-after] train_y {_info(train_y)}")
+        print(f"[task_data-after] test_x {_info(test_x)}")
+        print(f"[task_data-after] test_y {_info(test_y)}")
+    except Exception:
+        pass
 
     pre_loss, post_loss, _, _ = _GLOBAL_ALGO.inner_train(train_x, train_y, test_x, test_y)
 
