@@ -11,7 +11,7 @@ from algos.base import BaseAlgorithm
 from algos.maml import MAML
 from algos.utils import put_on_device
 
-from rpc.maml import run_train_master
+from rpc.maml import run_train_master, init_worker
 
 
 def run(
@@ -47,6 +47,12 @@ def run_process(rank, world_size, validate):
 
         maml = MAML(**model_conf)
         workers = [f"worker{i}" for i in range(1, world_size)]
+
+        # Initialize worker-local algo instances so we don't send the full
+        # `maml` object with every RPC. Send only the lightweight state.
+        weights = maml.dump_state()
+        for w in workers:
+            rpc.rpc_sync(w, init_worker, args=(model_conf, weights))
 
         run_train_master(maml, workers, train_loader)
 

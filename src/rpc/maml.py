@@ -5,6 +5,24 @@ from queue import Queue
 import torch.distributed.rpc as rpc
 from algos.utils import put_on_device
 
+# Worker-local algorithm reference (set via `init_worker`)
+_GLOBAL_ALGO = None
+
+
+def init_worker(model_conf, state=None):
+    """Initialize a local algo instance on the worker.
+
+    Called remotely by the master once before training starts. This avoids
+    repeatedly serializing the whole `algo_obj` to workers.
+    """
+    global _GLOBAL_ALGO
+    from algos.maml import MAML
+
+    _GLOBAL_ALGO = MAML(**model_conf)
+    if state is not None:
+        _GLOBAL_ALGO.load_state(state)
+    return True
+
 
 def run_train_master(algo_obj, worker_list, train_loader):
     for batch_id, task_batch in enumerate(train_loader):
@@ -32,10 +50,12 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
         futs = []
         for w in range(1, part_size + 1):
             task_data = task_batch.pop(0)
+            # Send only the task data to the worker. Worker must have been
+            # initialized beforehand via `init_worker` so it has a local algo.
             fut = rpc.rpc_async(
                 f"worker{w}",
-                run_task,
-                args=(algo_obj, task_data),
+                run_task_remote,
+                args=(task_data,),
             )
             futs.append(fut)
         
@@ -56,15 +76,23 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
     return algo_obj.outer_train(pre_losses, post_losses)
 
 
-def run_task(algo_obj, task_data):
-    # algo_obj = copy.deepcopy(algo_obj)
-    device = algo_obj.device
+def run_task_remote(task_data):
+    """Run task on worker using the worker-local algo instance.
+
+    This function should be executed on the worker process which has called
+    `init_worker` earlier. It avoids passing the full `algo_obj` over RPC.
+    """
+    global _GLOBAL_ALGO
+    if _GLOBAL_ALGO is None:
+        raise RuntimeError("Worker algorithm not initialized. Call init_worker first.")
+
+    device = _GLOBAL_ALGO.device
     support, query = task_data
     train_x, train_y, test_x, test_y = put_on_device(
         device, [support[0], support[1], query[0], query[1]]
     )
 
-    pre_loss, post_loss, _, _ = algo_obj.inner_train(train_x, train_y, test_x, test_y)
+    pre_loss, post_loss, _, _ = _GLOBAL_ALGO.inner_train(train_x, train_y, test_x, test_y)
 
     return pre_loss, post_loss
 
