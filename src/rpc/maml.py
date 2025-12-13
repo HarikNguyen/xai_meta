@@ -110,5 +110,5 @@ def run_task_remote(task_data, zero_state):
     )
 
     print(os.getpid(), id(pre_loss), id(post_loss))
-    return pre_out, post_out
+    return pre_loss, post_loss
 
