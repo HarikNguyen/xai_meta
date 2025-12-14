@@ -120,13 +120,13 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
         pre_accs_res.extend(pre_accs)
         post_accs_res.extend(post_accs)
     
-    print(len(pre_accs_res))
-    print(len(post_accs_res))
-    print(post_accs_res[0])
-    print(type(post_accs_res[0]))
+    # print(len(pre_accs_res))
+    # print(len(post_accs_res))
+    # print(post_accs_res[0])
+    # # print(type(post_accs_res[0]))
     return (
-        torch.stack(pre_accs_res).mean(),
-        torch.stack(post_accs_res).mean(),
+        torch.tensor(pre_accs_res).mean(),
+        torch.tensor(post_accs_res).mean(),
     )
 
 def val_on_meta_batch(zero_state, total_task, worker_list, task_batch):
