@@ -200,7 +200,7 @@ class MAML(BaseAlgorithm):
 
         return mean_pre_losses.item(), mean_post_losses.item()
 
-    def evaluate(self, train_x, train_y, test_x, test_y, val_mode=True):
+    def acc_val(self, train_x, train_y, test_x, test_y, val_mode=True, rpc_mode=False):
         T = self.T_val if val_mode else self.T_test
 
         # Compute the test loss after a single gradient update on the support set
@@ -211,6 +211,7 @@ class MAML(BaseAlgorithm):
             test_y,
             False,
             T,
+            rpc_mode,
         )
 
         # Turn one-hot predictions into class preds
@@ -219,9 +220,6 @@ class MAML(BaseAlgorithm):
         post_test_y_hat = torch.argmax(post_preds, dim=1)
         post_acc = accuracy(post_test_y_hat, test_y)
         return pre_acc, post_acc
-
-    def train(self, train_x, train_y, test_x, test_y):
-        pass
 
     def dump_state(self):
         """Return the state of the meta-learner

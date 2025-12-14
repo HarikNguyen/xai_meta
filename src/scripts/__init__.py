@@ -53,7 +53,7 @@ def run_process(rank, world_size, validate):
         for w in workers:
             rpc.rpc_sync(w, init_worker, args=(algo_conf,))
 
-        run_train_master(maml, workers, train_loader)
+        run_train_master(maml, workers, train_loader, val_loader)
 
     # shutdown all
     rpc.shutdown()
