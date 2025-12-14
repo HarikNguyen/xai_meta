@@ -41,8 +41,9 @@ def run_train_master(algo_obj, worker_list, train_loader, val_loader):
 
         if batch_id % 1000 == 0:
             zero_state_cur = algo_obj.dump_state()
-            pre_accs_avg, post_accs_avg = run_val_master(zero_state_cur, total_task, worker_list, val_loader)
-            print(f"Meta-batch {batch_id}: pre_accs_avg:post_accs_avg = {pre_accs_avg} {post_accs_avg}")
+            pre_accs_avg, post_accs_avg, post_accs_max, post_accs_max = run_val_master(zero_state_cur, total_task, worker_list, val_loader)
+            print(f"Meta-batch {batch_id}:\n- pre_accs_avg: {pre_accs_avg}\n- post_accs_avg: {post_accs_avg}")
+            print(f"- pre_accs_max: {pre_accs_max}\n- post_accs_max: {post_accs_max}")
 
         algo_obj.store_file("meta_init.pt")
 
@@ -120,13 +121,11 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
         pre_accs_res.extend(pre_accs)
         post_accs_res.extend(post_accs)
     
-    # print(len(pre_accs_res))
-    # print(len(post_accs_res))
-    # print(post_accs_res[0])
-    # # print(type(post_accs_res[0]))
     return (
         torch.tensor(pre_accs_res).mean(),
         torch.tensor(post_accs_res).mean(),
+        torch.tensor(pre_accs_res).max(),
+        torch.tensor(post_accs_res).max(),
     )
 
 def val_on_meta_batch(zero_state, total_task, worker_list, task_batch):
