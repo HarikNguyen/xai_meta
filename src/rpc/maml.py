@@ -120,6 +120,8 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
         pre_accs_res.extend(pre_accs)
         post_accs_res.extend(post_accs)
     
+    print(len(pre_accs_res))
+    print(len(post_accs_res))
     return (
         torch.stack(pre_accs_res).mean(),
         torch.stack(post_accs_res).mean(),
