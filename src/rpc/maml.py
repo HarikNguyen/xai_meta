@@ -26,6 +26,8 @@ def init_worker(algo_conf):
 
 
 def run_train_master(algo_obj, worker_list, train_loader, val_loader):
+    total_task = algo_obj.meta_batch_size
+
     start_time = time.time()
     for batch_id, task_batch in enumerate(train_loader):
         mean_pre_losses, mean_post_losses = train_on_meta_batch(algo_obj, worker_list, task_batch)
@@ -35,10 +37,12 @@ def run_train_master(algo_obj, worker_list, train_loader, val_loader):
             elapsed = end_time - start_time
             print(f"Meta-batch {batch_id}: {mean_pre_losses}, {mean_post_losses} | Time: {elapsed:.3f}s")
             
-            zero_state = algo_obj.dump_state()
-            pre_accs_avg, post_accs_avg = run_val_master(algo_obj, worker_list, val_loader)
-            
             start_time = time.time()
+
+        if batch_id % 1000 == 0:
+            zero_state_cur = algo_obj.dump_state()
+            pre_accs_avg, post_accs_avg = run_val_master(zero_state_cur, total_task, worker_list, val_loader)
+            print(f"Meta-batch {batch_id}: pre_accs_avg:post_accs_avg = {pre_accs_avg} {post_accs_avg}")
 
         algo_obj.store_file("meta_init.pt")
 
@@ -121,10 +125,10 @@ def run_val_master(zero_state, worker_list, val_loader):
         torch.stack(post_accs).mean(),
     )
 
-def val_on_meta_batch(zero_state, worker_list, task_batch):
+def val_on_meta_batch(zero_state, total_task, worker_list, task_batch):
     num_workers = len(worker_list)
     processed = 0
-    total_task = algo_obj.meta_batch_size
+    
 
     results = []
     while processed < total_task:
