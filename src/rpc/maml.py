@@ -113,7 +113,7 @@ def run_train_task_remote(task_data, zero_state):
     return pre_loss, post_loss
 
 
-def run_val_master(zero_state, worker_list, val_loader):
+def run_val_master(zero_state, total_task, worker_list, val_loader):
     pre_accs_res, post_accs_res = [], []
     for task_batch in val_loader:
         pre_accs, post_accs = val_on_meta_batch(zero_state, worker_list, task_batch)
