@@ -123,6 +123,7 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
     print(len(pre_accs_res))
     print(len(post_accs_res))
     print(post_accs_res[0])
+    print(type(post_accs_res[0]))
     return (
         torch.stack(pre_accs_res).mean(),
         torch.stack(post_accs_res).mean(),
