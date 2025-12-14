@@ -41,7 +41,7 @@ def run_train_master(algo_obj, worker_list, train_loader, val_loader):
 
         if batch_id % 1000 == 0:
             zero_state_cur = algo_obj.dump_state()
-            pre_accs_avg, post_accs_avg, post_accs_max, post_accs_max = run_val_master(zero_state_cur, total_task, worker_list, val_loader)
+            pre_accs_avg, post_accs_avg, pre_accs_max, post_accs_max = run_val_master(zero_state_cur, total_task, worker_list, val_loader)
             print(f"Meta-batch {batch_id}:\n- pre_accs_avg: {pre_accs_avg}\n- post_accs_avg: {post_accs_avg}")
             print(f"- pre_accs_max: {pre_accs_max}\n- post_accs_max: {post_accs_max}")
 
