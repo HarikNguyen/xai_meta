@@ -25,13 +25,10 @@ def init_worker(algo_conf):
     return True
 
 def run_train_master(algo_obj, worker_list, train_loader):
-    print("........")
     start_time = time.time()
     for batch_id, task_batch in enumerate(train_loader):
         mean_pre_losses, mean_post_losses = train_on_meta_batch(algo_obj, worker_list, task_batch)
 
-        if batch_id in [1,2,3,4,5,6,7,8,9,10]:
-            print("........")
         if batch_id % 100 == 0:
             end_time = time.time()
             elapsed = end_time - start_time
@@ -56,8 +53,6 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
         futs = []
         for w in range(1, part_size + 1):
             task_data = task_batch.pop(0)
-            # Send only the task data to the worker. Worker must have been
-            # initialized beforehand via `init_worker` so it has a local algo.
             fut = rpc.rpc_async(
                 f"worker{w}",
                 run_task_remote,
@@ -73,7 +68,6 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
 
     pre_losses, post_losses = [], []
     for pre_loss, post_loss in results:
-        print(os.getpid(), id(pre_loss), id(post_loss))
         pre_losses.append(pre_loss)
         post_losses.append(post_loss)
 
@@ -109,6 +103,5 @@ def run_task_remote(task_data, zero_state):
         rpc_mode=True,
     )
 
-    print(os.getpid(), id(pre_loss), id(post_loss))
     return pre_loss, post_loss
 
