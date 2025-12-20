@@ -102,6 +102,7 @@ class MAML(BaseAlgorithm):
         test_y,
         train_mode,
         T,
+        rpc_mode=False,
     ):
         """Run DOSO on a single task to get the loss on the query set
 
@@ -132,7 +133,10 @@ class MAML(BaseAlgorithm):
         """
         learner = self.baselearner
         # Copy initialization parameters to fast_weights parameters
-        fast_weights = [p.clone() for p in self.initialization]
+        if rpc_mode:
+            fast_weights = self.initialization
+        else:
+            fast_weights = [p.clone() for p in self.initialization]
 
         # ----- Pre-update (theta_0) -----
         with torch.no_grad():
@@ -173,7 +177,7 @@ class MAML(BaseAlgorithm):
     def set_val_mode(self):
         self.baselearner.eval()
 
-    def inner_train(self, train_x, train_y, test_x, test_y):
+    def inner_train(self, train_x, train_y, test_x, test_y, rpc_mode=False):
         return self._deploy(train_x, train_y, test_x, test_y, True, self.T)
 
     def outer_train(self, pre_losses, post_losses):
@@ -196,7 +200,7 @@ class MAML(BaseAlgorithm):
 
         return mean_pre_losses.item(), mean_post_losses.item()
 
-    def evaluate(self, train_x, train_y, test_x, test_y, val_mode=True):
+    def acc_val(self, train_x, train_y, test_x, test_y, val_mode=True, rpc_mode=False):
         T = self.T_val if val_mode else self.T_test
 
         # Compute the test loss after a single gradient update on the support set
@@ -207,6 +211,7 @@ class MAML(BaseAlgorithm):
             test_y,
             False,
             T,
+            rpc_mode,
         )
 
         # Turn one-hot predictions into class preds
@@ -216,9 +221,6 @@ class MAML(BaseAlgorithm):
         post_acc = accuracy(post_test_y_hat, test_y)
         return pre_acc, post_acc
 
-    def train(self, train_x, train_y, test_x, test_y):
-        pass
-
     def dump_state(self):
         """Return the state of the meta-learner
 
@@ -227,7 +229,7 @@ class MAML(BaseAlgorithm):
         initialization
             Initialization parameters
         """
-        return [p.clone().detach() for p in self.initialization]
+        return [p.clone().detach().to(self.device) for p in self.initialization]
 
     def load_state(self, state):
         """Load the given state into the meta-learner

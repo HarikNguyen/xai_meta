@@ -51,7 +51,7 @@ def warm_up():
         "criterion": nn.CrossEntropyLoss(),
     }
 
-    model_conf = {
+    algo_conf = {
         "train_base_lr": 0.01,
         "base_lr": 0.01,
         "second_order": False,
@@ -71,4 +71,4 @@ def warm_up():
         "grad_clip": 10,
     }
 
-    return train_loader, val_loader, model_conf
+    return train_loader, val_loader, algo_conf
