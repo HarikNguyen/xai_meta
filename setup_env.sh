@@ -26,7 +26,7 @@ echo "=== CREATE $ENV_NAME (Python $PYTHON_VER) ==="
 conda create -n "$ENV_NAME" python="$PYTHON_VER" -y
 
 # 5. Active
-condaActiveate "$ENV_NAME"
+conda activate "$ENV_NAME"
 
 # 6. Process Nvidia Driver và PyTorch
 echo "=== CHECK NVIDIA-SMI AND INSTALL PYTORCH ==="
