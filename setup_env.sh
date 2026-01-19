@@ -38,7 +38,7 @@ if command -v nvidia-smi &> /dev/null; then
     echo "Driver CUDA in this machine: $CUDA_FULL_VER"
     
     # Remove "." (ex: 12.4 -> 124)
-    CUDA_STR="${CUex_FULL_VER//./}"
+    CUDA_STR="${CUDA_FULL_VER//./}"
        
     COMPUTE_PLATFORM="cu${CUDA_STR}"
     
