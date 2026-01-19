@@ -4,6 +4,7 @@ import copy
 import typing
 from queue import Queue
 
+import numpy as np
 import torch
 import torch.distributed.rpc as rpc
 
@@ -190,3 +191,32 @@ def run_val_task_remote(task_data, zero_state):
         val_mode=True,
         rpc_mode=True,
     )
+
+
+def run_test_master(algo_obj, worker_list, test_loader, exp_string, logdir):
+    total_task = algo_obj.meta_batch_size
+    all_results = []
+
+    print("Starting Meta-Testing...")
+    
+    zero_state_cur = algo_obj.dump_state()
+
+    for task_batch in test_loader:
+        batch_pre_accs, batch_post_accs = val_on_meta_batch(
+            zero_state_cur, total_task, worker_list, task_batch
+        )
+        
+        for i in range(len(batch_post_accs)):
+            all_results.append(batch_post_accs[i])
+
+    all_results = np.array(all_results) # Shape: [Số lượng task, Số bước update]
+    
+    num_test_points = all_results.shape[0]
+    means = np.mean(all_results, axis=0)
+    stds = np.std(all_results, axis=0)
+    ci95 = 1.96 * stds / np.sqrt(num_test_points)
+
+    print('\nMean validation accuracy/loss, stddev, and confidence intervals')
+    print(f"Means: {means}")
+    print(f"Stds:  {stds}")
+    print(f"CI95:  {ci95}")
