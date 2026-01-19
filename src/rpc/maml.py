@@ -115,17 +115,21 @@ def run_train_task_remote(task_data, zero_state):
 
 
 def run_val_master(zero_state, total_task, worker_list, val_loader):
-    pre_accs_res, post_accs_res = [], []
-    for task_batch in val_loader:
-        pre_accs, post_accs = val_on_meta_batch(zero_state, total_task, worker_list, task_batch)
-        pre_accs_res.extend(pre_accs)
-        post_accs_res.extend(post_accs)
+    try:
+        task_batch = next(iter(val_loader))
+    except StopIteration:
+        return 0.0, 0.0, 0.0, 0.0
     
+    pre_accs, post_accs = val_on_meta_batch(zero_state, total_task, worker_list, task_batch)
+
+    pre_accs_tensor = torch.tensor(pre_accs)
+    post_accs_tensor = torch.tensor(post_accs)
+
     return (
-        torch.tensor(pre_accs_res).mean(),
-        torch.tensor(post_accs_res).mean(),
-        torch.tensor(pre_accs_res).max(),
-        torch.tensor(post_accs_res).max(),
+        pre_accs_tensor.mean().item(),
+        post_accs_tensor.mean().item(),
+        pre_accs_tensor.max().item(),
+        post_accs_tensor.max().item(),
     )
 
 def val_on_meta_batch(zero_state, total_task, worker_list, task_batch):
