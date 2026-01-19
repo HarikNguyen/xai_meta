@@ -11,7 +11,7 @@ from algos.base import BaseAlgorithm
 from algos.maml import MAML
 from algos.utils import put_on_device
 
-from rpc.maml import run_train_master, init_worker
+from rpc.maml import run_train_master, run_test_master, init_worker
 
 
 def run(
@@ -43,7 +43,7 @@ def run_process(rank, world_size, validate):
     )
 
     if rank == 0:
-        train_loader, val_loader, algo_conf = warm_up()
+        train_loader, val_loader, test_loader, algo_conf = warm_up()
 
         maml = MAML(**algo_conf)
         workers = [f"worker{i}" for i in range(1, world_size)]
@@ -53,7 +53,10 @@ def run_process(rank, world_size, validate):
         for w in workers:
             rpc.rpc_sync(w, init_worker, args=(algo_conf,))
 
-        run_train_master(maml, workers, train_loader, val_loader)
+        if not validate:
+            run_train_master(maml, workers, train_loader, val_loader)
+        else:
+            run_test_master(maml, workers, test_loader)
 
     # shutdown all
     rpc.shutdown()

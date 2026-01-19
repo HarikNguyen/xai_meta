@@ -193,7 +193,7 @@ def run_val_task_remote(task_data, zero_state):
     )
 
 
-def run_test_master(algo_obj, worker_list, test_loader, exp_string, logdir):
+def run_test_master(algo_obj, worker_list, test_loader):
     total_task = algo_obj.meta_batch_size
     all_results = []
 

@@ -87,4 +87,4 @@ def warm_up():
         "grad_clip": 10,
     }
 
-    return train_loader, val_loader, algo_conf
+    return train_loader, val_loader, test_loader, algo_conf
