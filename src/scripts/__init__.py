@@ -56,6 +56,7 @@ def run_process(rank, world_size, validate):
         if not validate:
             run_train_master(maml, workers, train_loader, val_loader)
         else:
+            print("Meta-Testing...")
             run_test_master(maml, workers, test_loader)
 
     # shutdown all
