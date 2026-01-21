@@ -11,7 +11,6 @@ def parse_args():
     # Add validate and world_size arguments
     parser.add_argument(
         '--validate', 
-        type=bool, 
         default=False, 
         action='store_true',
         help='Flag to indicate whether to validate the model.',
