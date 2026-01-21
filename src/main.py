@@ -13,6 +13,7 @@ def parse_args():
         '--validate', 
         type=bool, 
         default=False, 
+        action='store_true',
         help='Flag to indicate whether to validate the model.',
     )
     parser.add_argument(
