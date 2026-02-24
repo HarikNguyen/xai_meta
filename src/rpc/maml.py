@@ -208,7 +208,7 @@ def run_test_master(algo_obj, worker_list, test_loader):
         )
         
         for i in range(len(batch_post_accs)):
-            all_results.append(batch_post_accs[i])
+            all_results.append(batch_pre_accs + batch_post_accs)
 
     all_results = np.array(all_results) # Shape: [Số lượng task, Số bước update]
     
