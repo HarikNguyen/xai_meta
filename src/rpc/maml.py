@@ -29,7 +29,9 @@ def _get_worker_name(worker_list, worker_idx):
     return f"worker{worker_idx + 1}"
 
 
-def _dispatch_tasks(task_batch, total_task, worker_list, remote_fn, zero_state, val_mode=False):
+def _dispatch_tasks(
+    task_batch, total_task, worker_list, remote_fn, zero_state, val_mode=False
+):
     """Dispatch tasks to workers in chunks and gather RPC results in batches to workers."""
     num_workers = len(worker_list)
     if num_workers == 0:
@@ -187,12 +189,12 @@ def run_test_master(algo_obj, worker_list, test_loader):
             zero_state_cur, total_task, worker_list, task_batch
         )
 
-        combined_accs = np.column_stack((batch_pre_accs,batch_post_accs))
+        combined_accs = np.column_stack((batch_pre_accs, batch_post_accs))
 
         if all_results is None:
             all_results = combined_accs
         else:
-            all_results += combined_accs
+            all_results.column_stack((all_results, combined_accs))
 
     print(all_results.shape)
     num_test_points = all_results.shape[0]
@@ -206,7 +208,9 @@ def run_test_master(algo_obj, worker_list, test_loader):
     print(f"CI95:  {ci95}")
 
 
-def check_on_meta_batch(zero_state, total_task, worker_list, task_batch, val_mode=False):
+def check_on_meta_batch(
+    zero_state, total_task, worker_list, task_batch, val_mode=False
+):
     results = _dispatch_tasks(
         task_batch,
         total_task,
@@ -218,7 +222,7 @@ def check_on_meta_batch(zero_state, total_task, worker_list, task_batch, val_mod
 
     pre_accs = [pre_res for pre_res, _ in results]
     post_accs = [post_res for _, post_res in results]
-    
+
     return pre_accs, post_accs
 
 

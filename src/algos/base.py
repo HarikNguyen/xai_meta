@@ -74,7 +74,6 @@ class BaseAlgorithm:
         # Batching from episodic data
         self.batching_eps = batching_eps
 
-
         self.test_adam = test_adam
         self.operator = operator
 
