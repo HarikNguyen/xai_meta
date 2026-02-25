@@ -203,14 +203,11 @@ def run_test_master(algo_obj, worker_list, test_loader):
     zero_state_cur = algo_obj.dump_state()
 
     for task_batch in test_loader:
-        print(task_batch)
-        print(len(task_batch))
         batch_pre_accs, batch_post_accs = val_on_meta_batch(
             zero_state_cur, total_task, worker_list, task_batch
         )
         
         all_results.append(batch_pre_accs + batch_post_accs)
-        break
 
     all_results = np.array(all_results) # Shape: [Số lượng task, Số bước update]
     
