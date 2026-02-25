@@ -235,7 +235,7 @@ def run_check_task_remote(task_data, zero_state, val_mode=False):
     train_x, train_y, test_x, test_y = put_on_device(
         device, [support[0], support[1], query[0], query[1]]
     )
-
+    print(val_mode)
     return _GLOBAL_ALGO.acc_val(
         train_x,
         train_y,
