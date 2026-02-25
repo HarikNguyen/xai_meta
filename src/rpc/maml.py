@@ -187,6 +187,9 @@ def run_test_master(algo_obj, worker_list, test_loader):
             zero_state_cur, total_task, worker_list, task_batch
         )
 
+        print(len(batch_pre_accs))
+        print(len(batch_post_accs))
+        print(len(batch_pre_accs[0])
         all_results.append(batch_pre_accs + batch_post_accs)
 
     all_results = np.array(all_results)  # Shape: [Số lượng task, Số bước update]
