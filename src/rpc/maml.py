@@ -1,15 +1,11 @@
-import os
 import time
-import copy
-import typing
-from queue import Queue
 
 import numpy as np
 import torch
 import torch.distributed.rpc as rpc
 
-from algos.utils import put_on_device
 from algos.maml import MAML
+from algos.utils import put_on_device
 
 # Worker-local algorithm reference (set via `init_worker`)
 _GLOBAL_ALGO = None
@@ -26,65 +22,107 @@ def init_worker(algo_conf):
     return True
 
 
+def _get_worker_name(worker_list, worker_id):
+    """Resolve worker name from configured list with backward-compatible fallback."""
+    if worker_list:
+        return worker_list[worker_idx]
+    return f"worker{worker_idx + 1}"
+
+
+def _dispatch_tasks(task_batch, total_task, worker_list, remote_fn, zero_state, val_mode=False):
+    """Dispatch tasks to workers in chunks and gather RPC results in batches to workers."""
+    num_workers = len(worker_list)
+    if num_workers == 0:
+        raise ValueError("worker_list must not be empty")
+
+    # Uses an iterator instead of repeatedly popping from the head of a list
+    # to avoid O(n^2) behavior for larger meta-batches.
+    task_iter = iter(task_batch)
+
+    # Dispatch tasks
+    processed = 0
+    results = []
+
+    while processed < total_task:
+        remaining = total_task - processed
+        part_size = min(num_workers, remaining)
+
+        futs = []
+        for worker_idx in range(part_size):
+            task_data = task_batch.pop(0)
+            worker_name = _get_worker_name(worker_list, worker_idx)
+            if val_mode:
+                args = (task_data, zero_state, True)
+            else:
+                args = (task_data, zero_state)
+            fut = rpc.rpc_async(
+                worker_name,
+                remote_fn,
+                args=args,
+            )
+            futs.append(fut)
+
+        # Gather results
+        results.extend(fut.wait() for fut in futs)
+
+        # Update progress
+        processed += part_size
+
+    return results
+
+
 def run_train_master(algo_obj, worker_list, train_loader, val_loader):
     total_task = algo_obj.meta_batch_size
 
     start_time = time.time()
     for batch_id, task_batch in enumerate(train_loader):
-        mean_pre_losses, mean_post_losses = train_on_meta_batch(algo_obj, worker_list, task_batch)
+        mean_pre_losses, mean_post_losses = train_on_meta_batch(
+            algo_obj, worker_list, task_batch
+        )
 
         if batch_id % 100 == 0:
-            end_time = time.time()
-            elapsed = end_time - start_time
-            print(f"Meta-batch {batch_id}: {mean_pre_losses}, {mean_post_losses} | Time: {elapsed:.3f}s")
-            
+            elapsed = time.time() - start_time
+            print(
+                f"Meta-batch {batch_id}: {mean_pre_losses}, {mean_post_losses} | Time: {elapsed:.3f}s"
+            )
+
             start_time = time.time()
 
         if batch_id % 1000 == 0:
             zero_state_cur = algo_obj.dump_state()
-            pre_accs_avg, post_accs_avg, pre_accs_max, post_accs_max = run_val_master(zero_state_cur, total_task, worker_list, val_loader)
-            print(f"Meta-batch {batch_id}:\n- pre_accs_avg: {pre_accs_avg}\n- post_accs_avg: {post_accs_avg}")
+            pre_accs_avg, post_accs_avg, pre_accs_max, post_accs_max = run_val_master(
+                zero_state_cur, total_task, worker_list, val_loader
+            )
+            print(
+                f"Meta-batch {batch_id}:\n- pre_accs_avg: {pre_accs_avg}\n- post_accs_avg: {post_accs_avg}"
+            )
             print(f"- pre_accs_max: {pre_accs_max}\n- post_accs_max: {post_accs_max}")
 
+            # Save intermediate meta-learner state (checkpoints).
+            algo_obj.store_file(f"meta_init_{batch_id}.pt")
+
+        # Save final meta-learner state once training ends.
         algo_obj.store_file("meta_init.pt")
 
+
 def train_on_meta_batch(algo_obj, worker_list, task_batch):
-    num_workers = len(worker_list)
-    processed = 0
     total_task = algo_obj.meta_batch_size
 
     zero_state = algo_obj.dump_state()
 
-    results = []
-    while processed < total_task:
-        remaining = total_task - processed
-        part_size = min(num_workers, remaining)
-        
-        futs = []
-        for w in range(1, part_size + 1):
-            task_data = task_batch.pop(0)
-            fut = rpc.rpc_async(
-                f"worker{w}",
-                run_train_task_remote,
-                args=(task_data,zero_state,),
-            )
-            futs.append(fut)
-        
-        for fut in futs:
-            result = fut.wait()
-            results.append(result)
+    results = _dispatch_tasks(
+        task_batch,
+        total_task,
+        worker_list,
+        run_train_task_remote,
+        zero_state,
+    )
 
-        processed += part_size
+    pre_losses = torch.stack([pre_loss for pre_loss, _ in results])
+    post_losses = torch.stack([post_loss for _, post_loss in results])
 
-    pre_losses, post_losses = [], []
-    for pre_loss, post_loss in results:
-        pre_losses.append(pre_loss)
-        post_losses.append(post_loss)
-
-    pre_losses = torch.stack(pre_losses)
-    post_losses = torch.stack(post_losses)
-    
     return algo_obj.outer_train(pre_losses, post_losses)
+
 
 def run_train_task_remote(task_data, zero_state):
     """Run task on worker using the worker-local algo instance.
@@ -105,9 +143,9 @@ def run_train_task_remote(task_data, zero_state):
     )
 
     pre_loss, post_loss, _, _ = _GLOBAL_ALGO.inner_train(
-        train_x, 
-        train_y, 
-        test_x, 
+        train_x,
+        train_y,
+        test_x,
         test_y,
         rpc_mode=True,
     )
@@ -120,8 +158,14 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
         task_batch = next(iter(val_loader))
     except StopIteration:
         return 0.0, 0.0, 0.0, 0.0
-    
-    pre_accs, post_accs = val_on_meta_batch(zero_state, total_task, worker_list, task_batch)
+
+    pre_accs, post_accs = val_on_meta_batch(
+        zero_state,
+        total_task,
+        worker_list,
+        task_batch,
+        val_mode=True,
+    )
 
     pre_accs_tensor = torch.tensor(pre_accs)
     post_accs_tensor = torch.tensor(post_accs)
@@ -133,39 +177,56 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
         post_accs_tensor.max().item(),
     )
 
-def val_on_meta_batch(zero_state, total_task, worker_list, task_batch):
+
+def run_test_master(algo_obj, worker_list, test_loader):
+    algo_obj.read_file("meta_init.pt")
+    total_task = algo_obj.meta_batch_size
+    all_results = []
+
+    print("Starting Meta-Testing...")
+
+    zero_state_cur = algo_obj.dump_state()
+
+    for task_batch in test_loader:
+        batch_pre_accs, batch_post_accs = check_on_meta_batch(
+            zero_state_cur, total_task, worker_list, task_batch
+        )
+
+        all_results.append(batch_pre_accs + batch_post_accs)
+
+    all_results = np.array(all_results)  # Shape: [Số lượng task, Số bước update]
+
+    num_test_points = all_results.shape[0]
+    means = np.mean(all_results, axis=0)
+    stds = np.std(all_results, axis=0)
+    ci95 = 1.96 * stds / np.sqrt(num_test_points)
+
+    print("\nMean validation accuracy/loss, stddev, and confidence intervals")
+    print(f"Means: {means}")
+    print(f"Stds:  {stds}")
+    print(f"CI95:  {ci95}")
+
+
+def check_on_meta_batch(zero_state, total_task, worker_list, task_batch, val_mode=False):
     num_workers = len(worker_list)
     processed = 0
 
-    results = []
-    while processed < total_task:
-        remaining = total_task - processed
-        part_size = min(num_workers, remaining)
-        
-        futs = []
-        for w in range(1, part_size + 1):
-            task_data = task_batch.pop(0)
-            fut = rpc.rpc_async(
-                f"worker{w}",
-                run_val_task_remote,
-                args=(task_data,zero_state,),
-            )
-            futs.append(fut)
-        
-        for fut in futs:
-            result = fut.wait()
-            results.append(result)
+    results = _dispatch_tasks(
+        task_batch,
+        total_task,
+        worker_list,
+        run_check_task_remote,
+        zero_state,
+        val_mode=val_mode,
+    )
 
-        processed += part_size
-
-    pre_accs, post_accs = [], []
-    for pre_acc, post_acc in results:
-        pre_accs.append(pre_acc)
-        post_accs.append(post_acc)
-
+    pre_accs = [pre_acc for pre_acc, _ in results]
+    post_accs = [post_acc for _, post_acc in results]
+    
     return pre_accs, post_accs
 
-def run_val_task_remote(task_data, zero_state):
+
+def run_check_task_remote(task_data, zero_state, val_mode=False):
     """Run task on worker using the worker-local algo instance.
 
     This function should be executed on the worker process which has called
@@ -188,35 +249,8 @@ def run_val_task_remote(task_data, zero_state):
         train_y,
         test_x,
         test_y,
-        val_mode=True,
+        val_mode=val_mode,
         rpc_mode=True,
     )
 
 
-def run_test_master(algo_obj, worker_list, test_loader):
-    algo_obj.read_file("meta_init.pt")
-    total_task = algo_obj.meta_batch_size
-    all_results = []
-
-    print("Starting Meta-Testing...")
-    
-    zero_state_cur = algo_obj.dump_state()
-
-    for task_batch in test_loader:
-        batch_pre_accs, batch_post_accs = val_on_meta_batch(
-            zero_state_cur, total_task, worker_list, task_batch
-        )
-        
-        all_results.append(batch_pre_accs + batch_post_accs)
-
-    all_results = np.array(all_results) # Shape: [Số lượng task, Số bước update]
-    
-    num_test_points = all_results.shape[0]
-    means = np.mean(all_results, axis=0)
-    stds = np.std(all_results, axis=0)
-    ci95 = 1.96 * stds / np.sqrt(num_test_points)
-
-    print('\nMean validation accuracy/loss, stddev, and confidence intervals')
-    print(f"Means: {means}")
-    print(f"Stds:  {stds}")
-    print(f"CI95:  {ci95}")

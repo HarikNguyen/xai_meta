@@ -55,7 +55,7 @@ def warm_up():
             "n_way": 5,
             "k_shot": 1,
             "k_query": 1,
-            "meta_batch_size": 1, # Always use meta batch size of 1 when testing
+            "meta_batch_size": 1,  # Always use meta batch size of 1 when testing
             "shuffle": True,
         },
     )
@@ -76,7 +76,7 @@ def warm_up():
         "baselearner_args": baselearner_args,
         "optim_fn": torch.optim.Adam,
         "T": 5,
-        "T_val": 1, # Eval on at least one update f
+        "T_val": 1,  # Eval on at least one update f
         "T_test": 10,
         "train_batch_size": 4,
         "test_batch_size": 1,
