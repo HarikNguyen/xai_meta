@@ -204,6 +204,7 @@ def run_test_master(algo_obj, worker_list, test_loader):
 
     for task_batch in test_loader:
         print(task_batch)
+        print(len(task_batch))
         batch_pre_accs, batch_post_accs = val_on_meta_batch(
             zero_state_cur, total_task, worker_list, task_batch
         )
