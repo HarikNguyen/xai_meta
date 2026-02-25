@@ -71,7 +71,7 @@ def warm_up():
         "train_base_lr": 0.01,
         "base_lr": 0.01,
         "second_order": False,
-        "meta_batch_size": 1,
+        "meta_batch_size": 4,
         "baselearner_fn": Conv4,
         "baselearner_args": baselearner_args,
         "optim_fn": torch.optim.Adam,

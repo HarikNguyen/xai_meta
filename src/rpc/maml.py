@@ -22,7 +22,7 @@ def init_worker(algo_conf):
     return True
 
 
-def _get_worker_name(worker_list, worker_id):
+def _get_worker_name(worker_list, worker_idx):
     """Resolve worker name from configured list with backward-compatible fallback."""
     if worker_list:
         return worker_list[worker_idx]
@@ -35,21 +35,19 @@ def _dispatch_tasks(task_batch, total_task, worker_list, remote_fn, zero_state, 
     if num_workers == 0:
         raise ValueError("worker_list must not be empty")
 
-    # Uses an iterator instead of repeatedly popping from the head of a list
-    # to avoid O(n^2) behavior for larger meta-batches.
-    task_iter = iter(task_batch)
+    if total_task > len(task_batch):
+        raise ValueError(
+            f"total_task ({total_task}) cannot exceed task_batch size ({len(task_batch)})"
+        )
 
-    # Dispatch tasks
-    processed = 0
+    # Dispatch tasks in chunks by index to avoid O(n^2) pop(0) overhead.
     results = []
 
-    while processed < total_task:
-        remaining = total_task - processed
-        part_size = min(num_workers, remaining)
+    for chunk_start in range(0, total_task, num_workers):
+        task_chunk = task_batch[chunk_start : chunk_start + num_workers]
 
         futs = []
-        for worker_idx in range(part_size):
-            task_data = task_batch.pop(0)
+        for worker_idx, task_data in enumerate(task_chunk):
             worker_name = _get_worker_name(worker_list, worker_idx)
             if val_mode:
                 args = (task_data, zero_state, True)
@@ -64,9 +62,6 @@ def _dispatch_tasks(task_batch, total_task, worker_list, remote_fn, zero_state, 
 
         # Gather results
         results.extend(fut.wait() for fut in futs)
-
-        # Update progress
-        processed += part_size
 
     return results
 
@@ -101,8 +96,8 @@ def run_train_master(algo_obj, worker_list, train_loader, val_loader):
             # Save intermediate meta-learner state (checkpoints).
             algo_obj.store_file(f"meta_init_{batch_id}.pt")
 
-        # Save final meta-learner state once training ends.
-        algo_obj.store_file("meta_init.pt")
+    # Save final meta-learner state once training ends.
+    algo_obj.store_file("meta_init.pt")
 
 
 def train_on_meta_batch(algo_obj, worker_list, task_batch):
@@ -180,7 +175,7 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
 
 def run_test_master(algo_obj, worker_list, test_loader):
     algo_obj.read_file("meta_init.pt")
-    total_task = algo_obj.meta_batch_size
+    total_task = algo_obj.test_batch_size
     all_results = []
 
     print("Starting Meta-Testing...")
@@ -208,9 +203,6 @@ def run_test_master(algo_obj, worker_list, test_loader):
 
 
 def check_on_meta_batch(zero_state, total_task, worker_list, task_batch, val_mode=False):
-    num_workers = len(worker_list)
-    processed = 0
-
     results = _dispatch_tasks(
         task_batch,
         total_task,
@@ -252,5 +244,4 @@ def run_check_task_remote(task_data, zero_state, val_mode=False):
         val_mode=val_mode,
         rpc_mode=True,
     )
-
 
