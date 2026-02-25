@@ -246,7 +246,7 @@ def run_check_task_remote(task_data, zero_state, val_mode=False):
         val_mode=val_mode,
         rpc_mode=True,
     )
-    print(pre_acc, post_accs)
+    print(val_mode, post_accs)
     if val_mode:
         return pre_acc, post_accs[-1]
     else:
