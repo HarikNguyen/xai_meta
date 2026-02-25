@@ -145,6 +145,8 @@ class MAML(BaseAlgorithm):
 
         # ----- Inner loop (T updates) -----
         # Train on support set (train_x, train_y)
+        post_preds_list = []
+        post_losses = []
         for _ in range(T):
             # Get loss and grads
             _, grads = get_loss_and_grads(
@@ -164,12 +166,14 @@ class MAML(BaseAlgorithm):
                 train_mode=train_mode,
             )
 
-        # ----- Post-update (theta_T) -----
-        # Eval and return performance on query set (test_x, test_y)
-        post_preds = learner.forward_weights(test_x, fast_weights)
-        post_loss = learner.criterion(post_preds, test_y)
+            # Get post-update (theta_t) loss and predictions
+            # Eval and return performance on query set (test_x, test_y)
+            post_preds = learner.forward_weights(test_x, fast_weights)
+            post_loss = learner.criterion(post_preds, test_y)
+            post_preds_list.append(post_preds)
+            post_losses.append(post_loss)
 
-        return pre_loss, post_loss, pre_preds, post_preds
+        return pre_loss, post_losses, pre_preds, post_preds_list
 
     def set_train_mode(self):
         self.baselearner.train()
@@ -217,9 +221,8 @@ class MAML(BaseAlgorithm):
         # Turn one-hot predictions into class preds
         pre_train_y_hat = torch.argmax(pre_preds, dim=1)
         pre_acc = accuracy(pre_train_y_hat, train_y)
-        post_test_y_hat = torch.argmax(post_preds, dim=1)
-        post_acc = accuracy(post_test_y_hat, test_y)
-        return pre_acc, post_acc
+        post_accs = [accuracy(torch.argmax(p, dim=1), test_y) for p in post_preds]
+        return pre_acc, post_accs
 
     def dump_state(self):
         """Return the state of the meta-learner

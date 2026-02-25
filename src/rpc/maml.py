@@ -137,7 +137,7 @@ def run_train_task_remote(task_data, zero_state):
         device, [support[0], support[1], query[0], query[1]]
     )
 
-    pre_loss, post_loss, _, _ = _GLOBAL_ALGO.inner_train(
+    pre_loss, post_losses, _, _ = _GLOBAL_ALGO.inner_train(
         train_x,
         train_y,
         test_x,
@@ -145,7 +145,7 @@ def run_train_task_remote(task_data, zero_state):
         rpc_mode=True,
     )
 
-    return pre_loss, post_loss
+    return pre_loss, post_losses[-1]
 
 
 def run_val_master(zero_state, total_task, worker_list, val_loader):
@@ -212,8 +212,8 @@ def check_on_meta_batch(zero_state, total_task, worker_list, task_batch, val_mod
         val_mode=val_mode,
     )
 
-    pre_accs = [pre_acc for pre_acc, _ in results]
-    post_accs = [post_acc for _, post_acc in results]
+    pre_accs = [pre_res for pre_res, _ in results]
+    post_accs = [post_res for _, post_res in results]
     
     return pre_accs, post_accs
 
@@ -235,8 +235,8 @@ def run_check_task_remote(task_data, zero_state, val_mode=False):
     train_x, train_y, test_x, test_y = put_on_device(
         device, [support[0], support[1], query[0], query[1]]
     )
-    print(val_mode)
-    return _GLOBAL_ALGO.acc_val(
+
+    pre_acc, post_accs = _GLOBAL_ALGO.acc_val(
         train_x,
         train_y,
         test_x,
@@ -245,3 +245,7 @@ def run_check_task_remote(task_data, zero_state, val_mode=False):
         rpc_mode=True,
     )
 
+    if val_mode:
+        return pre_acc, post_accs[-1]
+    else:
+        return pre_acc, post_accs
