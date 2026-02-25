@@ -187,7 +187,7 @@ def run_test_master(algo_obj, worker_list, test_loader):
             zero_state_cur, total_task, worker_list, task_batch
         )
 
-        combined_accs = np.array(batch_pre_accs) + np.array(batch_post_accs)
+        combined_accs = np.column_stack(batch_pre_accs,batch_post_accs)
 
         if all_results is None:
             all_results = combined_accs
