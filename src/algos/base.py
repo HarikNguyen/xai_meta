@@ -61,6 +61,10 @@ class BaseAlgorithm:
         self.T_val = T_val
         # Number of weight updates at test time
         self.T_test = T_test
+        # Training batch size
+        self.train_batch_size = train_batch_size
+        # Test batch size
+        self.test_batch_size = test_batch_size
         # Learning rate for (meta-)optimizer
         self.lr = lr
         # Device to run model operations on
@@ -69,6 +73,7 @@ class BaseAlgorithm:
         self.episodic = True
         # Batching from episodic data
         self.batching_eps = batching_eps
+
 
         self.test_adam = test_adam
         self.operator = operator
