@@ -178,7 +178,7 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
 def run_test_master(algo_obj, worker_list, test_loader):
     algo_obj.read_file("meta_init.pt")
     total_task = algo_obj.test_batch_size
-    all_results = None
+    all_results = []
 
     print("Starting Meta-Testing...")
 
@@ -191,11 +191,9 @@ def run_test_master(algo_obj, worker_list, test_loader):
 
         combined_accs = np.column_stack((batch_pre_accs, batch_post_accs))
 
-        if all_results is None:
-            all_results = combined_accs
-        else:
-            all_results = np.column_stack((all_results, combined_accs))
-
+        all_results.extend(combined_accs.tolist())
+    
+    all_results = np.array(all_results)
     print(all_results.shape)
     num_test_points = all_results.shape[0]
     means = np.mean(all_results, axis=0)
