@@ -194,7 +194,7 @@ def run_test_master(algo_obj, worker_list, test_loader):
         if all_results is None:
             all_results = combined_accs
         else:
-            all_results.column_stack((all_results, combined_accs))
+            all_results = np.column_stack((all_results, combined_accs))
 
     print(all_results.shape)
     num_test_points = all_results.shape[0]
