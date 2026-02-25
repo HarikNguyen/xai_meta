@@ -189,7 +189,6 @@ def run_test_master(algo_obj, worker_list, test_loader):
 
         print(len(batch_pre_accs))
         print(len(batch_post_accs))
-        print(len(batch_pre_accs[0]))
         all_results.append(batch_pre_accs + batch_post_accs)
 
     all_results = np.array(all_results)  # Shape: [Số lượng task, Số bước update]
@@ -247,7 +246,7 @@ def run_check_task_remote(task_data, zero_state, val_mode=False):
         val_mode=val_mode,
         rpc_mode=True,
     )
-
+    print(pre_acc, post_accs)
     if val_mode:
         return pre_acc, post_accs[-1]
     else:
