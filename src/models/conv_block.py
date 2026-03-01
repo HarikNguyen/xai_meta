@@ -8,7 +8,7 @@ class ConvBlock(nn.Module):
         super(ConvBlock, self).__init__()
         self.device = device
         self.conv = nn.Conv2d(
-            in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=0
+            in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=1
         )
         self.batchnorm = nn.BatchNorm2d(32)
         self.relu = nn.ReLU()
@@ -26,7 +26,7 @@ class ConvBlock(nn.Module):
         return x
 
     def forward_weights(self, x, weights):
-        x = F.conv2d(x, weights[0], weights[1], padding=0)
+        x = F.conv2d(x, weights[0], weights[1], padding=1)
 
         # Manual batch normalization followed by ReLU
         running_mean = torch.zeros(32).to(self.device)
