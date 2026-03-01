@@ -157,7 +157,7 @@ def run_val_master(zero_state, total_task, worker_list, val_loader):
     except StopIteration:
         return 0.0, 0.0, 0.0, 0.0
 
-    pre_accs, post_accs = val_on_meta_batch(
+    pre_accs, post_accs = check_on_meta_batch(
         zero_state,
         total_task,
         worker_list,
