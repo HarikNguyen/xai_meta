@@ -42,5 +42,5 @@ class ConvBlock(nn.Module):
         )
         x = self.relu(x)
         if self.pool:
-            x = F.max_pool2d(F.relu(x), kernel_size=2)
+            x = F.max_pool2d(F.relu(x), kernel_size=2, stride=2)
         return x

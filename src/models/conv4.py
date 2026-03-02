@@ -20,7 +20,7 @@ class Conv4(nn.Module):
                             ("conv_block3", ConvBlock(device=device, indim=32)),
                             (
                                 "conv_block4",
-                                ConvBlock(device=device, indim=32, pools1=True),
+                                ConvBlock(device=device, indim=32, pools1=False),
                             ),
                             ("flatten", nn.Flatten()),
                         ]
