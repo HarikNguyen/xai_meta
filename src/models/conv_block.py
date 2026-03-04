@@ -33,13 +33,14 @@ class ConvBlock(nn.Module):
         # running_var = torch.ones(32).to(self.device)
         running_mean = self.batchnorm.running_mean
         running_var = self.batchnorm.running_var
+        momentum = self.batchnorm.momentum
         x = F.batch_norm(
             x,
             running_mean,
             running_var,
             weights[2],
             weights[3],
-            momentum=1,
+            momentum=momentum,
             training=True,
         )
         x = self.relu(x)
