@@ -34,13 +34,23 @@ class ConvBlock(nn.Module):
         running_mean = self.batchnorm.running_mean
         running_var = self.batchnorm.running_var
         momentum = self.batchnorm.momentum
+        
+        if self.training and self.track_running_stats:
+            if self.num_batches_tracked is not None:
+                print(self.num_batches_tracked)
+                self.num_batches_tracked += 1
+                if self.momentum is None:  # use cumulative moving average
+                    exponential_average_factor = 1.0 / float(self.num_batches_tracked)
+                else:  # use exponential moving average
+                    exponential_average_factor = self.momentum
+        
         x = F.batch_norm(
             x,
             running_mean,
             running_var,
             weights[2],
             weights[3],
-            momentum=momentum,
+            momentum=exponential_average_factor,
             training=True,
         )
         x = self.relu(x)
