@@ -16,11 +16,11 @@ class Conv4(nn.Module):
                     OrderedDict(
                         [
                             ("conv_block1", ConvBlock(device=device, indim=3)),
-                            ("conv_block2", ConvBlock(device=device, indim=32)),
-                            ("conv_block3", ConvBlock(device=device, indim=32)),
+                            ("conv_block2", ConvBlock(device=device, indim=64)),
+                            ("conv_block3", ConvBlock(device=device, indim=64)),
                             (
                                 "conv_block4",
-                                ConvBlock(device=device, indim=32, pools1=False),
+                                ConvBlock(device=device, indim=64, pools1=False),
                             ),
                             ("flatten", nn.Flatten()),
                         ]
