@@ -53,6 +53,7 @@ class ConvBlock(nn.Module):
             momentum=self.batchnorm.momentum,
             training=True,
         )
+        print("af", self.batchnorm.running_mean, self.batchnorm.running_var)
         x = self.relu(x)
         if self.pool:
             x = F.max_pool2d(F.relu(x), kernel_size=2, stride=2)
