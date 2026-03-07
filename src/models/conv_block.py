@@ -38,6 +38,7 @@ class ConvBlock(nn.Module):
         if self.training and self.batchnorm.track_running_stats:
             if self.batchnorm.num_batches_tracked is not None:
                 self.batchnorm.num_batches_tracked += 1
+                print(self.batchnorm.momentum)
                 if self.batchnorm.momentum is None:  # use cumulative moving average
                     exponential_average_factor = 1.0 / float(self.batchnorm.num_batches_tracked)
                 else:  # use exponential moving average
