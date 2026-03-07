@@ -27,7 +27,7 @@ class Conv4(nn.Module):
                     )
                 ),
                 "out": nn.Linear(
-                    in_features=32 * 5 * 5, out_features=self.train_classes
+                    in_features=64 * 5 * 5, out_features=self.train_classes
                 ).to(device),
             }
         )
