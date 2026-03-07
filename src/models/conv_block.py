@@ -10,7 +10,7 @@ class ConvBlock(nn.Module):
         self.conv = nn.Conv2d(
             in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=1
         )
-        self.batchnorm = nn.BatchNorm2d(32)
+        self.batchnorm = nn.BatchNorm2d(32, track_running_stats=False, momentum=1.0)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(
             kernel_size=2, stride=2 if not pools1 else 1, padding=0
@@ -26,24 +26,14 @@ class ConvBlock(nn.Module):
         return x
 
     def forward_weights(self, x, weights):
+        # conv2d
         x = F.conv2d(x, weights[0], weights[1], padding=1)
 
-        # Manual batch normalization followed by ReLU
-        # running_mean = torch.zeros(32).to(self.device)
-        # running_var = torch.ones(32).to(self.device)
+        # batchnrom
         running_mean = self.batchnorm.running_mean
         running_var = self.batchnorm.running_var
         momentum = self.batchnorm.momentum
-        print(running_mean, running_var)
-        # if self.training and self.batchnorm.track_running_stats:
-            # if self.batchnorm.num_batches_tracked is not None:
-                # self.batchnorm.num_batches_tracked += 1
-                # print(self.batchnorm.momentum)
-                # if self.batchnorm.momentum is None:  # use cumulative moving average
-                    # exponential_average_factor = 1.0 / float(self.batchnorm.num_batches_tracked)
-                # else:  # use exponential moving average
-                    # exponential_average_factor = self.batchnorm.momentum
-        
+       
         x = F.batch_norm(
             x,
             running_mean,
@@ -53,8 +43,14 @@ class ConvBlock(nn.Module):
             momentum=self.batchnorm.momentum,
             training=True,
         )
-        print("af", self.batchnorm.running_mean, self.batchnorm.running_var)
+        
+        # activation
         x = self.relu(x)
+
+        # pooling
         if self.pool:
             x = F.max_pool2d(F.relu(x), kernel_size=2, stride=2)
+
+
+        #return
         return x
