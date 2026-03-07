@@ -50,7 +50,7 @@ class ConvBlock(nn.Module):
             running_var,
             weights[2],
             weights[3],
-            momentum=exponential_average_factor,
+            momentum=self.batchnorm.momentum,
             training=True,
         )
         x = self.relu(x)
