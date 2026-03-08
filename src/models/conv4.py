@@ -20,14 +20,14 @@ class Conv4(nn.Module):
                             ("conv_block3", ConvBlock(device=device, indim=64)),
                             (
                                 "conv_block4",
-                                ConvBlock(device=device, indim=64, pools1=False),
+                                ConvBlock(device=device, indim=32, pools1=False),
                             ),
                             ("flatten", nn.Flatten()),
                         ]
                     )
                 ),
                 "out": nn.Linear(
-                    in_features=64 * 5 * 5, out_features=self.train_classes
+                    in_features=32 * 5 * 5, out_features=self.train_classes
                 ).to(device),
             }
         )

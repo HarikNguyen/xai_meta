@@ -8,9 +8,9 @@ class ConvBlock(nn.Module):
         super(ConvBlock, self).__init__()
         self.device = device
         self.conv = nn.Conv2d(
-            in_channels=indim, out_channels=64, kernel_size=3, stride=1, padding=1
+            in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=1
         )
-        self.batchnorm = nn.BatchNorm2d(64, track_running_stats=False, momentum=1.0)
+        self.batchnorm = nn.BatchNorm2d(32, track_running_stats=False, momentum=0.95, eps=1e-3)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(
             kernel_size=2, stride=2 if not pools1 else 1, padding=0
@@ -42,6 +42,7 @@ class ConvBlock(nn.Module):
             weights[3],
             momentum=self.batchnorm.momentum,
             training=True,
+            eps=self.batchnorm.eps,
         )
         
         # activation
