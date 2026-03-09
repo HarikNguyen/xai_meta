@@ -114,7 +114,7 @@ def train_on_meta_batch(algo_obj, worker_list, task_batch):
         run_train_task_remote,
         zero_state,
     )
-    
+
     pre_losses, post_losses = zip(*results)
     pre_losses = torch.stack(pre_losses)
     post_losses = torch.stack(post_losses)
@@ -193,7 +193,7 @@ def run_test_master(algo_obj, worker_list, test_loader):
         combined_accs = np.column_stack((batch_pre_accs, batch_post_accs))
 
         all_results.extend(combined_accs.tolist())
-    
+
     all_results = np.array(all_results)
 
     num_test_points = all_results.shape[0]

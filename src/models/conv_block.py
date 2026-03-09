@@ -10,7 +10,9 @@ class ConvBlock(nn.Module):
         self.conv = nn.Conv2d(
             in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=1
         )
-        self.batchnorm = nn.BatchNorm2d(32, track_running_stats=False, momentum=0.95, eps=1e-3)
+        self.batchnorm = nn.BatchNorm2d(
+            32, track_running_stats=False, momentum=0.95, eps=1e-3
+        )
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(
             kernel_size=2, stride=2 if not pools1 else 1, padding=0
@@ -30,10 +32,10 @@ class ConvBlock(nn.Module):
         x = F.conv2d(x, weights[0], weights[1], padding=1)
 
         # batchnrom
-        running_mean = self.batchnorm.running_mean
-        running_var = self.batchnorm.running_var
+        running_mean = None
+        running_var = None
         momentum = self.batchnorm.momentum
-       
+
         x = F.batch_norm(
             x,
             running_mean,
@@ -44,14 +46,13 @@ class ConvBlock(nn.Module):
             training=True,
             eps=self.batchnorm.eps,
         )
-        
+
         # activation
         x = self.relu(x)
 
         # pooling
         if self.pool:
-            x = F.max_pool2d(F.relu(x), kernel_size=2, stride=2)
+            x = F.max_pool2d(x, kernel_size=2, stride=2)
 
-
-        #return
+        # return
         return x
