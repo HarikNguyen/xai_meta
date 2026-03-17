@@ -11,7 +11,7 @@ class ConvBlock(nn.Module):
             in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=1
         )
         self.batchnorm = nn.BatchNorm2d(
-            32, track_running_stats=False, momentum=0.95, eps=1e-3
+            32, track_running_stats=False,
         )
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(
@@ -34,7 +34,6 @@ class ConvBlock(nn.Module):
         # batchnrom
         running_mean = None
         running_var = None
-        momentum = self.batchnorm.momentum
 
         x = F.batch_norm(
             x,
@@ -42,7 +41,6 @@ class ConvBlock(nn.Module):
             running_var,
             weights[2],
             weights[3],
-            momentum=self.batchnorm.momentum,
             training=True,
             eps=self.batchnorm.eps,
         )
