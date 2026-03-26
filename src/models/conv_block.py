@@ -13,7 +13,7 @@ class ConvBlock(nn.Module):
         self.batchnorm = nn.BatchNorm2d(
             32, track_running_stats=False,
         )
-        self.relu = nn.ReLU()
+        self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(
             kernel_size=2, stride=2 if not pools1 else 1, padding=0
         )
@@ -32,13 +32,10 @@ class ConvBlock(nn.Module):
         x = F.conv2d(x, weights[0], weights[1], padding=1)
 
         # batchnrom
-        running_mean = None
-        running_var = None
-
         x = F.batch_norm(
             x,
-            running_mean,
-            running_var,
+            None,
+            None,
             weights[2],
             weights[3],
             training=True,
@@ -46,7 +43,7 @@ class ConvBlock(nn.Module):
         )
 
         # activation
-        x = self.relu(x)
+        x = F.relu(x, inplace=True)
 
         # pooling
         if self.pool:
