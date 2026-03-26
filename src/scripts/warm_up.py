@@ -20,6 +20,7 @@ def warm_up():
         dataset="miniImagenet",
         dataset_type="train",
         num_workers=1,
+        seed=40,
         sample={
             "metatrain_iterations": metatrain_iterations,
             "n_way": 5,
@@ -27,7 +28,6 @@ def warm_up():
             "k_query": 15,
             "meta_batch_size": 4,
             "shuffle": True,
-            "seed": 40,
         },
     )
 
@@ -36,6 +36,7 @@ def warm_up():
         dataset="miniImagenet",
         dataset_type="val",
         num_workers=2,
+        seed=41,
         sample={
             "metatrain_iterations": metatrain_iterations // val_after,
             "n_way": 5,
@@ -43,7 +44,6 @@ def warm_up():
             "k_query": 15,
             "meta_batch_size": 4,
             "shuffle": True,
-            "seed": 41,
         },
     )
 
@@ -52,6 +52,7 @@ def warm_up():
         dataset="miniImagenet",
         dataset_type="test",
         num_workers=2,
+        seed=42,
         sample={
             "metatrain_iterations": metaval_iterations,
             "n_way": 5,
@@ -59,7 +60,6 @@ def warm_up():
             "k_query": 1,
             "meta_batch_size": 1,  # Always use meta batch size of 1 when testing
             "shuffle": True,
-            "seed": 43,
         },
     )
 
