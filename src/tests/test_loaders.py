@@ -35,6 +35,7 @@ class TestLoaderMiniImageNet(unittest.TestCase):
         }
         self.sampler = BatchTaskSampler(self.dataset.classes, seed=seed, **sample)
 
+        num_workers = 2
         self.loader = DataLoader(
             self.dataset,
             batch_sampler=self.sampler,
