@@ -18,9 +18,10 @@ def main():
         },
     )
 
-    for batch in loader:
+    for id_, batch in enumerate(loader):
+        print(f"Batch {id_}")
         print(batch)
-        break
+        print("==" * 60)
 
 
 if __name__ == "__main__":
