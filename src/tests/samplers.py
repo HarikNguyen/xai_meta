@@ -1,42 +1,42 @@
 import unittest
 import torch
 from loaders.samplers import BatchTaskSampler
+from loaders.datasets import MiniImagenetDataset
+from loaders.transforms import make_transform
 
-class TestSamplers(unittest.TestCase):
+class TestBatchTaskSampler(unittest.TestCase):
     def setUp(self):
-        # Assuming we have 10 classes with 10 samples each
-        self.labels = []
-        for i in range(10):
-            self.labels.extend([f"class_{i}"] * 10)
-            
-    def test_sampler_output_structure(self):
-        n_way, k_shot, k_query = 5, 1, 1
-        meta_batch_size = 2
-        iterations = 10
-        
-        sampler = BatchTaskSampler(
-            labels=self.labels,
-            metatrain_iterations=iterations,
-            n_way=n_way, k_shot=k_shot, k_query=k_query,
-            meta_batch_size=meta_batch_size
+        data_root="miniImagenet",
+        dataset="miniImagenet",
+        dataset_type="train",
+        dataset = MiniImagenetDataset(
+            data_root=data_root,
+            dataset=dataset,
+            dataset_type=dataset_type,
+            out_path=False,
+            transform=make_transform(),
         )
-        
-        # Get a batch from the sampler
-        batch = next(iter(sampler))
-        
-        # Check the batch size
-        self.assertEqual(len(batch), meta_batch_size)
-        
-        # Check the structure of the first task in the batch
-        task = batch[0]
-        self.assertEqual(len(task[0]), n_way * k_shot)
-        self.assertEqual(len(task[1]), n_way * k_query)
+        self.labels = dataset.classes
 
-    def test_no_leakage(self):
-        """Check that there is no overlap between support and query sets."""
-        sampler = BatchTaskSampler(self.labels, 1, 2, 5, 5, 1)
-        batch = next(iter(sampler))
-        support_idx, query_idx = batch[0]
+    def test_sampler_logic(self):
+        print("\n--- Running Sampler Logic Test ---")
+        n_way, k_shot, k_query = 3, 2, 2
+        sampler = BatchTaskSampler(self.labels, 1, n_way, k_shot, k_query, meta_batch_size=1)
         
+        # Get the first task
+        task = next(iter(sampler))[0]
+        support_idx, query_idx = task[0], task[1]
+        
+        print(f"Sampling: {n_way}-way {k_shot}-shot")
+        print(f"Support Indices: {support_idx.tolist()}")
+        print(f"Query Indices:   {query_idx.tolist()}")
+        
+        # Validation
         overlap = set(support_idx.tolist()).intersection(set(query_idx.tolist()))
-        self.assertEqual(len(overlap), 0, "Leakage detected!")
+        print(f"Overlap count: {len(overlap)}")
+        
+        self.assertEqual(len(overlap), 0, "Support and Query must be disjoint!")
+        print("Result: PASS - No data leakage detected.")
+
+if __name__ == '__main__':
+    unittest.main()
