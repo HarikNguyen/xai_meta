@@ -7,8 +7,8 @@ from loaders.transforms import make_transform
 class TestBatchTaskSampler(unittest.TestCase):
     def setUp(self):
         dataset = MiniImagenetDataset(
-            data_root="miniImagenet",
-            dataset="miniImagenet",
+            root_dir="miniImagenet",
+            dataset_name="miniImagenet",
             dataset_type="train",
             out_path=False,
             transform=make_transform(),
