@@ -32,6 +32,7 @@ def _task_collate(batch):
     ----------
     Tuple[batch_support_collated, batch_query_collated]
     """
+    print(batch)
     task_batches_collated = []
     for task_batch in batch:
         batch_support = task_batch[0]
