@@ -6,13 +6,10 @@ from loaders.transforms import make_transform
 
 class TestBatchTaskSampler(unittest.TestCase):
     def setUp(self):
-        data_root="miniImagenet",
-        dataset="miniImagenet",
-        dataset_type="train",
         dataset = MiniImagenetDataset(
-            data_root=data_root,
-            dataset=dataset,
-            dataset_type=dataset_type,
+            data_root="miniImagenet",
+            dataset="miniImagenet",
+            dataset_type="train",
             out_path=False,
             transform=make_transform(),
         )
