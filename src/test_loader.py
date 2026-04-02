@@ -17,6 +17,10 @@ def main():
         },
     )
 
+    for batch in loader:
+        print(batch)
+        break
+
 
 if __name__ == "__main__":
     main()
