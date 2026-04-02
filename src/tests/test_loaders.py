@@ -53,7 +53,7 @@ class TestLoaderMiniImageNet(unittest.TestCase):
         self.assertIsInstance(img, torch.Tensor)
         self.assertIsInstance(label, (int, str))
 
-        indices = [(0, 1),(3, 2)]
+        indices = [([0, 1],[4, 3, 2])]
         batch_data = self.dataset[indices]
         print(f"Fetched {len(batch_data)} items.")
         self.assertEqual(len(batch_data), len(indices))
