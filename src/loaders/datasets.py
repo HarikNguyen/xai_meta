@@ -57,7 +57,6 @@ class MiniImagenetDataset(object):
         (image, label, img_path) if out_path is True
         (image, label) if out_path is False
         """
-        print(index)
 
         label_name = self.filenames[index].split("/")[-2]
         img_path = self.filenames[index]
@@ -86,6 +85,7 @@ class MiniImagenetDataset(object):
         """
         batch_task = []
         for task_indices in indices:
+            print(task_indices)
             support_indices = task_indices[0]
             query_indices = task_indices[1]
 
