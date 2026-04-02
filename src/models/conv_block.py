@@ -11,7 +11,8 @@ class ConvBlock(nn.Module):
             in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=1
         )
         self.batchnorm = nn.BatchNorm2d(
-            32, track_running_stats=False,
+            32,
+            track_running_stats=False,
         )
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(

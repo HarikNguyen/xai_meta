@@ -1,6 +1,7 @@
 import torch
 from loaders import get_dataloader
 
+
 def main():
     loader = get_dataloader(
         data_root="miniImagenet",
@@ -18,7 +19,7 @@ def main():
     )
 
     for batch in loader:
-        # print(batch)
+        print(batch)
         break
 
 

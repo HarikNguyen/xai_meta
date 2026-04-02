@@ -4,19 +4,22 @@ from torch.utils.data import DataLoader
 from loaders.samplers import BatchTaskSampler
 from loaders.datasets import MiniImagenetDataset
 from loaders.transforms import make_transform
-from loaders import _task_collate 
+from loaders import _task_collate
+
 
 class TestLoaderMiniImageNet(unittest.TestCase):
     def setUp(self):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("SETTING UP UNIT TEST")
-        print("="*60)
-        
+        print("=" * 60)
+
         self.n_way, self.k_shot, self.k_query = 5, 1, 15
         self.meta_batch_size = 4
         self.metatrain_iterations = 4
-        print(f"Preparing with:\n\tn_way: {self.n_way}\n\tk_shot: {self.k_shot}\n\tk_query: {self.k_query}\n\tmeta_batch_size: {self.meta_batch_size}\n\tmetatrain_iterations: {self.metatrain_iterations}") 
-        
+        print(
+            f"Preparing with:\n\tn_way: {self.n_way}\n\tk_shot: {self.k_shot}\n\tk_query: {self.k_query}\n\tmeta_batch_size: {self.meta_batch_size}\n\tmetatrain_iterations: {self.metatrain_iterations}"
+        )
+
         self.dataset = MiniImagenetDataset(
             root_dir="miniImagenet",
             dataset_name="miniImagenet",
@@ -59,7 +62,7 @@ class TestLoaderMiniImageNet(unittest.TestCase):
         print("\n--- Running Dataset Test ---")
         img_single, label_single = self.dataset[0]
 
-        indices = [([0, 1],[4, 3, 2])]
+        indices = [([0, 1], [4, 3, 2])]
         batch_data = self.dataset.__getitems__(indices)
         print(f"Fetched {len(batch_data)} batch.")
         self.assertEqual(len(batch_data), len(indices))
@@ -72,10 +75,9 @@ class TestLoaderMiniImageNet(unittest.TestCase):
 
         print("Check passed!")
 
-
     def test_sampler_logic(self):
         print("\n--- Running Sampler Logic Test ---")
-        
+
         # Get the first task
         task = next(iter(self.sampler))[0]
         support_idx, query_idx = task[0], task[1]
@@ -83,33 +85,31 @@ class TestLoaderMiniImageNet(unittest.TestCase):
         print(f"Sampling: {n_way}-way {k_shot}-shot {k_query}-query")
         print(f"Support Indices: {support_idx.tolist()}")
         print(f"Query Indices:   {query_idx.tolist()}")
-        
+
         # Validation
         overlap = set(support_idx.tolist()).intersection(set(query_idx.tolist()))
         print(f"Overlap count: {len(overlap)}")
-        
+
         self.assertEqual(len(overlap), 0, "Support and Query must be disjoint!")
         print("Result: PASS - No data leakage detected.")
 
     def test_collator_logic(self):
         print("\n--- Running Collator Logic Test ---")
-        
-
-        
 
     def test_loader_logic(self):
         print("\n--- Running Loader Logic Test ---")
-        
+
         # Get the first task
         task = next(iter(self.loader))[0]
-        support, query= task[0], task[1]
-        
+        support, query = task[0], task[1]
+
         print(support)
 
     def tearDown(self):
-        print("\n" + "-"*60)
+        print("\n" + "-" * 60)
         print("TEST CASE COMPLETED")
-        print("-"*60)
+        print("-" * 60)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
