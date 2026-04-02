@@ -45,11 +45,21 @@ def _task_collate(batch):
         batch_support[1] = encode_labels(batch_support[1])
         batch_query[1] = encode_labels(batch_query[1])
 
+        print("After encoding")
+        print(batch_support)
+        print("-"*20)
+        print(batch_query)
+
         _, batch_support_labels = torch.unique(batch_support[1], return_inverse=True)
         _, batch_query_labels = torch.unique(batch_query[1], return_inverse=True)
 
         batch_support[1] = batch_support_labels
         batch_query[1] = batch_query_labels
+
+        print("After unique")
+        print(batch_support)
+        print("-"*20)
+        print(batch_query)
 
         task_batches_collated.append((batch_support, batch_query))
 
