@@ -85,7 +85,6 @@ class MiniImagenetDataset(object):
         """
         batch_task = []
         for task_indices in indices:
-            print(task_indices)
             support_indices = task_indices[0]
             query_indices = task_indices[1]
 

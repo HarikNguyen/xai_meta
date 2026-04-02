@@ -44,7 +44,7 @@ class TestLoaderMiniImageNet(unittest.TestCase):
             collate_fn=_task_collate,
         )
 
-    def test_dataset_logic(self):
+    def test_dataset_single_item_logic(self):
         print("\n--- Running Dataset Test ---")
         img, label = self.dataset[0]
         print(f"Single Image Shape: {img.shape}")
@@ -52,6 +52,12 @@ class TestLoaderMiniImageNet(unittest.TestCase):
 
         self.assertIsInstance(img, torch.Tensor)
         self.assertIsInstance(label, (int, str))
+
+        print("Check passed!")
+
+    def test_dataset_batch_logic(self):
+        print("\n--- Running Dataset Test ---")
+        img_single, label_single = self.dataset[0]
 
         indices = [([0, 1],[4, 3, 2])]
         batch_data = self.dataset[indices]
