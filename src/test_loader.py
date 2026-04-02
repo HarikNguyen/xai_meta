@@ -9,10 +9,10 @@ def main():
         num_workers=1,
         sample={
             "metatrain_iterations": 2,
-            "n_way": 5,
+            "n_way": 2,
             "k_shot": 1,
-            "k_query": 15,
-            "meta_batch_size": 4,
+            "k_query": 1,
+            "meta_batch_size": 1,
             "shuffle": True,
         },
     )
