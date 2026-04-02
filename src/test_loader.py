@@ -18,7 +18,7 @@ def main():
     )
 
     for batch in loader:
-        print(batch)
+        # print(batch)
         break
 
 
