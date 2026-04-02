@@ -61,11 +61,11 @@ class TestLoaderMiniImageNet(unittest.TestCase):
 
         indices = [([0, 1],[4, 3, 2])]
         batch_data = self.dataset.__getitems__(indices)
-        print(f"Fetched {len(batch_data)} items.")
+        print(f"Fetched {len(batch_data)} batch.")
         self.assertEqual(len(batch_data), len(indices))
 
         # Check first item in the returned batch
-        first_img, first_lbl = batch_data[0]
+        first_img, first_lbl = batch_data[0][0]
         self.assertEqual(first_img.shape, img_single.shape)
         print(f"First image shape: {first_img.shape}")
 
