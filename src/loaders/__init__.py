@@ -40,6 +40,7 @@ def _task_collate(batch):
         batch_support = default_collate(batch_support)
         batch_query = default_collate(batch_query)
         print(batch_support)
+        print("-"*20)
         print(batch_query)
         batch_support[1] = encode_labels(batch_support[1])
         batch_query[1] = encode_labels(batch_query[1])

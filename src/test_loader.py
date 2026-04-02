@@ -10,8 +10,8 @@ def main():
         sample={
             "metatrain_iterations": 2,
             "n_way": 2,
-            "k_shot": 1,
-            "k_query": 1,
+            "k_shot": 2,
+            "k_query": 3,
             "meta_batch_size": 1,
             "shuffle": True,
         },
