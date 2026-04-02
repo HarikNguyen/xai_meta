@@ -33,11 +33,11 @@ class TestLoaderMiniImageNet(unittest.TestCase):
             "meta_batch_size": self.meta_batch_size,
             "shuffle": True,
         }
-        self.sampler = BatchTaskSampler(dataset.classes, seed=seed, **sample)
+        self.sampler = BatchTaskSampler(self.dataset.classes, seed=seed, **sample)
 
         self.loader = DataLoader(
-            dataset,
-            batch_sampler=sampler,
+            self.dataset,
+            batch_sampler=self.sampler,
             num_workers=num_workers,
             pin_memory=True,
             collate_fn=_task_collate,
