@@ -66,9 +66,9 @@ class TestLoaderMiniImageNet(unittest.TestCase):
 
         # Check first item in the returned batch
         first_img, first_lbl = batch_data[0][0][0]
-        print(first_img)
-        # self.assertEqual(first_img[0].shape, img_single.shape)
-        # print(f"First image shape: {first_img.shape}")
+        print(first_img.shape)
+        print(img_single.shape)
+        self.assertEqual(first_img.shape, img_single.shape)
 
         print("Check passed!")
 
