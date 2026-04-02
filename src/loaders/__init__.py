@@ -32,14 +32,15 @@ def _task_collate(batch):
     ----------
     Tuple[batch_support_collated, batch_query_collated]
     """
-    print(batch)
     task_batches_collated = []
     for task_batch in batch:
         batch_support = task_batch[0]
         batch_query = task_batch[1]
-
+        
         batch_support = default_collate(batch_support)
         batch_query = default_collate(batch_query)
+        print(batch_support)
+        print(batch_query)
         batch_support[1] = encode_labels(batch_support[1])
         batch_query[1] = encode_labels(batch_query[1])
 
