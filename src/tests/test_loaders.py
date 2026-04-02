@@ -94,9 +94,25 @@ class TestLoaderMiniImageNet(unittest.TestCase):
     def test_collator_logic(self):
         print("\n--- Running Collator Logic Test ---")
 
+        
 
     def test_loader_logic(self):
         print("\n--- Running Loader Logic Test ---")
+        
+        # Get the first task
+        task = next(iter(self.loader))[0]
+        support_idx, query_idx = task[0], task[1]
+        n_way, k_shot, k_query = self.n_way, self.k_shot, self.k_query
+        print(f"Sampling: {n_way}-way {k_shot}-shot {k_query}-query")
+        print(f"Support Indices: {support_idx.tolist()}")
+        print(f"Query Indices:   {query_idx.tolist()}")
+        
+        # Validation
+        overlap = set(support_idx.tolist()).intersection(set(query_idx.tolist()))
+        print(f"Overlap count: {len(overlap)}")
+        
+        self.assertEqual(len(overlap), 0, "Support and Query must be disjoint!")
+        print("Result: PASS - No data leakage detected.")
 
     def tearDown(self):
         print("\n" + "-"*60)
