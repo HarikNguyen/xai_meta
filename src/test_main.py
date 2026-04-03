@@ -132,7 +132,7 @@ def main():
     with open("checks.txt", "w") as f:
         f.write(str(checks))
 
-    export_landscape_data(model, loader, "weights")
+    generate_landscape_data(model, loader, "weights")
 
 def test(model, weights, loader_iter):
     batch = next(loader_iter)
