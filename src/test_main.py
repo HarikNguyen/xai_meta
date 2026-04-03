@@ -11,10 +11,10 @@ def main():
         num_workers=1,
         sample={
             "metatrain_iterations": 2,
-            "n_way": 2,
-            "k_shot": 2,
-            "k_query": 3,
-            "meta_batch_size": 1,
+            "n_way": 5,
+            "k_shot": 1,
+            "k_query": 15,
+            "meta_batch_size": 4,
             "shuffle": True,
         },
     )
@@ -28,6 +28,7 @@ def main():
         print(f"Batch {id_}")
         # print(batch)
         print("==" * 60)
+        ls = []
         for task in batch:
             support, query = task[0], task[1]
             sup_x, sup_y = support
@@ -43,10 +44,48 @@ def main():
             print("++" * 60)
             print("pred dtype: {}".format(pred.dtype))
             print("sup_y dtype: {}".format(sup_y.dtype))
-            loss = model.criterion(pred, sup_y)
-            print(loss)
-            print("--" * 60)
+            l, g = get_loss_with_grad(model, sup_x, sup_y, weights)
+            print(l)
+            w = update_w(weights, g)
+            
+            print("test with que")
+            pred = model.forward_weights(que_x, w)
+            print(pred.shape)
+            print(pred)
+            print("++" * 60)
+            print("pred dtype: {}".format(pred.dtype))
+            print("que_y dtype: {}".format(que_y.dtype))
+            l, g = get_loss_with_grad(model, que_x, que_y, w)
+            print(l)
+            ls.append(l)
 
+            print("--" * 60)
+        print(ls)
+        # update init weights by Adam
+        
+
+        print("==" * 60)
+
+
+def update_w(w, g, al=0.001):
+    for w_i, g_i in zip(w, g):
+        w_i = w_i - al * g_i
+    return w
+
+def get_loss_with_grad(model, x, y, weights):
+    pred = model.forward_weights(x, weights)
+    loss = model.criterion(pred, y)
+
+    grads = torch.autograd.grad(
+        loss, weights, create_graph=create_graph, retain_graph=retain_graph
+    )
+
+    gradients = list(grads)
+    return loss, gradients
+
+
+
+    return loss
 
 if __name__ == "__main__":
     main()
