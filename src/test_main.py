@@ -4,6 +4,7 @@ from models import Conv4
 from algos.utils import put_on_device
 import os
 from sklearn.decomposition import PCA
+import numpy as np
 
 def main():
     loader = get_dataloader(
