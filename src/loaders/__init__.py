@@ -9,12 +9,14 @@ def encode_labels(labels):
     mapping = {}
     counter = 0
     result = []
-
+    print(labels)
     for item in labels:
         if item not in mapping:
             mapping[item] = counter
             counter += 1
         result.append(mapping[item])
+
+    
 
     return torch.tensor(result)
 
