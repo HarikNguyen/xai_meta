@@ -106,11 +106,13 @@ def main():
             # store weights
             if not os.path.exists("weights"):
                 os.makedirs("weights")
-            else:
+            elif id_ == 0:
                 for f in os.listdir("weights"):
                     os.remove(os.path.join("weights", f))
                     os.rmdir("weights")
                 os.makedirs("weights")
+            else:
+                pass
 
             torch.save(weights, f"weights/weights_{id_}.pt")
             # test with loader
