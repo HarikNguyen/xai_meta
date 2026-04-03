@@ -3,7 +3,7 @@ from loaders import get_dataloader
 from models import Conv4
 from algos.utils import put_on_device
 import os
-
+from sklearn.decomposition import PCA
 
 def main():
     loader = get_dataloader(
@@ -132,6 +132,8 @@ def main():
     with open("checks.txt", "w") as f:
         f.write(str(checks))
 
+    export_landscape_data(model, loader, "weights")
+
 def test(model, weights, loader_iter):
     batch = next(loader_iter)
     preds = []
@@ -199,9 +201,83 @@ def get_loss_with_grad(model, x, y, weights, r_l=False):
         return loss 
     return loss, gradients
 
+def generate_landscape_data(model, loader, checkpoint_dir, output_file="meta_landscape.npz", resolution=25):
+    print("Server: Starting Meta-Loss Landscape calculation...")
 
+    # --- 1. Extract PCA Directions from Checkpoints ---
+    all_flat_weights = []
+    files = sorted([f for f in os.listdir(checkpoint_dir) if f.endswith('.pt')], 
+                   key=lambda x: int(''.join(filter(str.isdigit, x))))
+    
+    for f in files:
+        weights = torch.load(os.path.join(checkpoint_dir, f), map_location='cuda')
+        # Flattening all parameters into a single vector
+        flat_w = torch.cat([p.data.view(-1) for p in weights]).detach().cpu().numpy()
+        all_flat_weights.append(flat_w)
+    
+    all_flat_weights = np.array(all_flat_weights)
+    pca = PCA(n_components=2)
+    pca.fit(all_flat_weights)
+    
+    d1, d2 = pca.components_
+    center_weights = all_flat_weights[-1] # Centering around the final checkpoint
 
-    return loss
+    # --- 2. Initialize Grid ---
+    alphas = np.linspace(-1.5, 1.5, resolution)
+    betas = np.linspace(-1.5, 1.5, resolution)
+    Z_meta_loss = np.zeros((resolution, resolution))
+    
+    # Grab one representative batch of tasks for consistent evaluation
+    task_batch = next(iter(loader)) 
+
+    # --- 3. The Grid Scan (GPU Intensive) ---
+    print(f"Scanning {resolution}x{resolution} points on GPU...")
+    for i, a in enumerate(alphas):
+        for j, b in enumerate(betas):
+            # Compute new flat weights for this coordinate
+            current_flat = center_weights + a * d1 + b * d2
+            
+            # Reconstruct weight list for the model
+            curr_weights = []
+            ptr = 0
+            for p in model.parameters():
+                numel = p.numel()
+                curr_weights.append(torch.from_numpy(current_flat[ptr:ptr+numel]).view(p.shape).cuda())
+                ptr += numel
+            
+            # Compute Meta-Loss (Inner Loop adaptation + Outer Loop evaluation)
+            batch_losses = []
+            for task in task_batch:
+                sup_x, sup_y = put_on_device("cuda", task[0])
+                que_x, que_y = put_on_device("cuda", task[1])
+                
+                # Fast Adaptation (e.g., 5 steps)
+                w_adapted = [p.clone() for p in curr_weights]
+                for _ in range(5):
+                    # logic from your 'get_loss_with_grad' and 'update_w' functions
+                    # Assuming these are available in your namespace
+                    l, g = get_loss_with_grad(model, sup_x, sup_y, w_adapted)
+                    w_adapted = [wi - 0.01 * gi for wi, gi in zip(w_adapted, g)]
+                
+                # Query Loss (Meta-Loss)
+                with torch.no_grad():
+                    query_pred = model.forward_weights(que_x, w_adapted)
+                    q_loss = model.criterion(query_pred, que_y)
+                    batch_losses.append(q_loss.item())
+            
+            Z_meta_loss[i, j] = np.mean(batch_losses)
+
+    # --- 4. Transform Training Trajectory to PCA space ---
+    traj_coords = pca.transform(all_flat_weights)
+
+    # --- 5. Export for Client ---
+    np.savez(output_file, 
+             alphas=alphas, 
+             betas=betas, 
+             Z=Z_meta_loss, 
+             traj_x=traj_coords[:, 0], 
+             traj_y=traj_coords[:, 1])
+    print(f"Exported landscape data to {output_file}")
 
 if __name__ == "__main__":
     main()
