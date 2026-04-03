@@ -11,35 +11,23 @@ def encode_labels(labels, mapping=None):
     if mapping is None:
         unique_labels = sorted(list(set(labels)))
         mapping = {label: i for i, label in enumerate(unique_labels)}
-    
+
     num_classes = len(mapping)
-    
+
     # 2. Convert labels to integer indices
     try:
         indices = [mapping[item] for item in labels]
     except KeyError as e:
         raise ValueError(f"Label {e} not found in the provided mapping.")
-        
+
     indices_tensor = torch.tensor(indices)
-    
+
     # 3. Convert indices to One-Hot vectors
     # F.one_hot returns a tensor of shape [N, num_classes]
     one_hot_tensor = F.one_hot(indices_tensor, num_classes=num_classes)
-    
+
     return one_hot_tensor.float()
 
-# def encode_labels(labels):
-    # mapping = {}
-    # counter = 0
-    # result = []
-
-    # for item in labels:
-        # if item not in mapping:
-            # mapping[item] = counter
-            # counter += 1
-        # result.append(mapping[item])
-
-    # return torch.tensor(result)
 
 def _task_collate(batch):
     """Collate function that handles collection type of element
