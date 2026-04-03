@@ -39,6 +39,11 @@ def main():
             pred = model.forward_weights(sup_x, weights)
             print(pred.shape)
             print(pred)
+            print("++" * 60)
+            loss = model.criterion(pred, sup_y)
+            print(loss)
+            print("--" * 60)
+
 
 if __name__ == "__main__":
     main()
