@@ -21,7 +21,7 @@ def main():
     model = Conv4(
         device="cuda",
         criterion=torch.nn.CrossEntropyLoss(),
-        train_classes=2,
+        train_classes=5,
     )
     weights = [p.clone().to("cuda") for p in model.parameters()]
     for id_, batch in enumerate(loader):
