@@ -28,9 +28,14 @@ def main():
         print("==" * 60)
         for task in batch:
             support, query = task[0], task[1]
-            print(f"Support: {support[0].shape}")
-            print(f"Query:   {query[0].shape}")
-
+            sup_x, sup_y = support
+            que_x, que_y = query
+            print(sup_x.shape, sup_y.shape)
+            print(que_x.shape, que_y.shape)
+            print("**" * 60)
+            pred = model.forward(sup_x)
+            print(pred.shape)
+            print(pred)
 
 if __name__ == "__main__":
     main()
