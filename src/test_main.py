@@ -70,9 +70,9 @@ def main():
 
 
 def update_w(w, g, al=0.001):
-    for w_i, g_i in zip(w, g):
-        w_i = w_i - al * g_i
-    return w
+    # for w_i, g_i in zip(w, g):
+        # w_i = w_i - al * g_i
+    return [w_i - al * g_i for w_i, g_i in zip(w, g)]
 
 def get_loss_with_grad(model, x, y, weights, r_l=False):
     model.zero_grad()
