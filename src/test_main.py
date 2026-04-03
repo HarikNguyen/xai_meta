@@ -1,6 +1,6 @@
 import torch
 from loaders import get_dataloader
-
+from models import Conv4
 
 def main():
     loader = get_dataloader(
@@ -17,11 +17,19 @@ def main():
             "shuffle": True,
         },
     )
-
+    model = Conv4(
+        device="cuda",
+        criterion=torch.nn.CrossEntropyLoss(),
+        train_classes=64,
+    )
     for id_, batch in enumerate(loader):
         print(f"Batch {id_}")
-        print(batch)
+        # print(batch)
         print("==" * 60)
+        for task in batch:
+            support, query = task[0], task[1]
+            print(f"Support: {support[0].shape}")
+            print(f"Query:   {query[0].shape}")
 
 
 if __name__ == "__main__":
