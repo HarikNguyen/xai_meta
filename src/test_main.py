@@ -2,6 +2,8 @@ import torch
 from loaders import get_dataloader
 from models import Conv4
 from algos.utils import put_on_device
+import os
+
 
 def main():
     loader = get_dataloader(
@@ -26,6 +28,7 @@ def main():
     # weights = [p.clone().to("cuda") for p in model.parameters()]
     weights = [p.clone().to("cuda").detach().requires_grad_(True) for p in model.parameters()]
     optim = torch.optim.Adam(weights, lr=0.001)
+    losses = []
     for id_, batch in enumerate(loader):
         print()
         print("=*=" * 60)
@@ -69,6 +72,7 @@ def main():
         print(ls)
         # update init weights by Adam
         avg_l = torch.mean(torch.stack(ls))
+        losses.append(avg_l.item())
         print(avg_l)
         # print("==" * 60)
         optim.zero_grad()
@@ -83,6 +87,10 @@ def main():
 
         print("=*=" * 60)
         print()
+
+    # write to file
+    with open("losses.txt", "w") as f:
+        f.write(str(losses))
 
 
 def update_w(w, g, al=0.01):
