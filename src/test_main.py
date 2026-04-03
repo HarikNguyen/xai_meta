@@ -73,6 +73,12 @@ def main():
         # print("==" * 60)
         optim.zero_grad()
         avg_l.backward()
+        
+        # clip gradient
+        for p in weights:
+            if p.grad is not None:
+                p.grad.data.clamp_(-10, 10)
+
         optim.step()
 
         print("=*=" * 60)
@@ -82,6 +88,9 @@ def main():
 def update_w(w, g, al=0.01):
     # for w_i, g_i in zip(w, g):
         # w_i = w_i - al * g_i
+    # clip gradient
+    g = [torch.clamp(p, -10, 10) for p in g]
+
     return [w_i - al * g_i for w_i, g_i in zip(w, g)]
 
 def get_loss_with_grad(model, x, y, weights, r_l=False):
