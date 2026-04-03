@@ -12,7 +12,7 @@ def main():
         dataset_type="train",
         num_workers=1,
         sample={
-            "metatrain_iterations": 10000,
+            "metatrain_iterations": 1000,
             "n_way": 5,
             "k_shot": 1,
             "k_query": 15,
@@ -102,7 +102,17 @@ def main():
 
         print("=*=" * 60)
         print()
-        if id_ % 1000 == 0:
+        if id_ % 100 == 0:
+            # store weights
+            if not os.path.exists("weights"):
+                os.makedirs("weights")
+            else:
+                for f in os.listdir("weights"):
+                    os.remove(os.path.join("weights", f))
+                    os.rmdir("weights")
+                os.makedirs("weights")
+
+            torch.save(weights, f"weights/weights_{id}.pt")
             # test with loader
             avg_pred, avg_post = test(model, weights, iter(test_loader))
             print(avg_pred)
@@ -110,6 +120,11 @@ def main():
             checks.append((avg_pred[0], avg_pred[1], avg_post[0], avg_post[1]))
 
     # write to file
+    if os.path.exists("losses.txt"):
+        os.remove("losses.txt")
+    if os.path.exists("checks.txt"):
+        os.remove("checks.txt")
+
     with open("losses.txt", "w") as f:
         f.write(str(losses))
     with open("checks.txt", "w") as f:
