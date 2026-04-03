@@ -23,6 +23,7 @@ def main():
         criterion=torch.nn.CrossEntropyLoss(),
         train_classes=2,
     )
+    weights = [p.clone().detach().to("cuda") for p in self.baselearner.parameters()]
     for id_, batch in enumerate(loader):
         print(f"Batch {id_}")
         # print(batch)
@@ -35,7 +36,7 @@ def main():
             print(sup_x.shape, sup_y.shape)
             print(que_x.shape, que_y.shape)
             print("**" * 60)
-            pred = model.forward(sup_x)
+            pred = model.forward_weights(sup_x, weights)
             print(pred.shape)
             print(pred)
 
