@@ -23,7 +23,8 @@ def main():
         criterion=torch.nn.CrossEntropyLoss(),
         train_classes=5,
     )
-    weights = [p.clone().to("cuda") for p in model.parameters()]
+    # weights = [p.clone().to("cuda") for p in model.parameters()]
+    weights = [p.clone().to("cuda").detach().requires_grad_(True) for p in model.parameters()]
     optim = torch.optim.Adam(weights, lr=0.001)
     for id_, batch in enumerate(loader):
         print()
