@@ -107,7 +107,7 @@ def main():
             avg_pred, avg_post = test(model, weights, iter(test_loader))
             print(avg_pred)
             print(avg_post)
-            checks.apped((avg_pred[0], avg_pred[1], avg_post[0], avg_post[1]))
+            checks.append((avg_pred[0], avg_pred[1], avg_post[0], avg_post[1]))
 
     # write to file
     with open("losses.txt", "w") as f:
