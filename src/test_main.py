@@ -84,7 +84,7 @@ def get_loss_with_grad(model, x, y, weights, r_l=False):
     )
 
     gradients = list(grads)
-    if rl:
+    if r_l:
         return loss
     return loss, gradients
 
