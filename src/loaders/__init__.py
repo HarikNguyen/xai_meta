@@ -6,28 +6,40 @@ from .transforms import make_transform
 from .samplers import BatchTaskSampler
 
 
-def encode_labels(labels, mapping=None):
-    # 1. Initialize or generate the mapping
-    if mapping is None:
-        unique_labels = sorted(list(set(labels)))
-        mapping = {label: i for i, label in enumerate(unique_labels)}
+# def encode_labels(labels, mapping=None):
+    # # 1. Initialize or generate the mapping
+    # if mapping is None:
+        # unique_labels = sorted(list(set(labels)))
+        # mapping = {label: i for i, label in enumerate(unique_labels)}
     
-    num_classes = len(mapping)
+    # num_classes = len(mapping)
     
-    # 2. Convert labels to integer indices
-    try:
-        indices = [mapping[item] for item in labels]
-    except KeyError as e:
-        raise ValueError(f"Label {e} not found in the provided mapping.")
+    # # 2. Convert labels to integer indices
+    # try:
+        # indices = [mapping[item] for item in labels]
+    # except KeyError as e:
+        # raise ValueError(f"Label {e} not found in the provided mapping.")
         
-    indices_tensor = torch.tensor(indices)
+    # indices_tensor = torch.tensor(indices)
     
-    # 3. Convert indices to One-Hot vectors
-    # F.one_hot returns a tensor of shape [N, num_classes]
-    one_hot_tensor = F.one_hot(indices_tensor, num_classes=num_classes)
+    # # 3. Convert indices to One-Hot vectors
+    # # F.one_hot returns a tensor of shape [N, num_classes]
+    # one_hot_tensor = F.one_hot(indices_tensor, num_classes=num_classes)
     
-    return one_hot_tensor.float()
+    # return one_hot_tensor.float()
 
+def encode_labels(labels):
+    mapping = {}
+    counter = 0
+    result = []
+
+    for item in labels:
+        if item not in mapping:
+            mapping[item] = counter
+            counter += 1
+        result.append(mapping[item])
+
+    return torch.tensor(result)
 
 def _task_collate(batch):
     """Collate function that handles collection type of element
@@ -53,11 +65,11 @@ def _task_collate(batch):
         batch_support[1] = encode_labels(batch_support[1])
         batch_query[1] = encode_labels(batch_query[1])
 
-        # _, batch_support_labels = torch.unique(batch_support[1], return_inverse=True)
-        # _, batch_query_labels = torch.unique(batch_query[1], return_inverse=True)
+        _, batch_support_labels = torch.unique(batch_support[1], return_inverse=True)
+        _, batch_query_labels = torch.unique(batch_query[1], return_inverse=True)
 
-        # batch_support[1] = batch_support_labels
-        # batch_query[1] = batch_query_labels
+        batch_support[1] = batch_support_labels
+        batch_query[1] = batch_query_labels
 
         task_batches_collated.append((batch_support, batch_query))
 
