@@ -152,7 +152,7 @@ def test(model, weights, loader_iter):
     return avg_pred, avg_post
         
 
-def get_accuracy(pred, y):
+def get_accuracy(preds, y):
     _, pred_idx = torch.max(preds, dim=1)
     _, true_idx = torch.max(y, dim=1)
     
