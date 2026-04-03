@@ -40,6 +40,8 @@ def main():
             print(pred.shape)
             print(pred)
             print("++" * 60)
+            print("pred dtype: {}".format(pred.dtype))
+            print("sup_y dtype: {}".format(sup_y.dtype))
             loss = model.criterion(pred, sup_y)
             print(loss)
             print("--" * 60)
