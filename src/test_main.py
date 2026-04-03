@@ -45,7 +45,7 @@ def main():
             print("pred dtype: {}".format(pred.dtype))
             print("sup_y dtype: {}".format(sup_y.dtype))
             w = [p.clone() for p in weights]
-            for _ in range(2):
+            for _ in range(5):
                 l, g = get_loss_with_grad(model, sup_x, sup_y, w)
                 print(l)
                 w = update_w(w, g)
