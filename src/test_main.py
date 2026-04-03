@@ -75,6 +75,7 @@ def update_w(w, g, al=0.001):
     return w
 
 def get_loss_with_grad(model, x, y, weights, r_l=False):
+    model.zero_grad()
     pred = model.forward_weights(x, weights)
     loss = model.criterion(pred, y)
 
