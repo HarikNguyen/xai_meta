@@ -44,9 +44,11 @@ def main():
             print("++" * 60)
             print("pred dtype: {}".format(pred.dtype))
             print("sup_y dtype: {}".format(sup_y.dtype))
-            l, g = get_loss_with_grad(model, sup_x, sup_y, weights)
-            print(l)
-            w = update_w(weights, g)
+            w = [p.clone() for p in weights]
+            for _ in range(2):
+                l, g = get_loss_with_grad(model, sup_x, sup_y, w)
+                print(l)
+                w = update_w(w, g)
             
             print("test with que")
             pred = model.forward_weights(que_x, w)
@@ -77,7 +79,7 @@ def get_loss_with_grad(model, x, y, weights, r_l=False):
     loss = model.criterion(pred, y)
 
     grads = torch.autograd.grad(
-        loss, weights, create_graph=True, retain_graph=retain_graph
+        loss, weights, create_graph=True, retain_graph=True
     )
 
     gradients = list(grads)
