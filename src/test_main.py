@@ -243,7 +243,7 @@ def generate_landscape_data(model, loader, checkpoint_dir, output_file="meta_lan
             ptr = 0
             for p in model.parameters():
                 numel = p.numel()
-                curr_weights.append(torch.from_numpy(current_flat[ptr:ptr+numel]).view(p.shape).cuda())
+                curr_weights.append(torch.from_numpy(current_flat[ptr:ptr+numel]).view(p.shape).cuda().float())
                 ptr += numel
             
             # Compute Meta-Loss (Inner Loop adaptation + Outer Loop evaluation)
