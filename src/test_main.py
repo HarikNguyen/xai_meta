@@ -21,7 +21,7 @@ def main():
     model = Conv4(
         device="cuda",
         criterion=torch.nn.CrossEntropyLoss(),
-        train_classes=64,
+        train_classes=2,
     )
     for id_, batch in enumerate(loader):
         print(f"Batch {id_}")
