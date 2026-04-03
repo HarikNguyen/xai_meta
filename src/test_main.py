@@ -32,6 +32,7 @@ def main():
             support, query = task[0], task[1]
             sup_x, sup_y = support
             que_x, que_y = query
+            print("dtype: sup - {}:{}, que - {}:{}".format(sup_x.dtype, sup_y.dtype, que_x.dtype, que_y.dtype))
             sup_x, sup_y, que_x, que_y = put_on_device("cuda", [sup_x, sup_y, que_x, que_y])
             print(sup_x.shape, sup_y.shape)
             print(que_x.shape, que_y.shape)
