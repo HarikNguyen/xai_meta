@@ -10,7 +10,7 @@ def main():
         dataset_type="train",
         num_workers=1,
         sample={
-            "metatrain_iterations": 2,
+            "metatrain_iterations": 10,
             "n_way": 5,
             "k_shot": 1,
             "k_query": 15,
@@ -24,7 +24,10 @@ def main():
         train_classes=5,
     )
     weights = [p.clone().to("cuda") for p in model.parameters()]
+    optim = torch.optim.Adam(weights, lr=0.001)
     for id_, batch in enumerate(loader):
+        print()
+        print("=*=" * 60)
         print(f"Batch {id_}")
         # print(batch)
         print("==" * 60)
@@ -64,12 +67,18 @@ def main():
             print("--" * 60)
         print(ls)
         # update init weights by Adam
-        
-
+        avg_l = torch.mean(torch.stack(ls))
+        print(avg_l)
         print("==" * 60)
+        optim.zero_grad()
+        avg_l.backward()
+        optim.step()
+
+        print("=*=" * 60)
+        print()
 
 
-def update_w(w, g, al=0.001):
+def update_w(w, g, al=0.01):
     # for w_i, g_i in zip(w, g):
         # w_i = w_i - al * g_i
     return [w_i - al * g_i for w_i, g_i in zip(w, g)]
@@ -85,7 +94,7 @@ def get_loss_with_grad(model, x, y, weights, r_l=False):
 
     gradients = list(grads)
     if r_l:
-        return loss
+        return loss 
     return loss, gradients
 
 
