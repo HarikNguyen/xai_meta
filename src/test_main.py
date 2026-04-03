@@ -1,6 +1,7 @@
 import torch
 from loaders import get_dataloader
 from models import Conv4
+from algos.utils import put_on_device
 
 def main():
     loader = get_dataloader(
@@ -30,6 +31,7 @@ def main():
             support, query = task[0], task[1]
             sup_x, sup_y = support
             que_x, que_y = query
+            sup_x, sup_y, que_x, que_y = put_on_device("cuda", [sup_x, sup_y, que_x, que_y])
             print(sup_x.shape, sup_y.shape)
             print(que_x.shape, que_y.shape)
             print("**" * 60)
