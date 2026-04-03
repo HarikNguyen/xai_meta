@@ -104,7 +104,7 @@ def main():
         print()
         if id_ % 1000 == 0:
             # test with loader
-            avg_pred, avg_post = test(model, weights, test_loader)
+            avg_pred, avg_post = test(model, weights, iter(test_loader))
             print(avg_pred)
             print(avg_post)
             checks.apped((avg_pred[0], avg_pred[1], avg_post[0], avg_post[1]))
@@ -115,8 +115,8 @@ def main():
     with open("checks.txt", "w") as f:
         f.write(str(checks))
 
-def test(model, weights, loader):
-    batch = next(loader)
+def test(model, weights, loader_iter):
+    batch = next(loader_iter)
     preds = []
     posts = []
     for task in batch:
