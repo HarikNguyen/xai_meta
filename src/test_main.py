@@ -243,14 +243,15 @@ def generate_landscape_data(model, loader, checkpoint_dir, output_file="meta_lan
             ptr = 0
             for p in model.parameters():
                 numel = p.numel()
-                curr_weights.append(torch.from_numpy(current_flat[ptr:ptr+numel]).view(p.shape).cuda().float())
+                curr_weights.append(torch.from_numpy(current_flat[ptr:ptr+numel]).view(p.shape).cuda().float().requires_grad_(True))
                 ptr += numel
             
             # Compute Meta-Loss (Inner Loop adaptation + Outer Loop evaluation)
             batch_losses = []
             for task in task_batch:
-                sup_x, sup_y = put_on_device("cuda", task[0])
-                que_x, que_y = put_on_device("cuda", task[1])
+                sup_x, sup_y = support
+                que_x, que_y = query
+                sup_x, sup_y, que_x, que_y = put_on_device("cuda", [sup_x, sup_y, que_x, que_y])
                 
                 # Fast Adaptation (e.g., 5 steps)
                 w_adapted = [p.clone() for p in curr_weights]
