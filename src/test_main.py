@@ -112,7 +112,7 @@ def main():
                     os.rmdir("weights")
                 os.makedirs("weights")
 
-            torch.save(weights, f"weights/weights_{id}.pt")
+            torch.save(weights, f"weights/weights_{id_}.pt")
             # test with loader
             avg_pred, avg_post = test(model, weights, iter(test_loader))
             print(avg_pred)
