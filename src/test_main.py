@@ -26,7 +26,7 @@ def main():
         dataset_type="test",
         num_workers=1,
         sample={
-            "metatrain_iterations": 10,
+            "metatrain_iterations": 11,
             "n_way": 5,
             "k_shot": 1,
             "k_query": 15,
