@@ -55,7 +55,7 @@ def main():
             print("++" * 60)
             print("pred dtype: {}".format(pred.dtype))
             print("que_y dtype: {}".format(que_y.dtype))
-            l, g = get_loss_with_grad(model, que_x, que_y, w)
+            l = get_loss_with_grad(model, que_x, que_y, w, True)
             print(l)
             ls.append(l)
 
@@ -72,15 +72,17 @@ def update_w(w, g, al=0.001):
         w_i = w_i - al * g_i
     return w
 
-def get_loss_with_grad(model, x, y, weights):
+def get_loss_with_grad(model, x, y, weights, r_l=False):
     pred = model.forward_weights(x, weights)
     loss = model.criterion(pred, y)
 
     grads = torch.autograd.grad(
-        loss, weights, create_graph=create_graph, retain_graph=retain_graph
+        loss, weights, create_graph=True, retain_graph=retain_graph
     )
 
     gradients = list(grads)
+    if rl:
+        return loss
     return loss, gradients
 
 
