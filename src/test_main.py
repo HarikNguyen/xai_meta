@@ -39,8 +39,8 @@ def main():
             que_x, que_y = query
             # print("dtype: sup - {}:{}, que - {}:{}".format(sup_x.dtype, sup_y.dtype, que_x.dtype, que_y.dtype))
             sup_x, sup_y, que_x, que_y = put_on_device("cuda", [sup_x, sup_y, que_x, que_y])
-            print(sup_x.shape, sup_y.shape)
-            print(que_x.shape, que_y.shape)
+            # print(sup_x.shape, sup_y.shape)
+            # print(que_x.shape, que_y.shape)
             # print("**" * 60)
             pred = model.forward_weights(sup_x, weights)
             # print(f"pred shape: {pred.shape}")
@@ -51,7 +51,7 @@ def main():
             w = [p.clone() for p in weights]
             for _ in range(5):
                 l, g = get_loss_with_grad(model, sup_x, sup_y, w)
-                print(l)
+                # print(l)
                 w = update_w(w, g)
             
             # print("test with que")
