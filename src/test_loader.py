@@ -20,7 +20,7 @@ def main():
 
     for id_, batch in enumerate(loader):
         print(f"Batch {id_}")
-        # print(batch)
+        print(batch)
         print("==" * 60)
 
 
