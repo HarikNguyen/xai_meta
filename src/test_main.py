@@ -23,7 +23,7 @@ def main():
         criterion=torch.nn.CrossEntropyLoss(),
         train_classes=2,
     )
-    weights = [p.clone().detach().to("cuda") for p in model.parameters()]
+    weights = [p.clone().to("cuda") for p in model.parameters()]
     for id_, batch in enumerate(loader):
         print(f"Batch {id_}")
         # print(batch)
