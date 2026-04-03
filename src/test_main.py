@@ -10,7 +10,7 @@ def main():
         dataset_type="train",
         num_workers=1,
         sample={
-            "metatrain_iterations": 3,
+            "metatrain_iterations": 100,
             "n_way": 5,
             "k_shot": 1,
             "k_query": 15,
@@ -31,46 +31,46 @@ def main():
         print("=*=" * 60)
         print(f"Batch {id_}")
         # print(batch)
-        print("==" * 60)
+        # print("==" * 60)
         ls = []
         for task in batch:
             support, query = task[0], task[1]
             sup_x, sup_y = support
             que_x, que_y = query
-            print("dtype: sup - {}:{}, que - {}:{}".format(sup_x.dtype, sup_y.dtype, que_x.dtype, que_y.dtype))
+            # print("dtype: sup - {}:{}, que - {}:{}".format(sup_x.dtype, sup_y.dtype, que_x.dtype, que_y.dtype))
             sup_x, sup_y, que_x, que_y = put_on_device("cuda", [sup_x, sup_y, que_x, que_y])
             print(sup_x.shape, sup_y.shape)
             print(que_x.shape, que_y.shape)
-            print("**" * 60)
+            # print("**" * 60)
             pred = model.forward_weights(sup_x, weights)
-            print(f"pred shape: {pred.shape}")
+            # print(f"pred shape: {pred.shape}")
             # print("pred", pred)
-            print("++" * 60)
-            print("pred dtype: {}".format(pred.dtype))
-            print("sup_y dtype: {}".format(sup_y.dtype))
+            # print("++" * 60)
+            # print("pred dtype: {}".format(pred.dtype))
+            # print("sup_y dtype: {}".format(sup_y.dtype))
             w = [p.clone() for p in weights]
             for _ in range(5):
                 l, g = get_loss_with_grad(model, sup_x, sup_y, w)
                 print(l)
                 w = update_w(w, g)
             
-            print("test with que")
+            # print("test with que")
             pred = model.forward_weights(que_x, w)
-            print("pred que shape: ", pred.shape)
+            # print("pred que shape: ", pred.shape)
             # print("pred que", pred)
-            print("++" * 60)
-            print("pred dtype: {}".format(pred.dtype))
-            print("que_y dtype: {}".format(que_y.dtype))
+            # print("++" * 60)
+            # print("pred dtype: {}".format(pred.dtype))
+            # print("que_y dtype: {}".format(que_y.dtype))
             l = get_loss_with_grad(model, que_x, que_y, w, True)
-            print(l)
+            # print(l)
             ls.append(l)
 
-            print("--" * 60)
+            # print("--" * 60)
         print(ls)
         # update init weights by Adam
         avg_l = torch.mean(torch.stack(ls))
         print(avg_l)
-        print("==" * 60)
+        # print("==" * 60)
         optim.zero_grad()
         avg_l.backward()
         optim.step()
