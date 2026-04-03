@@ -249,6 +249,7 @@ def generate_landscape_data(model, loader, checkpoint_dir, output_file="meta_lan
             # Compute Meta-Loss (Inner Loop adaptation + Outer Loop evaluation)
             batch_losses = []
             for task in task_batch:
+                support, query = task
                 sup_x, sup_y = support
                 que_x, que_y = query
                 sup_x, sup_y, que_x, que_y = put_on_device("cuda", [sup_x, sup_y, que_x, que_y])
