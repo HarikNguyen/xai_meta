@@ -180,7 +180,7 @@ def accuracy(y_pred, y):
     """
 
     # return ((y_pred == y).float().sum() / len(y)).item()
-    pred_idx = torch.max(y_pred, dim=1)
+    _, pred_idx = torch.max(y_pred, dim=1)
     _, true_idx = torch.max(y, dim=1)
 
     accuracy = (pred_idx == true_idx).float().mean()
