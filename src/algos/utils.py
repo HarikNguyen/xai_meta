@@ -179,4 +179,11 @@ def accuracy(y_pred, y):
         Float accuracy score in [0,1]
     """
 
-    return ((y_pred == y).float().sum() / len(y)).item()
+    # return ((y_pred == y).float().sum() / len(y)).item()
+    ed_idx = torch.max(y_pred, dim=1)
+    _, true_idx = torch.max(y, dim=1)
+
+    accuracy = (pred_idx == true_idx).float().mean()
+
+    return accuracy.item()
+

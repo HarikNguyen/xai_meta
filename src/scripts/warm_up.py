@@ -13,14 +13,13 @@ def warm_up():
     # Define datasets
     metatrain_iterations = 60000
     val_after = 1000
-    metaval_iterations = 600
+    metaval_iterations = 600+1
 
     train_loader = get_dataloader(
         data_root="miniImagenet",
         dataset="miniImagenet",
         dataset_type="train",
-        num_workers=1,
-        seed=40,
+        num_workers=2,
         sample={
             "metatrain_iterations": metatrain_iterations,
             "n_way": 5,
@@ -36,7 +35,6 @@ def warm_up():
         dataset="miniImagenet",
         dataset_type="val",
         num_workers=2,
-        seed=41,
         sample={
             "metatrain_iterations": metatrain_iterations // val_after,
             "n_way": 5,
