@@ -219,9 +219,11 @@ class MAML(BaseAlgorithm):
         )
 
         # Turn one-hot predictions into class preds
-        pre_train_y_hat = torch.argmax(pre_preds, dim=1)
-        pre_acc = accuracy(pre_train_y_hat, train_y)
-        post_accs = [accuracy(torch.argmax(p, dim=1), test_y) for p in post_preds]
+        pre_acc = accuracy(pre_preds, train_y)
+        post_accs = [accuracy(p, test_y) for p in post_preds]
+        # pre_train_y_hat = torch.argmax(pre_preds, dim=1)
+        # pre_acc = accuracy(pre_train_y_hat, train_y)
+        # post_accs = [accuracy(torch.argmax(p, dim=1), test_y) for p in post_preds]
         return pre_acc, post_accs
 
     def dump_state(self):
