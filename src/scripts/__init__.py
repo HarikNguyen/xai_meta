@@ -52,7 +52,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf):
         if id_ % VAL_AFTER == 0:
             val_boT = next(val_iter)
             val_pbar = tqdm(val_boT, desc="Validating", position=0, leave=False)
-            pre_valres, post_valres = val_on_metabatch(val_pbar)
+            pre_valres, post_valres = val_on_metabatch(algo_mgr, val_pbar)
 
             # close val bar (remove from screen)
             val_pbar.close()
