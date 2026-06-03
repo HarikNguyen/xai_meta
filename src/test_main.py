@@ -25,7 +25,7 @@ def main():
     test_loader = get_dataloader(
         data_root="miniImagenet",
         dataset="miniImagenet",
-        dataset_type="test",
+        dataset_type="val",
         num_workers=1,
         sample={
             "metatrain_iterations": 601,
@@ -159,7 +159,7 @@ def test(model, weights, loader_iter):
 
         preds.append((sup_acc, que_acc))
 
-        # update 5 times
+        # update 1 times
         w = [p.clone() for p in weights]
         for _ in range(5):
             l, g = get_loss_with_grad(model, sup_x, sup_y, w)
@@ -202,12 +202,12 @@ def update_w(w, g, al=0.01):
     return [w_i - al * g_i for w_i, g_i in zip(w, g)]
 
 
-def get_loss_with_grad(model, x, y, weights, r_l=False):
+def get_loss_with_grad(model, x, y, weights, r_l=false):
     model.zero_grad()
     pred = model.forward_weights(x, weights)
     loss = model.criterion(pred, y)
 
-    grads = torch.autograd.grad(loss, weights, create_graph=True, retain_graph=True)
+    grads = torch.autograd.grad(loss, weights, create_graph=true, retain_graph=true)
 
     gradients = list(grads)
     if r_l:

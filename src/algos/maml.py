@@ -146,8 +146,27 @@ class MAML(BaseAlgorithm):
 
         return meta_loss.item()
 
-    def val(self, train_x, train_y, test_x, test_y):
-        pass
+    def val(self, sup_x, sup_y, que_x, que_y):
+        sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
+        vmap_deploy = tf.vmap(
+            self._deploy, 
+            in_dims=(None, 0, 0, 0, 0), 
+            chunk_size=self.vmap_chunk_size
+        )
+
+        sup_losses, que_losses, sup_preds_list, que_preds_list = vmap_deploy(
+            self.theta_0,
+            sup_x,
+            sup_y,
+            que_x,
+            que_y,
+            train_mode=False,
+            T=self.T_val,
+        )
+
+        meta_loss = que_losses[-1].mean()
+
+        return meta_loss.item(), que_preds_list[-1]
 
     def dump_state(self):
         """Return the state of the meta-learner
