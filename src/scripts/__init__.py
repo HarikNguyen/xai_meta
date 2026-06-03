@@ -2,62 +2,79 @@ import os
 import numpy as np
 import math
 import torch
-import torch.multiprocessing as mp
-import torch.distributed.autograd as dist_autograd
-import torch.distributed.rpc as rpc
+from tqdm import tqdm
+
 
 from .warm_up import warm_up
-from algos.base import BaseAlgorithm
 from algos.maml import MAML
-from algos.utils import put_on_device
 
-from rpc.maml import run_train_master, run_test_master, init_worker
-
-
-def run(
-    validate,
-    world_size,
-):
-    mp.set_start_method("spawn", force=True)
-    world_size = world_size
-    mp.spawn(run_process, args=(world_size, validate), nprocs=world_size, join=True)
+from loaders.utils import boT_to_stack
 
 
-def run_process(rank, world_size, validate):
-    os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "29500"
-    device_maps = {
-        f"worker{i}": {torch.device("cuda:0"): torch.device("cuda:0")}
-        for i in range(world_size)
-    }
+############################################################################################
+### Main Func
+############################################################################################
 
-    options = rpc.TensorPipeRpcBackendOptions(
-        device_maps=device_maps,
-    )
+VAL_AFTER = 1000
+TRAIN_MODE = "train"
+VAL_MODE = "val"
+TEST_MODE = "test"
 
-    rpc.init_rpc(
-        name=f"worker{rank}",
-        rank=rank,
-        world_size=world_size,
-        rpc_backend_options=options,
-    )
+def run(args):
+    if args.algo == "maml":
+        algo_class = MAML()
+    else:
+        raise NotImplementedError(f"Algorithm {algo} not implemented.")
 
-    if rank == 0:
-        train_loader, val_loader, test_loader, algo_conf = warm_up()
+    # warm up
+    train_loader, val_loader, test_loader, algo_conf = warm_up()
+    val_iter = iter(val_loader)
+    algo_conf["vmap_chunk_size"] = args.vmap_chunk_size
 
-        maml = MAML(**algo_conf)
-        workers = [f"worker{i}" for i in range(1, world_size)]
 
-        # Initialize worker-local algo instances so we don't send the full
-        # `maml` object with every RPC.
-        for w in workers:
-            rpc.rpc_sync(w, init_worker, args=(algo_conf,))
+    checkpoint_dir = args.checkpoint_dir
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
 
-        if not validate:
-            run_train_master(maml, workers, train_loader, val_loader)
-        else:
-            print("Meta-Testing...")
-            run_test_master(maml, workers, test_loader)
+    if args.mode == TRAIN_MODE:
+        run_train(args, algo_class, train_loader, val_loader, algo_conf)
 
-    # shutdown all
-    rpc.shutdown()
+def run_train(args, algo_class, train_loader, val_loader, algo_conf):
+    # define algo_obj for manage training and validating strategies
+    algo_mgr = algo_class(**algo_conf)
+    
+    train_pbar = tqdm(train_loader, desc="Training", position=1, leave=True)
+    for id_, batch in enumerate(train_pbar):
+        meta_loss = train_on_metabatch(algo_mgr, batch)
+
+        train_pbar.set_postfix({"Meta Loss": f"{meta_loss:.4f}"})
+        break
+
+       #  if id_ % VAL_AFTER == 0:
+            # val_boT = next(val_iter)
+            # val_pbar = tqdm(val_boT, desc="Validating", position=0, leave=False)
+            # val_on_metabatch(val_pbar)
+
+            # # close val bar (remove from screen)
+            # val_pbar.close()
+
+            # # print validation results (Must be printed by tqdm.write to avoid interference with progress bars)
+            # val_result_str = f"[Step {id_}] Validation Results - Loss: 1.23 | Acc: 85.5%"
+            # tqdm.write(val_result_str)
+
+############################################################################################
+### Helper Funcs
+############################################################################################
+
+
+def train_on_metabatch(algo_mgr, boT):
+    sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
+    return algo_mgr.train(sup_x, sup_y, que_x, que_y)
+
+    pass
+
+def val_on_metabatch(algo_mgr, boT):
+    pass
+
+def test_on_wholeset(algo_mgr, iter_loader):
+    pass

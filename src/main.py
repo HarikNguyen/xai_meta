@@ -8,20 +8,38 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description="Script for running the model.")
 
-    # Add validate and world_size arguments
+    # Add arguments
     parser.add_argument(
-        "--validate",
-        default=False,
-        action="store_true",
-        help="Flag to indicate whether to validate the model.",
-    )
-    parser.add_argument(
-        "--world_size",
-        type=int,
-        default=1,
-        help="Size of the world for distributed training.",
+        "--mode",
+        default="train",
+        type=str,
+        help="Mode to run the script in.\n - train: start meta-training.\n - val: meta-testing on validation set.\n - test: meta-testing on test set.\nDefault: train",
+        choices=["train", "val", "test"],
     )
 
+    parser.add_argument(
+        "--algo",
+        default="maml",
+        type=str,
+        help="Algorithm to use. Default: MAML",
+        choices=["maml",],
+    )
+
+    parser.add_argument(
+        "--checkpoint_dir",
+        default="checkpoints",
+        type=str,
+        help="Directory to save checkpoints. Default: checkpoints",
+    )
+
+    parser.add_argument(
+        "--vmap_chunk_size",
+        default=None,
+        type=int,
+        help="Chunk size for vmap. Default: Equal to meta_batch_size",
+    )
+
+    # Return args
     return parser.parse_args()
 
 
@@ -30,7 +48,7 @@ def main():
     args = parse_args()
 
     # Call the run function with the arguments
-    run(args.validate, args.world_size)
+    run(args)
 
 
 if __name__ == "__main__":

@@ -80,7 +80,7 @@ class BaseAlgorithm:
     def train(self, train_x, train_y, test_x, test_y):
         raise NotImplementedError()
 
-    def evaluate(self, train_x, train_y, test_x, test_y):
+    def val(self, train_x, train_y, test_x, test_y):
         raise NotImplementedError()
 
     def dump_state(self):
