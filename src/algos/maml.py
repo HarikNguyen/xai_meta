@@ -191,7 +191,7 @@ class MAML(BaseAlgorithm):
         initialization
             Initialization parameters
         """
-        return [p.clone().detach().to(self.device) for p in self.theta_0]
+        return [p.clone().detach() for p in self.theta_0]
 
     def load_state(self, state):
         """Load the given state into the meta-learner
