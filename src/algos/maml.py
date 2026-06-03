@@ -42,7 +42,7 @@ class MAML(BaseAlgorithm):
         # get random initialization point for baselearner (theta_0)
         self.baselearner = self.baselearner_fn(**self.baselearner_args).to(self.device)
         self.theta_0 = [
-            p.clone().detach().requires_grad_(True) for p in self.baselearner.parameters()
+            p.clone().to(self.device).detach().requires_grad_(True) for p in self.baselearner.parameters()
         ]
 
         # define outer-level optimizer
@@ -79,7 +79,7 @@ class MAML(BaseAlgorithm):
         3. Return losses and preds at each step
         """
         # init fast_weights with theta_0 (phi)
-        fast_weights = theta_0
+        fast_weights = [p.clone() for p in theta_0]
         learner = self.baselearner
 
         # init results list
@@ -170,8 +170,3 @@ class MAML(BaseAlgorithm):
         self.initialization = [p.clone() for p in state]
         for p in self.theta_0:
             p.requires_grad = True
-
-    def to(self, device):
-        """to device"""
-        self.baselearner = self.baselearner.to(device)
-        self.theta_0 = [p.to(device) for p in self.theta_0]
