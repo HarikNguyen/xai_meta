@@ -122,7 +122,7 @@ class MAML(BaseAlgorithm):
         self.outer_optim.zero_grad()
         vmap_deploy = tf.vmap(
             self._deploy, 
-            in_dims=(None, 0, 0, 0, 0, None, None), 
+            in_dims=(None, 0, 0, 0, 0), 
             chunk_size=self.vmap_chunk_size
         )
 
