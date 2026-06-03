@@ -22,5 +22,4 @@ def calc_accuracy(preds, y):
 
     accuracy = (pred_idx == true_idx).float().mean()
 
-    return accuracy.item()
-
+    return accuracy
