@@ -119,7 +119,7 @@ class MAML(BaseAlgorithm):
         self.baselearner.eval()
 
     def train(self, train_x, train_y, test_x, test_y):
-        self.outer_optimizer.zero_grad()
+        self.outer_optim.zero_grad()
         vmap_deploy = tf.vmap(
             self._deploy, 
             in_dims=(None, 0, 0, 0, 0, None, None), 
@@ -140,7 +140,7 @@ class MAML(BaseAlgorithm):
 
         meta_loss.backward()
 
-        self.outer_optimizer.step()
+        self.outer_optim.step()
 
         return meta_loss.item()
 
