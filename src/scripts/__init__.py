@@ -30,6 +30,7 @@ def run(args):
     train_loader, val_loader, test_loader, algo_conf = warm_up()
     val_iter = iter(val_loader)
     algo_conf["vmap_chunk_size"] = args.vmap_chunk_size
+    print(algo_conf)
 
 
     checkpoint_dir = args.checkpoint_dir
