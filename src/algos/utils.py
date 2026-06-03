@@ -11,7 +11,7 @@ def put_on_device(dev, tensors):
 
 def get_loss_with_grad(learner, x, y, weights, return_grad=False):
     preds = learner.forward_weights(x, weights)
-    loss = criterion(preds, y)
+    loss = learner.criterion(preds, y)
     if return_grad:
         grads = torch.autograd.grad(loss, weights.values())
         return loss, preds, grads
