@@ -41,6 +41,7 @@ def run(args):
 def run_train(args, algo_class, train_loader, val_loader, algo_conf):
     # define algo_obj for manage training and validating strategies
     algo_mgr = algo_class(**algo_conf)
+    algo_mgr.to(algo_mgr.device)
     
     train_pbar = tqdm(train_loader, desc="Training", position=1, leave=True)
     for id_, batch in enumerate(train_pbar):

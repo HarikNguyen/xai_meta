@@ -119,6 +119,7 @@ class MAML(BaseAlgorithm):
         self.baselearner.eval()
 
     def train(self, train_x, train_y, test_x, test_y):
+        put_on_device(self.device, [train_x, train_y, test_x, test_y])
         self.outer_optim.zero_grad()
         vmap_deploy = tf.vmap(
             self._deploy, 
@@ -136,7 +137,7 @@ class MAML(BaseAlgorithm):
             T=self.T,
         )
 
-        meta_loss = post_losses[-1].mean()
+        meta_loss = que_losses[-1].mean()
 
         meta_loss.backward()
 
@@ -155,7 +156,7 @@ class MAML(BaseAlgorithm):
         initialization
             Initialization parameters
         """
-        return [p.clone().detach().to(self.device) for p in self.initialization]
+        return [p.clone().detach().to(self.device) for p in self.theta_0]
 
     def load_state(self, state):
         """Load the given state into the meta-learner
@@ -167,10 +168,10 @@ class MAML(BaseAlgorithm):
         """
 
         self.initialization = [p.clone() for p in state]
-        for p in self.initialization:
+        for p in self.theta_0:
             p.requires_grad = True
 
     def to(self, device):
         """to device"""
         self.baselearner = self.baselearner.to(device)
-        self.initialization = [p.to(device) for p in self.initialization]
+        self.theta_0 = [p.to(device) for p in self.theta_0]
