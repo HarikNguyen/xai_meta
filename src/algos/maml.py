@@ -1,7 +1,7 @@
 import torch
 import torch.func as tf
 from .base import BaseAlgorithm
-from .utils import get_loss_with_grad
+from .utils import get_loss_with_grad, put_on_device
 
 
 class MAML(BaseAlgorithm):
