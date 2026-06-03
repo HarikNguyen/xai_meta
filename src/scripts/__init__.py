@@ -59,8 +59,8 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf):
 
             # print validation results (Must be printed by tqdm.write to avoid interference with progress bars)
             val_result_str = f"""[Step {id_}] Validation Results
-            Pre-update: Sup Loss: {pre_valres["pre_sup_loss"]:.4f}, Que Loss: {pre_valres["pre_que_loss"]:.4f}, Sup Acc: {pre_valres["pre_sup_acc"]:.4f}, Que Acc: {pre_valres["pre_que_acc"]:.4f}
-            Post-update: Sup Loss: {post_valres["post_sup_loss"]:.4f}, Que Loss: {post_valres["post_que_loss"]:.4f}, Sup Acc: {post_valres["post_sup_acc"]:.4f}, Que Acc: {post_valres["post_que_acc"]:.4f}
+            Pre-update: Sup Loss: {pre_valres["sup_loss"]:.4f}, Que Loss: {pre_valres["que_loss"]:.4f}, Sup Acc: {pre_valres["sup_acc"]:.4f}, Que Acc: {pre_valres["que_acc"]:.4f}
+            Post-update: Sup Loss: {post_valres["sup_loss"]:.4f}, Que Loss: {post_valres["que_loss"]:.4f}, Sup Acc: {post_valres["sup_acc"]:.4f}, Que Acc: {post_valres["que_acc"]:.4f}
             """
             tqdm.write(val_result_str)
 
