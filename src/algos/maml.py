@@ -1,7 +1,7 @@
 import torch
 import torch.func as tf
 from .base import BaseAlgorithm
-from .utils import get_loss_n_preds, put_on_device
+from .utils import get_loss_n_preds, put_on_device, calc_accuracy
 
 
 class MAML(BaseAlgorithm):
@@ -83,7 +83,7 @@ class MAML(BaseAlgorithm):
         learner = self.baselearner
 
         # init results list
-        sup_losses, que_losses, sup_preds_list, que_preds_list = [], [], [], []
+        sup_losses, que_losses, sup_preds_list, que_preds_list, sup_accs, que_accs = [], [], [], [], [], []
         
         # get pre-update (theta_0) loss and predictions
         values_n_grad_fn = tf.grad_and_value(get_loss_n_preds, has_aux=True)
@@ -94,6 +94,8 @@ class MAML(BaseAlgorithm):
         que_losses.append(pre_que_loss)
         sup_preds_list.append(pre_sup_pred)
         que_preds_list.append(pre_que_pred)
+        sup_accs.append(calc_accuracy(pre_sup_pred, sup_y))
+        que_accs.append(calc_accuracy(pre_que_pred, que_y))
 
         for _ in range(T):
             # get fast_weights
@@ -110,6 +112,8 @@ class MAML(BaseAlgorithm):
             que_losses.append(que_loss)
             sup_preds_list.append(sup_pred)
             que_preds_list.append(que_pred)
+            sup_accs.append(calc_accuracy(sup_pred, sup_y))
+            que_accs.append(calc_accuracy(que_pred, que_y))
 
         return sup_losses, que_losses, sup_preds_list, que_preds_list
 
@@ -128,7 +132,7 @@ class MAML(BaseAlgorithm):
             chunk_size=self.vmap_chunk_size
         )
 
-        sup_losses, que_losses, sup_preds_list, que_preds_list = vmap_deploy(
+        _, que_losses, _, _, _, _ = vmap_deploy(
             self.theta_0,
             sup_x,
             sup_y,
@@ -154,7 +158,7 @@ class MAML(BaseAlgorithm):
             chunk_size=self.vmap_chunk_size
         )
 
-        sup_losses, que_losses, sup_preds_list, que_preds_list = vmap_deploy(
+        sup_losses, que_losses, _, _, sup_accs, que_accs = vmap_deploy(
             self.theta_0,
             sup_x,
             sup_y,
@@ -164,10 +168,21 @@ class MAML(BaseAlgorithm):
             T=self.T_val,
         )
 
-        meta_loss = que_losses[-1].mean()
+        pre_results = {
+            "sup_loss": sup_losses[0].mean().item(),
+            "que_loss": que_losses[0].mean().item(),
+            "sup_acc": sup_accs[0].mean().item(),
+            "que_acc": que_accs[0].mean().item(),
+        }
+        post_results = {
+            "sup_loss": sup_losses[-1].mean().item(),
+            "que_loss": que_losses[-1].mean().item(),
+            "sup_acc": sup_accs[-1].mean().item(),
+            "que_acc": que_accs[-1].mean().item(),
+        }
 
-        return meta_loss.item(), que_preds_list[-1]
-
+        return pre_results, post_results
+        
     def dump_state(self):
         """Return the state of the meta-learner
 

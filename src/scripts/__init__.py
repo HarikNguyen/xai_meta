@@ -49,17 +49,21 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf):
         train_pbar.set_postfix({"Meta Loss": f"{meta_loss:.4f}"})
         break
 
-       #  if id_ % VAL_AFTER == 0:
-            # val_boT = next(val_iter)
-            # val_pbar = tqdm(val_boT, desc="Validating", position=0, leave=False)
-            # val_on_metabatch(val_pbar)
+        if id_ % VAL_AFTER == 0:
+            val_boT = next(val_iter)
+            val_pbar = tqdm(val_boT, desc="Validating", position=0, leave=False)
+            pre_valres, post_valres = val_on_metabatch(val_pbar)
 
-            # # close val bar (remove from screen)
-            # val_pbar.close()
+            # close val bar (remove from screen)
+            val_pbar.close()
 
-            # # print validation results (Must be printed by tqdm.write to avoid interference with progress bars)
-            # val_result_str = f"[Step {id_}] Validation Results - Loss: 1.23 | Acc: 85.5%"
-            # tqdm.write(val_result_str)
+            # print validation results (Must be printed by tqdm.write to avoid interference with progress bars)
+            val_result_str = f"""[Step {id_}] Validation Results
+            Pre-update: Sup Loss: {pre_valres["pre_sup_loss"]:.4f}, Que Loss: {pre_valres["pre_que_loss"]:.4f}, Sup Acc: {pre_valres["pre_sup_acc"]:.4f}, Que Acc: {pre_valres["pre_que_acc"]:.4f}
+            Post-update: Sup Loss: {post_valres["post_sup_loss"]:.4f}, Que Loss: {post_valres["post_que_loss"]:.4f}, Sup Acc: {post_valres["post_sup_acc"]:.4f}, Que Acc: {post_valres["post_que_acc"]:.4f}
+            """
+            tqdm.write(val_result_str)
+
 
 ############################################################################################
 ### Helper Funcs
@@ -73,7 +77,8 @@ def train_on_metabatch(algo_mgr, boT):
     pass
 
 def val_on_metabatch(algo_mgr, boT):
-    pass
+    sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
+    return algo_mgr.val(sup_x, sup_y, que_x, que_y)
 
 def test_on_wholeset(algo_mgr, iter_loader):
     pass

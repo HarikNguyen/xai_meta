@@ -14,26 +14,10 @@ def get_loss_n_preds(weights, learner, x, y):
     loss = learner.criterion(preds, y)
     return loss, preds
 
-def accuracy(y_pred, y):
+def calc_accuracy(preds, y):
     """Computes accuracy of predictions
-
-    Compute the ratio of correct predictions on the true labels y.
-
-    Parameters
-    ----------
-    y_pred : torch.Tensor
-        Tensor of label predictions
-    y : torch.Tensor
-        Tensor of ground-truth labels
-
-    Returns
-    ----------
-    accuracy
-        Float accuracy score in [0,1]
     """
-
-    # return ((y_pred == y).float().sum() / len(y)).item()
-    _, pred_idx = torch.max(y_pred, dim=1)
+    _, pred_idx = torch.max(preds, dim=1)
     _, true_idx = torch.max(y, dim=1)
 
     accuracy = (pred_idx == true_idx).float().mean()
