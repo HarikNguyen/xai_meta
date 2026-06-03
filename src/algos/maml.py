@@ -118,8 +118,8 @@ class MAML(BaseAlgorithm):
     def set_val_mode(self):
         self.baselearner.eval()
 
-    def train(self, train_x, train_y, test_x, test_y):
-        put_on_device(self.device, [train_x, train_y, test_x, test_y])
+    def train(self, sup_x, sup_y, que_x, que_y):
+        sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
         self.outer_optim.zero_grad()
         vmap_deploy = tf.vmap(
             self._deploy, 
@@ -129,10 +129,10 @@ class MAML(BaseAlgorithm):
 
         sup_losses, que_losses, sup_preds_list, que_preds_list = vmap_deploy(
             self.theta_0,
-            train_x,
-            train_y,
-            test_x,
-            test_y,
+            sup_x,
+            sup_y,
+            que_x,
+            que_y,
             train_mode=True,
             T=self.T,
         )
