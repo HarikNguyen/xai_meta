@@ -202,12 +202,12 @@ def update_w(w, g, al=0.01):
     return [w_i - al * g_i for w_i, g_i in zip(w, g)]
 
 
-def get_loss_with_grad(model, x, y, weights, r_l=false):
+def get_loss_with_grad(model, x, y, weights, r_l=False):
     model.zero_grad()
     pred = model.forward_weights(x, weights)
     loss = model.criterion(pred, y)
 
-    grads = torch.autograd.grad(loss, weights, create_graph=true, retain_graph=true)
+    grads = torch.autograd.grad(loss, weights, create_graph=True, retain_graph=True)
 
     gradients = list(grads)
     if r_l:
