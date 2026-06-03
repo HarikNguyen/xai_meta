@@ -22,7 +22,7 @@ TEST_MODE = "test"
 
 def run(args):
     if args.algo == "maml":
-        algo_class = MAML()
+        algo_class = MAML
     else:
         raise NotImplementedError(f"Algorithm {algo} not implemented.")
 
@@ -30,8 +30,6 @@ def run(args):
     train_loader, val_loader, test_loader, algo_conf = warm_up()
     val_iter = iter(val_loader)
     algo_conf["vmap_chunk_size"] = args.vmap_chunk_size
-    print(algo_conf)
-
 
     checkpoint_dir = args.checkpoint_dir
     if not os.path.exists(checkpoint_dir):
