@@ -46,7 +46,7 @@ class MAML(BaseAlgorithm):
         ]
 
         # define outer-level optimizer
-        self.outer_optim = self.optim_fn(self.theta_0, lr=self.outer_lr)
+        self.outer_optim = self.optim_fn(self.theta_0, lr=self.lr)
 
     def _fast_weights(self, params, gradients, train_mode=False):
         """Compute task-specific weights using the gradients (theta_t)
