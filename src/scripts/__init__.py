@@ -47,7 +47,6 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf):
         meta_loss = train_on_metabatch(algo_mgr, batch)
 
         train_pbar.set_postfix({"Meta Loss": f"{meta_loss:.4f}"})
-        break
 
         if id_ % VAL_AFTER == 0:
             val_boT = next(val_iter)
