@@ -13,7 +13,7 @@ def warm_up():
     # Define datasets
     metatrain_iterations = 60000
     val_after = 1000
-    metaval_iterations = 600+1
+    metaval_iterations = 600
 
     train_loader = get_dataloader(
         data_root="miniImagenet",
@@ -36,7 +36,7 @@ def warm_up():
         dataset_type="val",
         num_workers=2,
         sample={
-            "metatrain_iterations": metatrain_iterations // val_after,
+            "metatrain_iterations": metatrain_iterations // val_after + 1,
             "n_way": 5,
             "k_shot": 1,
             "k_query": 15,
