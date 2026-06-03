@@ -86,7 +86,7 @@ class MAML(BaseAlgorithm):
         sup_losses, que_losses, sup_preds_list, que_preds_list = [], [], [], []
         
         # get pre-update (theta_0) loss and predictions
-        values_n_grad_fn = tf.value_and_grad(get_loss_n_preds, has_aux=True)
+        values_n_grad_fn = tf.grad_and_value(get_loss_n_preds, has_aux=True)
         (pre_sup_loss, pre_sup_pred), grads = values_n_grad_fn(fast_weights, learner, sup_x, sup_y)
         pre_que_loss, pre_que_pred = get_loss_with_grad(fast_weights, learner, que_x, que_y)
 
