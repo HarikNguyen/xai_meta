@@ -89,11 +89,11 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
             # save checkpoint if best
             if post_valres["que_acc"] > best_val_queacc:
                 best_val_queacc = post_valres["que_acc"]
-                checkpoint_path = os.path.join(checkpoint_dir, f"best_checkpoint_step_{id_}.pt")
+                checkpoint_path = os.path.join(checkpoint_dir, f"best_checkpoint.pt")
                 torch.save(algo_mgr.dump_state(), checkpoint_path)
 
     # save last checkpoint
-    checkpoint_path = os.path.join(checkpoint_dir, f"last_checkpoint_step_{id_}.pt")
+    checkpoint_path = os.path.join(checkpoint_dir, f"last_checkpoint.pt")
     torch.save(algo_mgr.dump_state(), checkpoint_path)
 
 
