@@ -115,7 +115,7 @@ class MAML(BaseAlgorithm):
             sup_accs.append(calc_accuracy(sup_pred, sup_y))
             que_accs.append(calc_accuracy(que_pred, que_y))
 
-        return sup_losses, que_losses, sup_preds_list, que_preds_list
+        return sup_losses, que_losses, sup_preds_list, que_preds_list, sup_accs, que_accs
 
     def set_train_mode(self):
         self.baselearner.train()
