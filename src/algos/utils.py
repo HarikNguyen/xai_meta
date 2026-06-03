@@ -13,7 +13,8 @@ def get_loss_with_grad(learner, x, y, weights, return_grad=False):
     preds = learner.forward_weights(x, weights)
     loss = learner.criterion(preds, y)
     if return_grad:
-        grads = torch.autograd.grad(loss, weights.values())
+        grads = torch.autograd.grad(loss, weights, create_graph=true, retain_graph=true)
+        grads = list(grads)
         return loss, preds, grads
     return loss, preds
 
