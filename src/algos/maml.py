@@ -1,7 +1,7 @@
 import torch
 import torch.func as tf
 from .base import BaseAlgorithm
-from .utils import get_loss_with_grad, put_on_device
+from .utils import get_loss_n_preds, put_on_device
 
 
 class MAML(BaseAlgorithm):
@@ -40,7 +40,7 @@ class MAML(BaseAlgorithm):
         self.vmap_chunk_size = vmap_chunk_size
 
         # get random initialization point for baselearner (theta_0)
-        self.baselearner = self.baselearner_fn(**self.baselearner_args).to(self.device)
+        self.baselearner = self.baselearner_fn(**self.baselearner_args)
         self.theta_0 = [
             p.clone().to(self.device).detach().requires_grad_(True) for p in self.baselearner.parameters()
         ]
@@ -86,8 +86,9 @@ class MAML(BaseAlgorithm):
         sup_losses, que_losses, sup_preds_list, que_preds_list = [], [], [], []
         
         # get pre-update (theta_0) loss and predictions
-        pre_sup_loss, pre_sup_pred, grads = get_loss_with_grad(learner, sup_x, sup_y, fast_weights, return_grad=True)
-        pre_que_loss, pre_que_pred = get_loss_with_grad(learner, que_x, que_y, fast_weights)
+        values_n_grad_fn = tf.value_and_grad(get_loss_n_preds, has_aux=True)
+        (pre_sup_loss, pre_sup_pred), grads = values_n_grad_fn(fast_weights, learner, sup_x, sup_y)
+        pre_que_loss, pre_que_pred = get_loss_with_grad(fast_weights, learner, que_x, que_y)
 
         sup_losses.append(pre_sup_loss)
         que_losses.append(pre_que_loss)
@@ -102,8 +103,8 @@ class MAML(BaseAlgorithm):
                 train_mode=train_mode,
             )
             # get loss and predictions
-            sup_loss, sup_pred, grads = get_loss_with_grad(learner, sup_x, sup_y, fast_weights, return_grad=True)
-            que_loss, que_pred = get_loss_with_grad(learner, que_x, que_y, fast_weights)
+            (sup_loss, sup_pred), grads = values_n_grad_fn(fast_weights, learner, sup_x, sup_y)
+            que_loss, que_pred = get_loss_with_grad(fast_weights, learner, que_x, que_y)
 
             sup_losses.append(sup_loss)
             que_losses.append(que_loss)

@@ -9,13 +9,9 @@ def put_on_device(dev, tensors):
             tensors[i] = tensors[i].to(dev)
     return tensors
 
-def get_loss_with_grad(learner, x, y, weights, return_grad=False):
+def get_loss_n_preds(weights, learner, x, y):
     preds = learner.forward_weights(x, weights)
     loss = learner.criterion(preds, y)
-    if return_grad:
-        grads = torch.autograd.grad(loss, weights, create_graph=True, retain_graph=True)
-        grads = list(grads)
-        return loss, preds, grads
     return loss, preds
 
 def accuracy(y_pred, y):
