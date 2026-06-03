@@ -28,7 +28,6 @@ def run(args):
 
     # warm up
     train_loader, val_loader, test_loader, algo_conf = warm_up()
-    val_iter = iter(val_loader)
     algo_conf["vmap_chunk_size"] = args.vmap_chunk_size
 
     checkpoint_dir = args.checkpoint_dir
@@ -41,7 +40,9 @@ def run(args):
 def run_train(args, algo_class, train_loader, val_loader, algo_conf):
     # define algo_obj for manage training and validating strategies
     algo_mgr = algo_class(**algo_conf)
-    
+
+    # training + validation loop
+    val_iter = iter(val_loader)
     train_pbar = tqdm(train_loader, desc="Training", position=1, leave=True)
     for id_, batch in enumerate(train_pbar):
         meta_loss = train_on_metabatch(algo_mgr, batch)
