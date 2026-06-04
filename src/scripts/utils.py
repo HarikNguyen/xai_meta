@@ -17,6 +17,7 @@ def log_to_csv(csv_path, log, header=None):
 
 def compute_stats(data):
     """Compute mean, std, ci95 for a list of numbers."""
+    print(data)
     arr = np.array(data)
     mean = np.mean(arr)
     std = np.std(arr, ddof=1)  # sample standard deviation
