@@ -13,7 +13,8 @@ def warm_up():
     # Define datasets
     metatrain_iterations = 60000
     val_after = 1000
-    metaval_iterations = 600
+    metatest_batch_size = 4
+    metatest_iterations = 600 // metatest_batch_size # each task only use for 1 iteration
 
     train_loader = get_dataloader(
         data_root="miniImagenet",
@@ -52,11 +53,11 @@ def warm_up():
         num_workers=2,
         seed=42,
         sample={
-            "metatrain_iterations": metaval_iterations,
+            "metatrain_iterations": metatest_iterations,
             "n_way": 5,
             "k_shot": 1,
             "k_query": 1,
-            "meta_batch_size": 1,  # Always use meta batch size of 1 when testing
+            "meta_batch_size": metatest_batch_size,  # Really equal (metatrain_iterations = 600 || meta_batch_size = 1)
             "shuffle": True,
         },
     )
