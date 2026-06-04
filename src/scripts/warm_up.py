@@ -51,7 +51,6 @@ def warm_up():
         dataset="miniImagenet",
         dataset_type="test",
         num_workers=2,
-        seed=42,
         sample={
             "metatrain_iterations": metatest_iterations,
             "n_way": 5,
