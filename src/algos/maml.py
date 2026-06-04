@@ -117,12 +117,6 @@ class MAML(BaseAlgorithm):
 
         return sup_losses, que_losses, sup_preds_list, que_preds_list, sup_accs, que_accs
 
-    def set_train_mode(self):
-        self.baselearner.train()
-
-    def set_val_mode(self):
-        self.baselearner.eval()
-
     def train(self, sup_x, sup_y, que_x, que_y):
         sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
         self.outer_optim.zero_grad()
@@ -151,22 +145,7 @@ class MAML(BaseAlgorithm):
         return meta_loss.item()
 
     def val(self, sup_x, sup_y, que_x, que_y):
-        sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
-        vmap_deploy = tf.vmap(
-            self._deploy, 
-            in_dims=(None, 0, 0, 0, 0), 
-            chunk_size=self.vmap_chunk_size
-        )
-
-        sup_losses, que_losses, _, _, sup_accs, que_accs = vmap_deploy(
-            self.theta_0,
-            sup_x,
-            sup_y,
-            que_x,
-            que_y,
-            train_mode=False,
-            T=self.T_val,
-        )
+        sup_losses, que_losses, sup_accs, que_accs = self._validate(sup_x, sup_y, que_x, que_y, T=self.T_val)
 
         pre_results = {
             "sup_loss": sup_losses[0].mean().item(),
@@ -182,26 +161,37 @@ class MAML(BaseAlgorithm):
         }
 
         return pre_results, post_results
+
+    def test(self, sup_x, sup_y, que_x, que_y):
+        return self._validate(sup_x, sup_y, que_x, que_y, T=self.T_test)
+
+    def _validate(self, sup_x, sup_y, que_x, que_y, T):
+        sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
+        vmap_deploy = tf.vmap(
+            self._deploy, 
+            in_dims=(None, 0, 0, 0, 0), 
+            chunk_size=self.vmap_chunk_size
+        )
+
+        sup_losses, que_losses, _, _, sup_accs, que_accs = vmap_deploy(
+            self.theta_0,
+            sup_x,
+            sup_y,
+            que_x,
+            que_y,
+            train_mode=False,
+            T=T,
+        )
+        return sup_losses, que_losses, sup_accs, que_accs
         
     def dump_state(self):
         """Return the state of the meta-learner
-
-        Returns
-        ----------
-        initialization
-            Initialization parameters
         """
         return [p.clone().detach() for p in self.theta_0]
 
     def load_state(self, state):
         """Load the given state into the meta-learner
-
-        Parameters
-        ----------
-        state : initialization
-            Initialization parameters
         """
-
-        self.initialization = [p.clone() for p in state]
-        for p in self.theta_0:
-            p.requires_grad = True
+        with torch.no_grad():
+            for p_current, p_loaded in zip(self.theta_0, state):
+                p_current.copy_(p_loaded)

@@ -8,7 +8,7 @@ from .warm_up import warm_up
 from .utils import log_to_csv
 from algos.maml import MAML
 
-from loaders.utils import boT_to_stack
+from loaders.utils import boT_to_stack, compute_stats
 
 
 ############################################################################################
@@ -17,7 +17,6 @@ from loaders.utils import boT_to_stack
 
 VAL_AFTER = 1000
 TRAIN_MODE = "train"
-VAL_MODE = "val"
 TEST_MODE = "test"
 LOG_DIR = "logs"
 
@@ -45,6 +44,9 @@ def run(args):
 
     if args.mode == TRAIN_MODE:
         run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_dir)
+
+    elif args.mode == TEST_MODE:
+        run_test(args, algo_class, test_loader, algo_conf, checkpoint_dir)
 
 def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_dir="checkpoints"):
     # define algo_obj for manage training and validating strategies
@@ -96,6 +98,33 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
     checkpoint_path = os.path.join(checkpoint_dir, f"last_checkpoint.pt")
     torch.save(algo_mgr.dump_state(), checkpoint_path)
 
+def run_test(args, algo_class, test_loader, algo_conf, checkpoint_dir="checkpoints"):
+    # define algo_obj for manage training and validating strategies
+    algo_mgr = algo_class(**algo_conf)
+
+    # load checkpoint
+    checkpoint_path = os.path.join(checkpoint_dir, f"last_checkpoint.pt")
+    print("Loading checkpoint from", checkpoint_path)
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}. Please run training first.")
+    algo_mgr.read_file(checkpoint_path)
+
+    # test on whole test set
+    all_sup_losses, all_que_losses, all_sup_accs, all_que_accs = test_on_wholeset(algo_mgr, test_loader)
+
+    # compute stats
+    num_steps = len(all_sup_losses)
+    total_tasks = len(all_sup_losses[0])
+
+    metrics_dict = {
+        "SUPPORT LOSS": all_sup_losses,
+        "QUERY LOSS": all_que_losses,
+        "SUPPORT ACCURACY": all_sup_accs,
+        "QUERY ACCURACY": all_que_accs
+    }
+
+    # print and save
+    print_n_log_test(metrics_dict, num_steps, total_tasks)
 
 ############################################################################################
 ### Helper Funcs
@@ -110,5 +139,56 @@ def val_on_metabatch(algo_mgr, boT):
     sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
     return algo_mgr.val(sup_x, sup_y, que_x, que_y)
 
-def test_on_wholeset(algo_mgr, iter_loader):
-    pass
+def test_on_wholeset(algo_mgr, test_loader):
+    all_sup_losses = defaultdict(list)
+    all_que_losses = defaultdict(list)
+    all_sup_accs = defaultdict(list)
+    all_que_accs = defaultdict(list)
+
+    test_pbar = tqdm(test_loader, desc="Testing", leave=True)
+    with torch.no_grad():
+        for boT in iter_loader:
+            # fast-adaptation for each task in meta-batch
+            sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
+            sup_losses, que_losses, sup_accs, que_accs = algo_mgr.val(sup_x, sup_y, que_x, que_y)
+            
+            # store results
+            for step in range(len(sup_losses)):
+                all_sup_losses[step].extend(sup_losses[step].detach().cpu().numpy())
+                all_que_losses[step].extend(que_losses[step].detach().cpu().numpy())
+                all_sup_accs[step].extend(sup_accs[step].detach().cpu().numpy())
+                all_que_accs[step].extend(que_accs[step].detach().cpu().numpy())
+
+    return all_sup_losses, all_que_losses, all_sup_accs, all_que_accs   
+
+def print_n_log_test(metrics_dict, num_steps, total_tasks):
+    print("\n\n" + "#" * 70)
+    print(f"META-TESTING RESULTS OVER {total_tasks} TASKS")
+    print("#" * 70)
+
+    final_results = {}
+
+    for metric_name, data_by_step in metrics_dict.items():
+        print(f"\n\n{'='*60}")
+        print(f" TABLE: {metric_name} ")
+        print(f"{'='*60}")
+        print(f"{'Step':<15} | {'Mean':<10} | {'Std':<10} | {'CI 95%':<10}")
+        print(f"{'-'*60}")
+        
+        csv_filename = f"test_{metric_name.replace(' ', '_')}.csv"
+        csv_path = os.path.join(LOG_DIR, csv_filename)
+        if os.path.exists(csv_path):
+            os.remove(csv_path)
+        csv_header = ["Step", "Mean", "Std", "CI_95"]
+
+        for step in range(num_steps):
+            mean, std, ci95 = compute_stats(data_by_step[step])
+            
+            step_label = "Pre-update" if step == 0 else f"Update {step}"
+            
+            print(f"{step_label:<15} | {mean:<10.4f} | {std:<10.4f} | ± {ci95:<10.4f}")
+
+            log_row = [step_label, mean, std, ci95]
+            log_to_csv(csv_path, log_row, header=csv_header)
+            
+    print(f"\n{'='*60}\n")

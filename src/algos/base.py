@@ -83,20 +83,21 @@ class BaseAlgorithm:
     def val(self, train_x, train_y, test_x, test_y):
         raise NotImplementedError()
 
+    def test(self, train_x, train_y, test_x, test_y):
+        raise NotImplementedError()
+
     def dump_state(self):
         raise NotImplementedError()
 
     def load_state(self, state):
         raise NotImplementedError()
 
-    def store_file(self, filename):
+    def read_file(self, filename):
+        if map_location is None and hasattr(self, 'device'):
+            map_location = self.device
+        state = torch.load(filename, map_location=map_location, weights_only=True)
+        self.load_state(state)
+
+    def save_file(self, filename):
         state = self.dump_state()
-
-        with open(filename, "wb+") as f:
-            pickle.dump(state, f)
-
-    def read_file(self, filename, **kwargs):
-        with open(filename, "rb") as f:
-            state = pickle.load(f)
-
-        self.load_state(state, **kwargs)
+        torch.save(state, filename)
