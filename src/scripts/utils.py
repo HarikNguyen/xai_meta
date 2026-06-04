@@ -20,6 +20,7 @@ def compute_stats(data):
     arr = np.array(data)
     mean = np.mean(arr)
     std = np.std(arr, ddof=1)  # sample standard deviation
+    n = len(data)
     se = std / np.sqrt(n) # standard error
     ci95 = stats.t.ppf(0.975, n-1) * se # ci95 using t-distribution
     return mean, std, ci95
