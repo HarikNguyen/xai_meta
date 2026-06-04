@@ -147,18 +147,18 @@ def test_on_wholeset(algo_mgr, test_loader):
     all_que_accs = defaultdict(list)
 
     test_pbar = tqdm(test_loader, desc="Testing", leave=True)
-    with torch.no_grad():
-        for boT in test_pbar:
-            # fast-adaptation for each task in meta-batch
-            sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
-            sup_losses, que_losses, sup_accs, que_accs = algo_mgr.test(sup_x, sup_y, que_x, que_y)
-            
-            # store results
-            for step in range(len(sup_losses)):
-                all_sup_losses[step].extend(sup_losses[step].detach().cpu().numpy())
-                all_que_losses[step].extend(que_losses[step].detach().cpu().numpy())
-                all_sup_accs[step].extend(sup_accs[step].detach().cpu().numpy())
-                all_que_accs[step].extend(que_accs[step].detach().cpu().numpy())
+    # with torch.no_grad():
+    for boT in test_pbar:
+        # fast-adaptation for each task in meta-batch
+        sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
+        sup_losses, que_losses, sup_accs, que_accs = algo_mgr.test(sup_x, sup_y, que_x, que_y)
+        
+        # store results
+        for step in range(len(sup_losses)):
+            all_sup_losses[step].extend(sup_losses[step].detach().cpu().numpy())
+            all_que_losses[step].extend(que_losses[step].detach().cpu().numpy())
+            all_sup_accs[step].extend(sup_accs[step].detach().cpu().numpy())
+            all_que_accs[step].extend(que_accs[step].detach().cpu().numpy())
 
     return all_sup_losses, all_que_losses, all_sup_accs, all_que_accs   
 
