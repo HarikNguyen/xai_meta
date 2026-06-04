@@ -1,5 +1,4 @@
-import pickle
-
+import torch
 
 class BaseAlgorithm:
     def __init__(
