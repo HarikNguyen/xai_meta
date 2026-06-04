@@ -92,7 +92,7 @@ class BaseAlgorithm:
     def load_state(self, state):
         raise NotImplementedError()
 
-    def read_file(self, filename):
+    def read_file(self, filename, map_location=None):
         if map_location is None and hasattr(self, 'device'):
             map_location = self.device
         state = torch.load(filename, map_location=map_location, weights_only=True)
