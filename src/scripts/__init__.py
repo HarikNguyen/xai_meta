@@ -3,6 +3,7 @@ import numpy as np
 import math
 import torch
 from tqdm import tqdm
+from collections import defaultdict
 
 from .warm_up import warm_up
 from .utils import log_to_csv, compute_stats
