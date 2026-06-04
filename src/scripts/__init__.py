@@ -5,10 +5,10 @@ import torch
 from tqdm import tqdm
 
 from .warm_up import warm_up
-from .utils import log_to_csv
+from .utils import log_to_csv, compute_stats
 from algos.maml import MAML
 
-from loaders.utils import boT_to_stack, compute_stats
+from loaders.utils import boT_to_stack
 
 
 ############################################################################################
