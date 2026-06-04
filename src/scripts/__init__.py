@@ -148,7 +148,7 @@ def test_on_wholeset(algo_mgr, test_loader):
 
     test_pbar = tqdm(test_loader, desc="Testing", leave=True)
     with torch.no_grad():
-        for boT in iter_loader:
+        for boT in test_loader:
             # fast-adaptation for each task in meta-batch
             sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
             sup_losses, que_losses, sup_accs, que_accs = algo_mgr.val(sup_x, sup_y, que_x, que_y)
