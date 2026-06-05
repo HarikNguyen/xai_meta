@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, default_collate
-from .datasets import MiniImagenetDataset
+from .datasets import FewShotDataset
 from .transforms import make_transform
 from .samplers import BatchTaskSampler
 
@@ -77,7 +77,7 @@ def get_dataloader(
     transform = make_transform()
 
     # Get dataset
-    dataset = MiniImagenetDataset(
+    dataset = FewShotDataset(
         data_root,
         dataset,
         dataset_type,
