@@ -37,4 +37,4 @@ def resize_all_images(dataset_name, size=(84, 84)):
 
 # Call the function
 # resize_all_images("miniImagenet")
-resize_all_images("CUB_200_2011")
+resize_all_images("cub_200")
