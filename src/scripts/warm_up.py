@@ -32,8 +32,10 @@ def warm_up():
     )
 
     val_loader = get_dataloader(
-        data_root="miniImagenet",
-        dataset="miniImagenet",
+        # data_root="miniImagenet",
+        # dataset="miniImagenet",
+        data_root="cub_200",
+        dataset="cub_200",
         dataset_type="val",
         num_workers=2,
         sample={
@@ -47,8 +49,10 @@ def warm_up():
     )
 
     test_loader = get_dataloader(
-        data_root="miniImagenet",
-        dataset="miniImagenet",
+        # data_root="miniImagenet",
+        # dataset="miniImagenet",
+        data_root="cub_200",
+        dataset="cub_200",
         dataset_type="test",
         num_workers=2,
         sample={

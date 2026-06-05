@@ -58,7 +58,9 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
     csv_path = f"{LOG_DIR}/{algo_class.__name__}_train_log.csv"
     header = ["Step",
               "Pre_Sup_Loss", "Pre_Que_Loss", "Pre_Sup_Acc", "Pre_Que_Acc",
-              "Post_Sup_Loss", "Post_Que_Loss", "Post_Sup_Acc", "Post_Que_Acc"]
+    meta_loss_list = []
+    loss_csv = f"{LOG_DIR}/{algo_class.__name__}_meta_loss.csv"
+    header = ["step", "meta_loss"]
     val_iter = iter(val_loader)
 
     # training + validation loop
@@ -67,6 +69,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
         meta_loss = train_on_metabatch(algo_mgr, batch)
 
         train_pbar.set_postfix({"Meta Loss": f"{meta_loss:.4f}"})
+        log_to_csv(loss_csv, [id_, meta_loss.detach().cpu().numpy()], header=header)
 
         if id_ % VAL_AFTER == 0 or id_ == len(train_loader) - 1:
             val_boT = next(val_iter)
