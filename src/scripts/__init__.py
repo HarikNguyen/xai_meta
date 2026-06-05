@@ -70,7 +70,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
         meta_loss = train_on_metabatch(algo_mgr, batch)
 
         train_pbar.set_postfix({"Meta Loss": f"{meta_loss:.4f}"})
-        log_to_csv(loss_csv, [id_, meta_loss.detach().cpu().numpy()], header=header)
+        log_to_csv(loss_csv, [id_, meta_loss], header=header)
 
         if id_ % VAL_AFTER == 0 or id_ == len(train_loader) - 1:
             val_boT = next(val_iter)
