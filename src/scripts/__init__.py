@@ -58,8 +58,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
     csv_path = f"{LOG_DIR}/{algo_class.__name__}_train_log.csv"
     header = ["Step",
               "Pre_Sup_Loss", "Pre_Que_Loss", "Pre_Sup_Acc", "Pre_Que_Acc",
-    meta_loss_list = []
-    loss_csv = f"{LOG_DIR}/{algo_class.__name__}_meta_loss.csv"
+              "Post_Sup_Loss", "Post_Que_Loss", "Post_Sup_Acc", "Post_Que_Acc"]
     header = ["step", "meta_loss"]
     val_iter = iter(val_loader)
 
