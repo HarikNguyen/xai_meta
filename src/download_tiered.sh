@@ -2,11 +2,15 @@
 
 REPO_ID="hariknguyen/tiered_imagenet"
 BASE_URL="https://huggingface.co/datasets/$REPO_ID/resolve/main"
+TARGET_DIR="tiered_imagenet"
+
+mkdir -p "$TARGET_DIR"
 
 # Function: Download -> Extract -> Delete
 download_and_extract() {
     local file_name=$1
     local file_url="$BASE_URL/$file_name"
+    local target_file="$TARGET_DIR/$file_name" # Cập nhật đường dẫn đích
 
     echo "=> Checking: $file_name"
     HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" -L "$file_url")
@@ -14,15 +18,15 @@ download_and_extract() {
         return 1 # File not found, return flag 1 to break the loop
     fi
 
-    echo "📥 Downloading: $file_name..."
-    wget -q --show-progress -O "$file_name" "$file_url"
+    echo "Downloading: $file_name..."
+    wget -q --show-progress -O "$target_file" "$file_url"
 
     if [[ "$file_name" == *.tar ]]; then
-        echo "Extracting: $file_name..."
-        tar -xf "$file_name"
+        echo "📦 Extracting: $file_name..."
+        tar -xf "$target_file" -C "$TARGET_DIR"
         
         echo "Extraction complete! Deleting $file_name to free up disk space..."
-        rm "$file_name"
+        rm "$target_file"
     fi
 
     echo "Done: $file_name!"
