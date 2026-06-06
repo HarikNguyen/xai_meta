@@ -40,6 +40,8 @@ def run_test(args, algo_class, test_loader, algo_conf, use_best=False, use_last=
 
     # print and save
     print_n_log_test(metrics_dict, num_steps, total_tasks, log_dir)
+    # save details
+    save_details(metrics_dict, num_steps, total_tasks, log_dir)
 
 ############################################################################################
 ### Helper Funcs
