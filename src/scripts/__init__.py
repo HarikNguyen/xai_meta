@@ -36,6 +36,7 @@ def run(args):
         os.makedirs(os.path.join(checkpoint_dir, algo_class.__name__))
 
     checkpoint_dir = os.path.join(checkpoint_dir, algo_class.__name__)
+    print("Checkpoint directory:", checkpoint_dir)
 
     log_dir = args.log_dir
     if not os.path.exists(log_dir):
