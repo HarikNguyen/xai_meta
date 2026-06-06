@@ -57,6 +57,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
                 checkpoint_path = os.path.join(checkpoint_dir, f"best_checkpoint.pt")
                 torch.save(algo_mgr.dump_state(), checkpoint_path)
 
+    train_pbar.close()
     # save last checkpoint
     checkpoint_path = os.path.join(checkpoint_dir, f"last_checkpoint.pt")
     torch.save(algo_mgr.dump_state(), checkpoint_path)
