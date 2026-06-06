@@ -20,6 +20,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
     loss_csv = f"{log_dir}/{algo_class.__name__}_meta_loss_log.csv"
     loss_header = ["step", "meta_loss"]
     val_iter = iter(val_loader)
+    val_after = args.yaml_config["dataloader"]["val_after"]
 
     # training + validation loop
     train_pbar = tqdm(train_loader, desc="Training", position=1, leave=True)

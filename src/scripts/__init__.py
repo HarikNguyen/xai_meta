@@ -14,7 +14,6 @@ from loaders.utils import boT_to_stack
 ### Main Func
 ############################################################################################
 
-VAL_AFTER = 1000
 TRAIN_MODE = "train"
 TEST_MODE = "test"
 
