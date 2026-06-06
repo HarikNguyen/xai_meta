@@ -21,8 +21,8 @@ for filename in os.listdir(val_dir):
 
 # rm val (old)
 os.rmdir(val_dir)
-os.remove('val.csv')
+os.remove(f"{FOLDER}/val.csv")
 
 # rename train to val
-os.rename('train', 'val')
-os.rename('train.csv', 'val.csv')
+os.rename(f"{FOLDER}/train", f"{FOLDER}/val")
+os.rename(f"{FOLDER}/train.csv", f"{FOLDER}/val.csv")
