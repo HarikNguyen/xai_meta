@@ -26,6 +26,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--config",
+        default="configs/mini2cub.yaml",
+        type=str,
+        help="Path to configuration file. Default: configs/mini2cub.yaml",
+    )
+
+    parser.add_argument(
         "--checkpoint_dir",
         default="checkpoints",
         type=str,
@@ -39,13 +46,29 @@ def parse_args():
         help="Chunk size for vmap. Default: Equal to meta_batch_size",
     )
 
+    parser.add_argument(
+        "--log_dir",
+        default="logs",
+        type=str,
+        help="Directory to save logs. Default: logs",
+    )
+
     # Return args
     return parser.parse_args()
 
+def load_config(yaml_path):
+    """Load configuration from YAML file."""
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    return config
 
 def main():
     # Get arguments from the command line
     args = parse_args()
+
+    # Load config from YAML file
+    yaml_config = load_config(args.config)
+    args.yaml_config = yaml_config
 
     # Call the run function with the arguments
     run(args)
