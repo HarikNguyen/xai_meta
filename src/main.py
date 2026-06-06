@@ -55,6 +55,18 @@ def parse_args():
         help="Directory to save logs. Default: logs",
     )
 
+    parser.add_argument(
+        "--use_best",
+        action="store_true",
+        help="Use the best checkpoint from the checkpoint directory. Default: False",
+    )
+
+    parser.add_argument(
+        "--use_last",
+        action="store_true",
+        help="Use the last checkpoint from the checkpoint directory. Default: True",
+    )
+
     # Return args
     return parser.parse_args()
 
