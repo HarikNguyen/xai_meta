@@ -15,8 +15,10 @@ def run_test(args, algo_class, test_loader, algo_conf, use_best=False, use_last=
     # load checkpoint
     if use_best:
         checkpoint_path = os.path.join(checkpoint_dir, f"best_checkpoint.pt")
-    if use_last:
+    elif use_last:
         checkpoint_path = os.path.join(checkpoint_dir, f"last_checkpoint.pt")
+    else:
+        raise ValueError("Please specify a checkpoint to load")
     print("Loading checkpoint from", checkpoint_path)
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}. Please run training first.")

@@ -46,5 +46,4 @@ def run(args):
         run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_dir, log_dir)
 
     elif args.mode == TEST_MODE:
-
         run_test(args, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
