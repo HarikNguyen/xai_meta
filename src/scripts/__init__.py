@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from .warm_up import warm_up
 from .trains import run_train
-from .test import run_test
+from .tests import run_test
 from algos.maml import MAML
 from loaders.utils import boT_to_stack
 
