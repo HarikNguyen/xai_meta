@@ -1,5 +1,7 @@
-from scripts import run
+import yaml
 import argparse
+
+from scripts import run
 
 
 def parse_args():
