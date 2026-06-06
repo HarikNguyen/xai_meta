@@ -30,7 +30,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
         train_pbar.set_postfix({"Meta Loss": f"{meta_loss:.4f}"})
         log_to_csv(loss_csv, [id_, meta_loss], header=loss_header)
 
-        if id_ % VAL_AFTER == 0 or id_ == len(train_loader) - 1:
+        if id_ % val_after == 0 or id_ == len(train_loader) - 1:
             val_boT = next(val_iter)
             val_pbar = tqdm(val_boT, desc="Validating", position=0, leave=False)
             pre_valres, post_valres = val_on_metabatch(algo_mgr, val_pbar)
