@@ -36,7 +36,7 @@ def warm_up():
         # dataset="miniImagenet",
         data_root="cub_200",
         dataset="cub_200",
-        dataset_type="train",
+        dataset_type="val",
         num_workers=2,
         sample={
             "metatrain_iterations": metatrain_iterations // val_after + 1,
