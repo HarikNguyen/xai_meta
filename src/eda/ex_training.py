@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 
-df = pd.read_csv("../.logs/mini2cub/MAML_train_log.csv")
+df = pd.read_csv("../.logs/tiered/MAML_train_log.csv")
 
 fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
@@ -43,4 +43,4 @@ axs[1, 1].legend()
 axs[1, 1].grid(True)
 
 plt.tight_layout()
-plt.savefig('metrics_plot_mini2cub.png')
+plt.savefig('metrics_plot_tiered.png')
