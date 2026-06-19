@@ -2,7 +2,6 @@ import torch
 from PIL import Image
 import torchvision.transforms.functional as vF
 
-
 _pil_interpolation_to_str = {
     Image.NEAREST: "PIL.Image.NEAREST",
     Image.BILINEAR: "PIL.Image.BILINEAR",

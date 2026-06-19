@@ -1,7 +1,7 @@
 import torch
-from torch.distributed.optim import DistributedOptimizer
+import torch.func as tf
 from .base import BaseAlgorithm
-from .utils import *
+from .utils import get_loss_n_preds, put_on_device, calc_accuracy
 
 
 class MAML(BaseAlgorithm):
@@ -12,6 +12,7 @@ class MAML(BaseAlgorithm):
         second_order,
         meta_batch_size=1,
         grad_clip=None,
+        vmap_chunk_size=None,
         **kwargs,
     ):
         """Initialization of MAML
@@ -30,57 +31,25 @@ class MAML(BaseAlgorithm):
             Keyword arguments that are ignored
         """
         super().__init__(**kwargs)
+        # hyperparameters
         self.train_base_lr = train_base_lr
         self.base_lr = base_lr
         self.second_order = second_order
         self.meta_batch_size = meta_batch_size
         self.grad_clip = grad_clip
+        self.vmap_chunk_size = vmap_chunk_size
 
-        # Increment after every train step on a single task, and update
-        # init when task_counter % meta_batch_size == 0
-        self.task_counter = 0
-
-        self.test_loss_sum = 0.0
-        # Maintain train loss history
-        self.train_losses = []
-
-        # Get random initialization point for baselearner
-        self.baselearner = self.baselearner_fn(**self.baselearner_args).to(self.device)
-        self.initialization = [
-            p.clone().detach().to(self.device) for p in self.baselearner.parameters()
+        # get random initialization point for baselearner (theta_0)
+        self.baselearner = self.baselearner_fn(**self.baselearner_args)
+        self.theta_0 = [
+            p.clone().to(self.device).detach().requires_grad_(True) for p in self.baselearner.parameters()
         ]
 
-        # Store gradients across tasks
-        self.grad_buffer = [
-            torch.zeros(p.size(), device=self.device) for p in self.initialization
-        ]
-
-        # Enable gradient tracking for the initialization parameters
-        for p in self.initialization:
-            p.requires_grad = True
-
-        # Initialize the meta-optimizer
-        self.optimizer = self.optim_fn(self.initialization, lr=self.lr)
-
-        # Maintain test history
-        self.test_losses = []
-        self.test_perfs = []
-
-    def _get_params(self):
-        return [p.clone().detach() for p in self.initialization]
+        # define outer-level optimizer
+        self.outer_optim = self.optim_fn(self.theta_0, lr=self.lr)
 
     def _fast_weights(self, params, gradients, train_mode=False):
-        """Compute task-specific weights using the gradients (theta*)
-
-        Apply a single step of gradient descent using the provided gradients
-        to compute task-specific, or equivalently, fast, weights.
-
-        Parameters
-        ----------
-        params : list
-            List of parameter tensors
-        gradients : list
-            List of torch.Tensor variables containing the gradients per layer
+        """Compute task-specific weights using the gradients (theta_t)
         """
         lr = self.base_lr if not train_mode else self.train_base_lr
 
@@ -91,160 +60,138 @@ class MAML(BaseAlgorithm):
             ]
 
         # Return task-specific weights
-        fast_weights = [(params[i] - lr * gradients[i]) for i in range(len(gradients))]
+        fast_weights = [(params[i] - lr * gradients[i])for i in range(len(gradients))]
         return fast_weights
 
     def _deploy(
         self,
-        train_x,
-        train_y,
-        test_x,
-        test_y,
+        theta_0,
+        sup_x,
+        sup_y,
+        que_x,
+        que_y,
         train_mode,
         T,
-        rpc_mode=False,
     ):
-        """Run DOSO on a single task to get the loss on the query set
-
-        1. Compute the base-learner loss and gradients on the support set
-        (train_x, train_y) using our initialization point.
-        2. Make a few weight update based on this information.
-        3. Evaluate and return the loss of the fast weights on the query set
-        (test_x, test_y).
-
-        Parameters
-        ----------
-        train_x: torch.Tensor
-            Inputs of the support set
-        train_y: torch.Tensor
-            Outputs of the support set
-        test_x: torch.Tensor
-            Inputs of the query set
-        test_y: torch.Tensor
-            Outputs of the query set
-        train_mode: boolean
-            Whether we are in training mode or test mode
-
-        Returns
-        ----------
-        test_loss
-            Loss of the base-learner on the query set after the proposed
-            one-step update
+        """Deploy on single task
+        1. Fast adaptation on support set (sup_x, sup_y) for T steps
+        2. Eval on query set (que_x, que_y) after each update step
+        3. Return losses and preds at each step
         """
+        # init fast_weights with theta_0 (phi)
+        fast_weights = [p.clone() for p in theta_0]
         learner = self.baselearner
-        # Copy initialization parameters to fast_weights parameters
-        if rpc_mode:
-            fast_weights = self.initialization
-        else:
-            fast_weights = [p.clone() for p in self.initialization]
 
-        # ----- Pre-update (theta_0) -----
-        with torch.no_grad():
-            pre_preds = learner.forward_weights(train_x, fast_weights)
-            pre_loss = learner.criterion(pre_preds, train_y)
+        # init results list
+        sup_losses, que_losses, sup_preds_list, que_preds_list, sup_accs, que_accs = [], [], [], [], [], []
+        
+        # get pre-update (theta_0) loss and predictions
+        values_n_grad_fn = tf.grad_and_value(get_loss_n_preds, has_aux=True)
+        grads, (pre_sup_loss, pre_sup_pred) = values_n_grad_fn(fast_weights, learner, sup_x, sup_y)
+        pre_que_loss, pre_que_pred = get_loss_n_preds(fast_weights, learner, que_x, que_y)
 
-        # ----- Inner loop (T updates) -----
-        # Train on support set (train_x, train_y)
+        sup_losses.append(pre_sup_loss)
+        que_losses.append(pre_que_loss)
+        sup_preds_list.append(pre_sup_pred)
+        que_preds_list.append(pre_que_pred)
+        sup_accs.append(calc_accuracy(pre_sup_pred, sup_y))
+        que_accs.append(calc_accuracy(pre_que_pred, que_y))
+
         for _ in range(T):
-            # Get loss and grads
-            _, grads = get_loss_and_grads(
-                learner,
-                train_x,
-                train_y,
-                weights=fast_weights,
-                create_graph=self.second_order,
-                retain_graph=T > 1 or self.second_order,
-                flat=False,
-            )
-
-            # Get fast_weights
+            # get fast_weights
             fast_weights = self._fast_weights(
                 params=fast_weights,
                 gradients=grads,
                 train_mode=train_mode,
             )
+            # get loss and predictions
+            grads, (sup_loss, sup_pred) = values_n_grad_fn(fast_weights, learner, sup_x, sup_y)
+            que_loss, que_pred = get_loss_n_preds(fast_weights, learner, que_x, que_y)
 
-        # ----- Post-update (theta_T) -----
-        # Eval and return performance on query set (test_x, test_y)
-        post_preds = learner.forward_weights(test_x, fast_weights)
-        post_loss = learner.criterion(post_preds, test_y)
+            sup_losses.append(sup_loss)
+            que_losses.append(que_loss)
+            sup_preds_list.append(sup_pred)
+            que_preds_list.append(que_pred)
+            sup_accs.append(calc_accuracy(sup_pred, sup_y))
+            que_accs.append(calc_accuracy(que_pred, que_y))
 
-        return pre_loss, post_loss, pre_preds, post_preds
+        return sup_losses, que_losses, sup_preds_list, que_preds_list, sup_accs, que_accs
 
-    def set_train_mode(self):
-        self.baselearner.train()
-
-    def set_val_mode(self):
-        self.baselearner.eval()
-
-    def inner_train(self, train_x, train_y, test_x, test_y, rpc_mode=False):
-        return self._deploy(train_x, train_y, test_x, test_y, True, self.T)
-
-    def outer_train(self, pre_losses, post_losses):
-        mean_pre_losses = pre_losses.mean()
-        mean_post_losses = post_losses.mean()
-
-        # Meta-update
-        self.optimizer.zero_grad()
-        mean_post_losses.backward()
-
-        # Clip gradient (optional)
-        if self.grad_clip is not None:
-            for p in self.initialization:
-                if p.grad is not None:
-                    p.grad.data.clamp_(-self.grad_clip, self.grad_clip)
-
-        self.optimizer.step()
-        # opt = DistributedOptimizer(self.optimizer, self.initialization, lr=self.lr)
-        # opt.step()
-
-        return mean_pre_losses.item(), mean_post_losses.item()
-
-    def acc_val(self, train_x, train_y, test_x, test_y, val_mode=True, rpc_mode=False):
-        T = self.T_val if val_mode else self.T_test
-
-        # Compute the test loss after a single gradient update on the support set
-        _, _, pre_preds, post_preds = self._deploy(
-            train_x,
-            train_y,
-            test_x,
-            test_y,
-            False,
-            T,
-            rpc_mode,
+    def train(self, sup_x, sup_y, que_x, que_y):
+        sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
+        self.outer_optim.zero_grad()
+        vmap_deploy = tf.vmap(
+            self._deploy, 
+            in_dims=(None, 0, 0, 0, 0), 
+            chunk_size=self.vmap_chunk_size
         )
 
-        # Turn one-hot predictions into class preds
-        pre_train_y_hat = torch.argmax(pre_preds, dim=1)
-        pre_acc = accuracy(pre_train_y_hat, train_y)
-        post_test_y_hat = torch.argmax(post_preds, dim=1)
-        post_acc = accuracy(post_test_y_hat, test_y)
-        return pre_acc, post_acc
+        _, que_losses, _, _, _, _ = vmap_deploy(
+            self.theta_0,
+            sup_x,
+            sup_y,
+            que_x,
+            que_y,
+            train_mode=True,
+            T=self.T,
+        )
 
+        meta_loss = que_losses[-1].mean()
+
+        meta_loss.backward()
+
+        self.outer_optim.step()
+
+        return meta_loss.item()
+
+    def val(self, sup_x, sup_y, que_x, que_y):
+        sup_losses, que_losses, sup_accs, que_accs = self._validate(sup_x, sup_y, que_x, que_y, T=self.T_val)
+
+        pre_results = {
+            "sup_loss": sup_losses[0].mean().item(),
+            "que_loss": que_losses[0].mean().item(),
+            "sup_acc": sup_accs[0].mean().item(),
+            "que_acc": que_accs[0].mean().item(),
+        }
+        post_results = {
+            "sup_loss": sup_losses[-1].mean().item(),
+            "que_loss": que_losses[-1].mean().item(),
+            "sup_acc": sup_accs[-1].mean().item(),
+            "que_acc": que_accs[-1].mean().item(),
+        }
+
+        return pre_results, post_results
+
+    def test(self, sup_x, sup_y, que_x, que_y):
+        return self._validate(sup_x, sup_y, que_x, que_y, T=self.T_test)
+
+    def _validate(self, sup_x, sup_y, que_x, que_y, T):
+        sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
+        vmap_deploy = tf.vmap(
+            self._deploy, 
+            in_dims=(None, 0, 0, 0, 0), 
+            chunk_size=self.vmap_chunk_size
+        )
+
+        sup_losses, que_losses, _, _, sup_accs, que_accs = vmap_deploy(
+            self.theta_0,
+            sup_x,
+            sup_y,
+            que_x,
+            que_y,
+            train_mode=False,
+            T=T,
+        )
+        return sup_losses, que_losses, sup_accs, que_accs
+        
     def dump_state(self):
         """Return the state of the meta-learner
-
-        Returns
-        ----------
-        initialization
-            Initialization parameters
         """
-        return [p.clone().detach().to(self.device) for p in self.initialization]
+        return [p.clone().detach() for p in self.theta_0]
 
     def load_state(self, state):
         """Load the given state into the meta-learner
-
-        Parameters
-        ----------
-        state : initialization
-            Initialization parameters
         """
-
-        self.initialization = [p.clone() for p in state]
-        for p in self.initialization:
-            p.requires_grad = True
-
-    def to(self, device):
-        """to device"""
-        self.baselearner = self.baselearner.to(device)
-        self.initialization = [p.to(device) for p in self.initialization]
+        with torch.no_grad():
+            for p_current, p_loaded in zip(self.theta_0, state):
+                p_current.copy_(p_loaded)

@@ -8,10 +8,13 @@ class ConvBlock(nn.Module):
         super(ConvBlock, self).__init__()
         self.device = device
         self.conv = nn.Conv2d(
-            in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=0
+            in_channels=indim, out_channels=32, kernel_size=3, stride=1, padding=1
         )
-        self.batchnorm = nn.BatchNorm2d(32)
-        self.relu = nn.ReLU()
+        self.batchnorm = nn.BatchNorm2d(
+            32,
+            track_running_stats=False,
+        )
+        self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(
             kernel_size=2, stride=2 if not pools1 else 1, padding=0
         )
@@ -26,21 +29,26 @@ class ConvBlock(nn.Module):
         return x
 
     def forward_weights(self, x, weights):
+        # conv2d
         x = F.conv2d(x, weights[0], weights[1], padding=1)
 
-        # Manual batch normalization followed by ReLU
-        running_mean = torch.zeros(32).to(self.device)
-        running_var = torch.ones(32).to(self.device)
+        # batchnrom
         x = F.batch_norm(
             x,
-            running_mean,
-            running_var,
+            None,
+            None,
             weights[2],
             weights[3],
-            momentum=1,
             training=True,
+            eps=self.batchnorm.eps,
         )
-        x = self.relu(x)
+
+        # activation
+        x = F.relu(x, inplace=True)
+
+        # pooling
         if self.pool:
-            x = F.max_pool2d(F.relu(x), kernel_size=2)
+            x = F.max_pool2d(x, kernel_size=2, stride=2)
+
+        # return
         return x

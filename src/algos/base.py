@@ -1,5 +1,4 @@
-import pickle
-
+import torch
 
 class BaseAlgorithm:
     def __init__(
@@ -61,6 +60,10 @@ class BaseAlgorithm:
         self.T_val = T_val
         # Number of weight updates at test time
         self.T_test = T_test
+        # Training batch size
+        self.train_batch_size = train_batch_size
+        # Test batch size
+        self.test_batch_size = test_batch_size
         # Learning rate for (meta-)optimizer
         self.lr = lr
         # Device to run model operations on
@@ -76,7 +79,10 @@ class BaseAlgorithm:
     def train(self, train_x, train_y, test_x, test_y):
         raise NotImplementedError()
 
-    def evaluate(self, train_x, train_y, test_x, test_y):
+    def val(self, train_x, train_y, test_x, test_y):
+        raise NotImplementedError()
+
+    def test(self, train_x, train_y, test_x, test_y):
         raise NotImplementedError()
 
     def dump_state(self):
@@ -85,14 +91,12 @@ class BaseAlgorithm:
     def load_state(self, state):
         raise NotImplementedError()
 
-    def store_file(self, filename):
+    def read_file(self, filename, map_location=None):
+        if map_location is None and hasattr(self, 'device'):
+            map_location = self.device
+        state = torch.load(filename, map_location=map_location, weights_only=True)
+        self.load_state(state)
+
+    def save_file(self, filename):
         state = self.dump_state()
-
-        with open(filename, "wb+") as f:
-            pickle.dump(state, f)
-
-    def read_file(self, filename, **kwargs):
-        with open(filename, "rb") as f:
-            state = pickle.load(f)
-
-        self.load_state(state, **kwargs)
+        torch.save(state, filename)

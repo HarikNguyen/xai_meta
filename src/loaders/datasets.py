@@ -4,7 +4,7 @@ from PIL import Image
 from typing import List
 
 
-class MiniImagenetDataset(object):
+class FewShotDataset(object):
 
     def __init__(
         self,

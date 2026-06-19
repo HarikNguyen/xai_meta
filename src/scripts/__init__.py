@@ -1,59 +1,48 @@
 import os
 import numpy as np
-import math
 import torch
-import torch.multiprocessing as mp
-import torch.distributed.autograd as dist_autograd
-import torch.distributed.rpc as rpc
+from tqdm import tqdm
 
 from .warm_up import warm_up
-from algos.base import BaseAlgorithm
+from .trains import run_train
+from .tests import run_test
 from algos.maml import MAML
-from algos.utils import put_on_device
-
-from rpc.maml import run_train_master, init_worker
+from loaders.utils import boT_to_stack
 
 
-def run(
-    validate,
-    world_size,
-):
-    mp.set_start_method("spawn", force=True)
-    world_size = world_size
-    mp.spawn(run_process, args=(world_size, validate), nprocs=world_size, join=True)
+############################################################################################
+### Main Func
+############################################################################################
 
+TRAIN_MODE = "train"
+TEST_MODE = "test"
 
-def run_process(rank, world_size, validate):
-    os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "29500"
-    device_maps = {
-        f"worker{i}": {torch.device("cuda:0"): torch.device("cuda:0")}
-        for i in range(world_size)
-    }
+def run(args):
+    if args.algo == "maml":
+        algo_class = MAML
+    else:
+        raise NotImplementedError(f"Algorithm {algo} not implemented.")
 
-    options = rpc.TensorPipeRpcBackendOptions(
-        device_maps=device_maps,
-    )
+    # warm up
+    train_loader, val_loader, test_loader, algo_conf = warm_up(args.yaml_config)
+    algo_conf["vmap_chunk_size"] = args.vmap_chunk_size
 
-    rpc.init_rpc(
-        name=f"worker{rank}",
-        rank=rank,
-        world_size=world_size,
-        rpc_backend_options=options,
-    )
+    checkpoint_dir = args.checkpoint_dir
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
 
-    if rank == 0:
-        train_loader, val_loader, algo_conf = warm_up()
+    if not os.path.exists(os.path.join(checkpoint_dir, algo_class.__name__)):
+        os.makedirs(os.path.join(checkpoint_dir, algo_class.__name__))
 
-        maml = MAML(**algo_conf)
-        workers = [f"worker{i}" for i in range(1, world_size)]
+    checkpoint_dir = os.path.join(checkpoint_dir, algo_class.__name__)
 
-        # Initialize worker-local algo instances so we don't send the full
-        # `maml` object with every RPC.
-        for w in workers:
-            rpc.rpc_sync(w, init_worker, args=(algo_conf,))
+    log_dir = args.log_dir
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 
-        run_train_master(maml, workers, train_loader, val_loader)
+    # run
+    if args.mode == TRAIN_MODE:
+        run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_dir, log_dir)
 
-    # shutdown all
-    rpc.shutdown()
+    elif args.mode == TEST_MODE:
+        run_test(args, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
