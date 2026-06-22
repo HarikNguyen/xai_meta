@@ -23,6 +23,9 @@ class BatchTaskSampler(Sampler):
         self.seed = seed
         self.shuffle = shuffle
 
+        self.generator = torch.Generator()
+        self.generator.manual_seed(self.seed)
+
         self.meta_batch_size = meta_batch_size
         self.metatrain_iterations = metatrain_iterations
 
@@ -38,21 +41,17 @@ class BatchTaskSampler(Sampler):
         return self.metatrain_iterations
 
     def __get_n_ways(self):
-        classes = torch.randperm(len(self.label_indeces))[: self.n_way]
+        classes = torch.randperm(len(self.label_indeces), generator=self.generator)[: self.n_way]
         return classes
 
     def __get_k_shots_lists(self):
         support_set = []
         query_set = []
 
-        if self.seed:
-            torch.manual_seed(self.seed)
-            torch.cuda.manual_seed(self.seed)
-
         n_ways = self.__get_n_ways()
         for _, class_ in enumerate(n_ways):
             data_id_list = self.label_indeces[class_.item()]
-            data_pos_shuffle = torch.randperm(data_id_list.size()[0])
+            data_pos_shuffle = torch.randperm(data_id_list.size()[0], generator=self.generator)
 
             support_set.append(data_id_list[data_pos_shuffle[: self.k_shot]])
             query_set.append(

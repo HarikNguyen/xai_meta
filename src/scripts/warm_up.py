@@ -58,6 +58,7 @@ def warm_up(config):
             "meta_batch_size": dl_cfg["metatest_batch_size"],  # Really equal (metatrain_iterations = 600 || meta_batch_size = 1)
             "shuffle": True,
         },
+        seed=42,
     )
 
     # Define model conf
