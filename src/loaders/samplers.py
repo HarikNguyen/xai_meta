@@ -24,7 +24,8 @@ class BatchTaskSampler(Sampler):
         self.shuffle = shuffle
 
         self.generator = torch.Generator()
-        self.generator.manual_seed(self.seed)
+        if self.seed is not None:
+            self.generator.manual_seed(self.seed)
 
         self.meta_batch_size = meta_batch_size
         self.metatrain_iterations = metatrain_iterations
