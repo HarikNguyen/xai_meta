@@ -64,7 +64,7 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
             axes[0].axis('off')
 
             im = axes[1].imshow(heatmap_normalized, cmap='jet')
-            axes[1].set_title(f"Feature Saliency Map (T={T_test})")
+            axes[1].set_title(f"Feature Saliency Map (T={T})")
             axes[1].axis('off')
 
             fig.colorbar(im, ax=axes[1], fraction=0.046, pad=0.04)
