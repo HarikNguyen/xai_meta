@@ -1,4 +1,5 @@
 import os
+import shutil
 import torch
 import matplotlib.pyplot as plt
 from interpreters import MAMLPostHocExplainer
@@ -9,6 +10,9 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
     algo_mgr = algo_class(**algo_conf)
     T = algo_mgr.T_test
     device = algo_conf.get("device", "cpu")
+    if os.path.exists(os.path.join(log_dir, "plots")):
+        shutil.rmtree(os.path.join(log_dir, "plots"))
+    os.makedirs(os.path.join(log_dir, "plots"))
 
     # load checkpoint
     if use_best:
@@ -65,6 +69,6 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
 
             fig.colorbar(im, ax=axes[1], fraction=0.046, pad=0.04)
 
-            save_path = os.path.join(log_dir, f"{algo}_task{metabatch_id}-{task_id}_saliency.png")
+            save_path = os.path.join(log_dir, "plots", f"{algo}_task{metabatch_id}-{task_id}_saliency.png")
             plt.savefig(save_path, bbox_inches='tight', dpi=300)
             plt.close(fig)
