@@ -6,6 +6,7 @@ from tqdm import tqdm
 from .warm_up import warm_up
 from .trains import run_train
 from .tests import run_test
+from .explains import explain
 from algos.maml import MAML
 from loaders.utils import boT_to_stack
 
@@ -16,6 +17,7 @@ from loaders.utils import boT_to_stack
 
 TRAIN_MODE = "train"
 TEST_MODE = "test"
+EXPLAIN_MODE = "explain"
 
 def run(args):
     if args.algo == "maml":
@@ -46,3 +48,6 @@ def run(args):
 
     elif args.mode == TEST_MODE:
         run_test(args, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
+
+    elif args.mode == EXPLAIN_MODE:
+        explain(args.algo, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
