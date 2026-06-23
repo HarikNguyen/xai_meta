@@ -246,6 +246,7 @@ class MAMLPostHocExplainer:
         Tính qua double-backward: không dựng ma trận P×D.
         Kết quả: pixel/đặc trưng nào trong mẫu j quan trọng với hướng thích nghi.
         """
+        sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
         phis    = self._compute_trajectory(sup_x, sup_y, T)
         lambdas = self._compute_lambdas(phis, que_x, que_y, sup_x, sup_y, T)
         return self._saliency_x_core(sup_x, sup_y, T, phis, lambdas)
