@@ -16,7 +16,7 @@ def parse_args():
         default="train",
         type=str,
         help="Mode to run the script in.\n - train: start meta-training.\n - val: meta-testing on validation set.\n - test: meta-testing on test set.\nDefault: train",
-        choices=["train", "val", "test"],
+        choices=["train", "val", "test", "explain"],
     )
 
     parser.add_argument(
