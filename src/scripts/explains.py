@@ -60,7 +60,7 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
                 axes[0].imshow(original_img_np[:, :, 0], cmap='gray')
             else:
                 axes[0].imshow(original_img_np)
-            axes[0].set_title(f"Support Input (Task {tasks_processed + 1})")
+            axes[0].set_title(f"Support Input (Task {metabatch_id} - {task_id})")
             axes[0].axis('off')
 
             im = axes[1].imshow(heatmap_normalized, cmap='jet')
