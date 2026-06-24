@@ -18,7 +18,8 @@ import torch.nn.functional as F
 import torch.autograd as autograd
 from typing import Dict, List, Optional
 
-from algos.utils import get_loss_n_preds, put_on_device, get_stratified_bootstrap_batches
+from algos.utils import get_loss_n_preds, put_on_device
+from loaders.utils import get_stratified_bootstrap_batches
 
 
 class MAMLPostHocExplainer:
