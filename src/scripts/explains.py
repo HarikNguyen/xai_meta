@@ -53,47 +53,62 @@ def show_explaination(sup_x, saliency_maps, algo, log_dir, metabatch_id, task_id
     # inits
     num_shot = sup_x.shape[0]
     cols = min(num_shot, 5)
-    rows = math.ceil(num_shot/ cols)
+    # Tăng gấp đôi số hàng: một hàng cho overlay, một hàng cho ảnh gốc
+    rows = math.ceil(num_shot / cols) * 2 
+    
     fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 3 * rows))
-    if num_shot == 1:
-        axes = np.array([axes])
-    else:
-        axes = np.array(axes).flatten()
+    
+    # Đảm bảo axes luôn là một mảng 2D (rows, cols)
+    if rows == 1 and cols == 1:
+        axes = np.array([[axes]])
+    elif rows == 1:
+        axes = axes[np.newaxis, :]
+    elif cols == 1:
+        axes = axes[:, np.newaxis]
 
     for shot_idx in range(num_shot):
-        ax = axes[shot_idx]
-
+        # Tính toán vị trí hàng/cột
+        row_idx = (shot_idx // cols) * 2
+        col_idx = shot_idx % cols
+        
+        # --- Xử lý dữ liệu ảnh ---
         original_img_tensor = sup_x[shot_idx].cpu().detach()
         img_min, img_max = original_img_tensor.min(), original_img_tensor.max()
         original_img_np = (original_img_tensor - img_min) / (img_max - img_min + 1e-8)
         original_img_np = original_img_np.permute(1, 2, 0).numpy()
 
         is_gray = original_img_np.shape[-1] == 1
-        if is_gray:
-            img_to_show = original_img_np[:, :, 0]
-            cmap_img = 'gray'
-        else:
-            img_to_show = original_img_np
-            cmap_img = None
+        cmap_img = 'gray' if is_gray else None
+        img_to_show = original_img_np[:, :, 0] if is_gray else original_img_np
 
+        # 1. Vẽ ảnh Overlay (Hàng trên)
+        ax_overlay = axes[row_idx, col_idx]
         saliency_tensor = saliency_maps[shot_idx].cpu().detach()
         heatmap = torch.abs(saliency_tensor).sum(dim=0).numpy()
-        hm_min, hm_max = heatmap.min(), heatmap.max()
-        heatmap_normalized = (heatmap - hm_min) / (hm_max - hm_min + 1e-8)
+        heatmap_normalized = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min() + 1e-8)
+        
+        ax_overlay.imshow(img_to_show, cmap=cmap_img)
+        ax_overlay.imshow(heatmap_normalized, cmap='jet', alpha=0.5)
+        ax_overlay.set_title(f"Overlay {shot_idx + 1}")
+        ax_overlay.axis('off')
 
-        ax.imshow(img_to_show, cmap=cmap_img)
-        ax.imshow(heatmap_normalized, cmap='jet', alpha=0.5)
+        # 2. Vẽ ảnh Gốc (Hàng dưới)
+        ax_orig = axes[row_idx + 1, col_idx]
+        ax_orig.imshow(img_to_show, cmap=cmap_img)
+        ax_orig.set_title(f"Original {shot_idx + 1}")
+        ax_orig.axis('off')
 
-        ax.set_title(f"Shot {shot_idx + 1}")
-        ax.axis('off')
+    # Tắt các ô trống nếu có
+    for i in range(rows):
+        for j in range(cols):
+            if (i // 2) * cols + j >= num_shot:
+                axes[i, j].axis('off')
 
-    for idx in range(num_shot, len(axes)):
-        axes[idx].axis('off')
-
-    plt.suptitle(f"Saliency Overlay - Task {metabatch_id}-{task_id} (T={T})", fontsize=16, y=1.02)
+    plt.suptitle(f"Saliency Overlay & Original - Task {metabatch_id}-{task_id} (T={T})", fontsize=16, y=1.02)
     plt.tight_layout()
 
     plot_dir = os.path.join(log_dir, "plots")
+    os.makedirs(plot_dir, exist_ok=True) # Đảm bảo thư mục tồn tại
     save_path = os.path.join(plot_dir, f"{algo}_task{metabatch_id}-{task_id}_saliency_overlay.png")
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.close(fig)
