@@ -4,6 +4,7 @@ import math
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 from interpreters import MAMLPostHocExplainer
 
 def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=True, checkpoint_dir="checkpoints", log_dir="logs"):
