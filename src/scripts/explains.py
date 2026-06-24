@@ -36,8 +36,10 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
         raise NotImplementedError(f"Algorithm {algo} can not be explained.")
 
     # explain each task
-    for metabatch_id, boT in tqdm(enumerate(test_loader), desc="Explaining", position=0):
-        for task_id, (support, query) in tqdm(enumerate(boT), desc=f"Batch {metabatch_id} tasks", position=1, leave=False):
+    test_loader_pbar = tqdm(test_loader, desc="Training", position=0, leave=True, unit="boT")
+    for metabatch_id, boT in enumerate(test_loader_pbar):
+        boT_pbar = tqdm(boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task")
+        for task_id, (support, query) in enumerate(boT_pbar):
             sup_x, sup_y = support
             que_x, que_y = query
 
