@@ -17,7 +17,7 @@ dataloader:
   n_way: 5
   k_shot: 1
   k_query: 15
-  test_k_query: 10
+  test_k_query: 5
 
 algo:
   train_base_lr: 0.01
