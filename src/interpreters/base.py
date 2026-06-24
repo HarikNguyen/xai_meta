@@ -4,23 +4,13 @@ algos/interpreter.py
 Post-hoc XAI cho MAML: Feature Saliency Map của support set S
 w.r.t. độ lợi thích nghi  ΔM = L_Q(θ₀) − L_Q(φᵢ*(S)).
 
-Lý thuyết đầy đủ: partial_LQ_partial_S.md §3-4.
-
-Ba kênh attribution (dùng chung một adjoint chain λ^(K)...λ^(1)):
 ──────────────────────────────────────────────────────────────────
-  ∂ΔM/∂wⱼ = (α/k) Σₘ ⟨gⱼ^(m-1), λ^(m)⟩                    ∈ ℝ
   ∂ΔM/∂xⱼ = (α/k) Σₘ [∇²_{φ,xⱼ} ℓⱼ(φ^(m-1))]ᵀ λ^(m)      ∈ ℝᴰ
-  LOO_j    = ΔM(S) − ΔM(S∖{j})                              ∈ ℝ  (discrete)
 
 Adjoint:
   λ^(K) = ∇_φ L_Q(φ^(K))
   λ^(m-1) = λ^(m) − α·H^(m-1)·λ^(m)     [H symmetric → no transpose needed]
   H^(m-1)·v via Pearlmutter HVP: O(P), không build ma trận P×P.
-
-Ghi chú BatchNorm (xác nhận bằng số):
-  ℓⱼ luôn được tính qua forward CHUNG toàn batch sup_x → sup_y,
-  rồi lấy thành phần thứ j. Forward riêng lẻ từng mẫu cho kết quả sai
-  nếu model dùng BatchNorm (track_running_stats=False là chuẩn cho MAML).
 """
 
 import torch
@@ -28,30 +18,26 @@ import torch.nn.functional as F
 import torch.autograd as autograd
 from typing import Dict, List, Optional
 
-from algos.utils import get_loss_n_preds, put_on_device
+from algos.utils import get_loss_n_preds, put_on_device, get_stratified_bootstrap_batches
 
 
 class MAMLPostHocExplainer:
     """
-    Post-hoc explainer cho một MAML đã train xong.
+    Post-hoc explainer for MAML.
 
     Parameters
     ----------
     maml : MAML
-        Đối tượng MAML đã load checkpoint (theta_0 đã sẵn sàng).
+        MAML manager obj (loaded from checkpoint - theta_0 was prepared).
     device : str, optional
-        Tự suy từ maml.device nếu không truyền.
+        Device to run on.
     """
 
     def __init__(self, maml, device: Optional[str] = None):
         self.maml    = maml
         self.device  = device or maml.device
-        self.alpha   = maml.base_lr   # inner-loop LR tại meta-test
+        self.alpha   = maml.base_lr   # inner-loop LR at meta-test time
         self.learner = maml.baselearner
-
-    # =========================================================================
-    # PRIVATE: primitive operations
-    # =========================================================================
 
     def _loss_j_joint(
         self,
@@ -237,6 +223,8 @@ class MAMLPostHocExplainer:
         que_x: torch.Tensor,
         que_y: torch.Tensor,
         T: int,
+        num_bootstraps: int = 10,
+        samples_per_class: int = 3,
     ) -> torch.Tensor:
         """
         ∂ΔM/∂xⱼ ∈ ℝ^(k×D) — bản đồ saliency đặc trưng (cùng shape sup_x).
@@ -247,7 +235,17 @@ class MAMLPostHocExplainer:
         Kết quả: pixel/đặc trưng nào trong mẫu j quan trọng với hướng thích nghi.
         """
         sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
+        total_saliency = torch.zeros_like(sup_x)
+
         phis    = self._compute_trajectory(sup_x, sup_y, T)
-        lambdas = self._compute_lambdas(phis, que_x, que_y, sup_x, sup_y, T)
-        return self._saliency_x_core(sup_x, sup_y, T, phis, lambdas)
+
+        bootstrap_generator = get_stratified_bootstrap_batches(
+            que_x, que_y, num_bootstraps, samples_per_class
+        )
+        for b_que_x, b_que_y in bootstrap_generator:
+            lambdas_b = self._compute_lambdas(phis, b_que_x, b_que_y, sup_x, sup_y, T)
+            saliency_b = self._saliency_x_core(sup_x, sup_y, T, phis, lambdas_b)
+            total_saliency += saliency_b
+
+        return total_saliency / num_bootstraps
 
