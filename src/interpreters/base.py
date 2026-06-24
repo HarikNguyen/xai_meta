@@ -224,7 +224,7 @@ class MAMLPostHocExplainer:
         que_x: torch.Tensor,
         que_y: torch.Tensor,
         T: int,
-        num_bootstraps: int = 10,
+        num_bootstraps: int = 100,
         samples_per_class: int = 3,
     ) -> torch.Tensor:
         """
