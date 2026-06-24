@@ -46,7 +46,6 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
             )
 
             show_explaination(sup_x, saliency_maps, algo, log_dir, metabatch_id, task_id, T)
-            pbar.update(1)
 
 def show_explaination(sup_x, saliency_maps, algo, log_dir, metabatch_id, task_id, T):
     # inits
