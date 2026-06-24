@@ -21,42 +21,19 @@ from typing import Dict, List, Optional
 from algos.utils import get_loss_n_preds, put_on_device
 from loaders.utils import get_stratified_bootstrap_batches
 
-
 class MAMLPostHocExplainer:
     """
-    Post-hoc explainer for MAML.
-
-    Parameters
-    ----------
-    maml : MAML
-        MAML manager obj (loaded from checkpoint - theta_0 was prepared).
-    device : str, optional
-        Device to run on.
+    Post-hoc explainer for MAML (Highly Optimized Version).
+    
+    Tối ưu hóa thời gian chạy bằng cách lợi dụng tính tuyến tính của 
+    chuỗi Adjoint và khả năng Vector hóa đạo hàm bậc 2 của PyTorch.
     """
 
     def __init__(self, maml, device: Optional[str] = None):
         self.maml    = maml
         self.device  = device or maml.device
-        self.alpha   = maml.base_lr   # inner-loop LR at meta-test time
+        self.alpha   = maml.base_lr   
         self.learner = maml.baselearner
-
-    def _loss_j_joint(
-        self,
-        phi: List[torch.Tensor],
-        x_full: torch.Tensor,
-        y_full: torch.Tensor,
-        j: int,
-    ) -> torch.Tensor:
-        """
-        ℓⱼ(φ; x_full, y_full) = CE của mẫu thứ j, tính qua forward CHUNG.
-
-        y_full là one-hot [k, n_way] (đúng format codebase: calc_accuracy dùng
-        torch.max(y, dim=1) → y phải là one-hot).
-        """
-        preds    = self.learner.forward_weights(x_full, phi)          # [k, n_way]
-        log_probs = F.log_softmax(preds, dim=-1)                       # [k, n_way]
-        per_ex   = -(y_full * log_probs).sum(dim=-1)                   # [k]
-        return per_ex[j]
 
     def _compute_trajectory(
         self,
@@ -64,12 +41,7 @@ class MAMLPostHocExplainer:
         sup_y: torch.Tensor,
         T: int,
     ) -> List[List[torch.Tensor]]:
-        """
-        Quỹ đạo detached φ^(0)...φ^(T).
-
-        Mỗi φ^(m) là list tensor tươi (detached clone), không lưu đồ thị
-        xuyên bước → adjoint có thể bật requires_grad độc lập tại từng bước.
-        """
+        """Quỹ đạo detached φ^(0)...φ^(T)."""
         phis = [[p.detach().clone() for p in self.maml.theta_0]]
 
         for _ in range(T):
@@ -82,7 +54,7 @@ class MAMLPostHocExplainer:
             ]
             phis.append(phi_next)
 
-        return phis  # len = T+1
+        return phis
 
     def _hvp(
         self,
@@ -91,11 +63,7 @@ class MAMLPostHocExplainer:
         sup_x: torch.Tensor,
         sup_y: torch.Tensor,
     ) -> List[torch.Tensor]:
-        """
-        Hessian-vector product  H^(m)·v  qua Pearlmutter double-backward.
-        H = ∇²_φ L_S(φ),  v được detach trước khi dot.
-        Chi phí: O(P) — không dựng ma trận P×P.
-        """
+        """Hessian-vector product H^(m)·v via Pearlmutter double-backward."""
         phi_r = [p.detach().requires_grad_(True) for p in phi]
         loss, _ = get_loss_n_preds(phi_r, self.learner, sup_x, sup_y)
         grads = autograd.grad(loss, phi_r, create_graph=True)
@@ -103,40 +71,7 @@ class MAMLPostHocExplainer:
         Hv    = autograd.grad(dot, phi_r, retain_graph=False)
         return [hv.detach() for hv in Hv]
 
-    def _compute_lambdas(
-        self,
-        phis: List[List[torch.Tensor]],
-        que_x: torch.Tensor,
-        que_y: torch.Tensor,
-        sup_x: torch.Tensor,
-        sup_y: torch.Tensor,
-        T: int,
-    ) -> Dict[int, List[torch.Tensor]]:
-        """
-        Adjoint chain λ^(T)...λ^(0).
-        Công thức: λ^(T) = ∇_φ L_Q(φ^(T));  λ^(m-1) = λ^(m) − α·H^(m-1)·λ^(m).
-        H đối xứng → không cần transpose.  Trả về dict key=0..T.
-        """
-        # λ^(T)
-        phi_T = [p.detach().requires_grad_(True) for p in phis[T]]
-        qL, _ = get_loss_n_preds(phi_T, self.learner, que_x, que_y)
-        lam_T = autograd.grad(qL, phi_T)
-
-        lambdas: Dict[int, List[torch.Tensor]] = {T: [l.detach() for l in lam_T]}
-
-        # backward recursion m = T, T-1, ..., 1
-        for m in range(T, 0, -1):
-            Hv = self._hvp(phis[m - 1], lambdas[m], sup_x, sup_y)
-            lambdas[m - 1] = [
-                (l - self.alpha * hv).detach()
-                for l, hv in zip(lambdas[m], Hv)
-            ]
-
-        return lambdas
-
-    # ---- internal saliency core (nhận phis+lambdas đã tính) ----
-
-    def _saliency_x_core(
+    def _saliency_x_core_batched(
         self,
         sup_x: torch.Tensor,
         sup_y: torch.Tensor,
@@ -145,77 +80,34 @@ class MAMLPostHocExplainer:
         lambdas: Dict[int, List[torch.Tensor]],
     ) -> torch.Tensor:
         """
-        Kênh đặc trưng: [∇²_{φ,xⱼ} ℓⱼ]ᵀ λ^(m) via double-backward.
-
-        QUAN TRỌNG (đã xác nhận bằng số):
-          - xⱼ phải nằm trong x_full để BatchNorm thấy đúng statistics.
-          - autograd.grad(loss_j, phi_r, create_graph=True) giữ link x→phi→loss,
-            cho phép backward thứ hai ∂h/∂xⱼ chạy qua.
+        Kênh đặc trưng: [∇²_{φ,X} L_S]ᵀ λ^(m) via Batched double-backward.
+        Tối ưu hóa: Xử lý toàn bộ batch X cùng lúc, loại bỏ vòng lặp for j=1..k.
         """
-        k        = sup_x.shape[0]
         saliency = torch.zeros_like(sup_x)
 
-        for j in range(k):
-            total_grad = torch.zeros_like(sup_x[j])
+        for m in range(1, T + 1):
+            lam_m = lambdas[m]
 
-            for m in range(1, T + 1):
-                lam_m = lambdas[m]
+            # Kích hoạt đạo hàm cho toàn bộ batch đầu vào
+            sup_x_leaf = sup_x.detach().requires_grad_(True)
+            phi_r = [p.detach().requires_grad_(True) for p in phis[m - 1]]
+            
+            # Forward pass 1 lần duy nhất cho toàn bộ tập Support
+            loss, _ = get_loss_n_preds(phi_r, self.learner, sup_x_leaf, sup_y)
+            
+            # Đạo hàm bậc 1 của Mean Loss
+            g_phi = autograd.grad(loss, phi_r, create_graph=True, retain_graph=True)
+            
+            # Tích vô hướng với trạng thái Adjoint
+            h = sum((g * l.detach()).sum() for g, l in zip(g_phi, lam_m))
+            
+            # Đạo hàm bậc 2 dội ngược về toàn bộ pixel của batch
+            grad_X = autograd.grad(h, sup_x_leaf, retain_graph=False)[0]
+            
+            # Alpha/k đã được tích hợp sẵn vì loss bên trên là Mean Loss (1/k)
+            saliency += self.alpha * grad_X.detach()
 
-                # --- xⱼ là leaf; nhúng vào batch đầy đủ ---
-                xj_leaf = sup_x[j].detach().requires_grad_(True)
-                x_full  = torch.cat([
-                    sup_x[:j].detach(),
-                    xj_leaf.unsqueeze(0),
-                    sup_x[j + 1:].detach(),
-                ], dim=0)   # [k, ...], xj_leaf tại vị trí j
-
-                # --- first backward: ∇_φ ℓⱼ, giữ đồ thị để backward qua lần 2 ---
-                phi_r  = [p.detach().requires_grad_(True) for p in phis[m - 1]]
-                loss_j = self._loss_j_joint(phi_r, x_full, sup_y, j)
-                g_phi  = autograd.grad(
-                    loss_j, phi_r,
-                    create_graph=True,   # bắt buộc: đồ thị của g_phi phải tồn tại
-                    retain_graph=True,   # giữ để backward tiếp theo
-                )
-
-                # --- scalar h = ⟨∇_φ ℓⱼ, λ^(m)⟩ ---
-                h = sum((g * l.detach()).sum() for g, l in zip(g_phi, lam_m))
-
-                # --- second backward: ∂h/∂xⱼ = [∇²_{φ,xⱼ} ℓⱼ]ᵀ λ^(m) ---
-                grad_xj = autograd.grad(h, xj_leaf, retain_graph=False)[0]
-
-                total_grad = total_grad + (self.alpha / k) * grad_xj.detach()
-
-            saliency[j] = total_grad
-
-        return saliency  # [k, C, H, W] — cùng shape với sup_x
-
-    # =========================================================================
-    # PUBLIC: standalone attribution methods
-    # =========================================================================
-
-    def compute_adaptation_gain(
-        self,
-        sup_x: torch.Tensor,
-        sup_y: torch.Tensor,
-        que_x: torch.Tensor,
-        que_y: torch.Tensor,
-        T: int,
-    ) -> float:
-        """
-        ΔM = L_Q(θ₀) − L_Q(φᵢ*(S)) ∈ ℝ.
-
-        Dương → thích nghi có ích; âm → thích nghi phản tác dụng.
-        Đây là baseline cho mọi phép quy kết.
-        """
-        with torch.no_grad():
-            pre_loss, _ = get_loss_n_preds(
-                self.maml.theta_0, self.learner, que_x, que_y
-            )
-        phis = self._compute_trajectory(sup_x, sup_y, T)
-        with torch.no_grad():
-            post_loss, _ = get_loss_n_preds(phis[T], self.learner, que_x, que_y)
-        return (pre_loss - post_loss).item()
+        return saliency
 
     def saliency_x(
         self,
@@ -228,25 +120,44 @@ class MAMLPostHocExplainer:
         samples_per_class: int = 3,
     ) -> torch.Tensor:
         """
-        ∂ΔM/∂xⱼ ∈ ℝ^(k×D) — bản đồ saliency đặc trưng (cùng shape sup_x).
-
-            ∂ΔM/∂xⱼ = (α/k) Σ_{m=1}^{K} [∇²_{φ,xⱼ} ℓⱼ(φ^{m-1})]ᵀ λ^{m}
-
-        Tính qua double-backward: không dựng ma trận P×D.
-        Kết quả: pixel/đặc trưng nào trong mẫu j quan trọng với hướng thích nghi.
+        Phiên bản siêu tối ưu bằng Linearity of Expectation (Tuyến tính kỳ vọng).
+        Thay vì chạy N vòng lặp Adjoint Backward, ta chỉ lấy trung bình 
+        trạng thái Lambda cuối cùng, rồi chạy Adjoint Backward ĐÚNG 1 LẦN.
         """
         sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
-        total_saliency = torch.zeros_like(sup_x)
 
-        phis    = self._compute_trajectory(sup_x, sup_y, T)
+        # 1. Quỹ đạo Forward (chỉ tính 1 lần)
+        phis = self._compute_trajectory(sup_x, sup_y, T)
 
+        # 2. Xấp xỉ kỳ vọng E_Q cho Tín hiệu Trạng thái Cuối cùng (Terminal Lambda)
+        phi_T = [p.detach().requires_grad_(True) for p in phis[T]]
+        expected_lam_T = [torch.zeros_like(p) for p in phi_T]
+        
         bootstrap_generator = get_stratified_bootstrap_batches(
             que_x, que_y, num_bootstraps, samples_per_class
         )
+        
         for b_que_x, b_que_y in bootstrap_generator:
-            lambdas_b = self._compute_lambdas(phis, b_que_x, b_que_y, sup_x, sup_y, T)
-            saliency_b = self._saliency_x_core(sup_x, sup_y, T, phis, lambdas_b)
-            total_saliency += saliency_b
+            # Chỉ tính đạo hàm bậc 1 ở bước K (rất nhẹ)
+            qL, _ = get_loss_n_preds(phi_T, self.learner, b_que_x, b_que_y)
+            lam_T_b = autograd.grad(qL, phi_T, retain_graph=False)
+            
+            # Cộng dồn trung bình
+            expected_lam_T = [
+                l_avg + l_b.detach() / num_bootstraps 
+                for l_avg, l_b in zip(expected_lam_T, lam_T_b)
+            ]
 
-        return total_saliency / num_bootstraps
+        # 3. Chuỗi đi lùi Adjoint (CHỈ CHẠY 1 LẦN DUY NHẤT với expected_lam_T)
+        lambdas = {T: expected_lam_T}
+        for m in range(T, 0, -1):
+            Hv = self._hvp(phis[m - 1], lambdas[m], sup_x, sup_y)
+            lambdas[m - 1] = [
+                (l - self.alpha * hv).detach() 
+                for l, hv in zip(lambdas[m], Hv)
+            ]
 
+        # 4. Batched Saliency Core (CHỈ CHẠY 1 LẦN DUY NHẤT)
+        total_saliency = self._saliency_x_core_batched(sup_x, sup_y, T, phis, lambdas)
+
+        return total_saliency
