@@ -36,7 +36,7 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
         raise NotImplementedError(f"Algorithm {algo} can not be explained.")
 
     # explain each task
-    total_tasks = len(test_loader) * len(test_loader.dataset)
+    total_tasks = len(test_loader) * len(iter(test_loader).__next__())
     with tqdm(total=len(test_loader) * len(test_loader.dataset), desc="Processing Tasks") as pbar:
         for metabatch_id, boT in enumerate(test_loader):
             for task_id, (support, query) in enumerate(boT):
