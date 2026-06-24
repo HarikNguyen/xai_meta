@@ -36,19 +36,17 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
         raise NotImplementedError(f"Algorithm {algo} can not be explained.")
 
     # explain each task
-    total_tasks = len(test_loader) * len(iter(test_loader).__next__())
-    with tqdm(total=len(test_loader) * len(test_loader.dataset), desc="Processing Tasks") as pbar:
-        for metabatch_id, boT in enumerate(test_loader):
-            for task_id, (support, query) in enumerate(boT):
-                sup_x, sup_y = support
-                que_x, que_y = query
+    for metabatch_id, boT in tqdm(enumerate(test_loader), desc="Explaining", position=0):
+        for task_id, (support, query) in tqdm(enumerate(boT), desc=f"Batch {metabatch_id} tasks", position=1, leave=False):
+            sup_x, sup_y = support
+            que_x, que_y = query
 
-                saliency_maps = explainer.saliency_x(
-                    sup_x, sup_y, que_x, que_y, T=T
-                )
+            saliency_maps = explainer.saliency_x(
+                sup_x, sup_y, que_x, que_y, T=T
+            )
 
-                show_explaination(sup_x, saliency_maps, algo, log_dir, metabatch_id, task_id, T)
-                pbar.update(1)
+            show_explaination(sup_x, saliency_maps, algo, log_dir, metabatch_id, task_id, T)
+            pbar.update(1)
 
 def show_explaination(sup_x, saliency_maps, algo, log_dir, metabatch_id, task_id, T):
     # inits
