@@ -43,7 +43,7 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
             sup_x, sup_y = support
             que_x, que_y = query
 
-            saliency_maps = explainer.saliency_x(
+            saliency_maps = explainer.interpret(
                 sup_x, sup_y, que_x, que_y, T=T
             )
 
