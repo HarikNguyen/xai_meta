@@ -14,6 +14,7 @@ Adjoint:
 """
 import torch
 import torch.autograd as autograd
+import torch.nn.functional as F
 from typing import Dict, List, Optional, Tuple, Union
 
 from algos.utils import get_loss_n_preds, put_on_device
