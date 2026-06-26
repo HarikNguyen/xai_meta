@@ -122,9 +122,9 @@ class MAMLPostHocExplainer:
             features_m_leaf = features_m.detach().requires_grad_(True)
             preds = self.learner.forward_features(features_m_leaf, phi_r)
             loss = self.learner.criterion(preds, sup_y)
-            g_phi = autograd.grad(loss, phi_r, create_graph=True, retain_graph=True)
+            g_phi = autograd.grad(loss, phi_r, create_graph=True, retain_graph=True, allow_unused=True)
             
-            h = sum((g * l.detach()).sum() for g, l in zip(g_phi, lam_m))
+            h = sum((g * l.detach()).sum() for g, l in zip(g_phi, lam_m) if g is not None)
             grad_features = autograd.grad(h, features_m_leaf, retain_graph=False)[0]
 
             # Global Average Pooling -> Tính trọng số (alpha) cho từng kênh đặc trưng
