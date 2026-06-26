@@ -121,7 +121,7 @@ class MAMLPostHocExplainer:
             features_m = self.learner(sup_x, phi_r, only_features=True)
             features_m_leaf = features_m.detach().requires_grad_(True)
             preds = self.learner.forward_features(features_m_leaf, phi_r)
-            loss = self.learner.criterion**2(preds, sup_y)
+            loss = self.learner.criterion(preds, sup_y)
             g_phi = autograd.grad(loss, phi_r, create_graph=True, retain_graph=True)
             
             h = sum((g * l.detach()).sum() for g, l in zip(g_phi, lam_m))
