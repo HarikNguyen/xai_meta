@@ -50,7 +50,7 @@ class Conv4(nn.Module):
         x = F.linear(x, weights[16], weights[17])
         return x
 
-    def forward_features(features, weights):
+    def forward_features(self, features, weights):
         x = self.model.features.flatten(features)
         x = F.linear(x, weights[16], weights[17])
         return x
