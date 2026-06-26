@@ -20,35 +20,23 @@ class ConvBlock(nn.Module):
         )
         self.pool = pool
 
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.batchnorm(x)
+    def forward(self, x, weights=None):
+        if weights is not None:
+            x = self.conv(x)
+            x = self.batchnorm(x)
+        else:
+            x = F.conv2d(x, weights[0], weights[1], padding=1)
+            x = F.batch_norm(
+                x,
+                None,
+                None,
+                weights[2],
+                weights[3],
+                training=True,
+                eps=self.batchnorm.eps,
+            )
+
         x = self.relu(x)
         if self.pool:
             x = self.maxpool(x)
-        return x
-
-    def forward_weights(self, x, weights):
-        # conv2d
-        x = F.conv2d(x, weights[0], weights[1], padding=1)
-
-        # batchnrom
-        x = F.batch_norm(
-            x,
-            None,
-            None,
-            weights[2],
-            weights[3],
-            training=True,
-            eps=self.batchnorm.eps,
-        )
-
-        # activation
-        x = F.relu(x, inplace=True)
-
-        # pooling
-        if self.pool:
-            x = F.max_pool2d(x, kernel_size=2, stride=2)
-
-        # return
         return x

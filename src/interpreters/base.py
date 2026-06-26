@@ -109,27 +109,34 @@ class MAMLPostHocExplainer:
                              phis: List[List[torch.Tensor]],
                              lambdas: Dict[int, List[torch.Tensor]],
                              max_steps: Optional[int] = None) -> torch.Tensor:
-        """
-        Tính saliency map cho một hoặc nhiều bước.
-        max_steps=None → tính tất cả các bước.
-        """
+
         saliency = torch.zeros_like(sup_x)
         T_max = max_steps or len(phis) - 1
         
         for m in range(1, T_max + 1):
             lam_m = lambdas[m]
-            sup_x_leaf = sup_x.detach().requires_grad_(True)
-            phi_r = [p.detach().requires_grad_(True) for p in phis[m - 1]]
 
-            loss, _ = get_loss_n_preds(phi_r, self.learner, sup_x_leaf, sup_y)
+            phi_r = [p.detach().requires_grad_(True) for p in phis[m - 1]]
+            
+            features_m = self.learner(sup_x, phi_r, only_features=True)
+            features_m_leaf = features_m.detach().requires_grad_(True)
+            preds = self.learner.forward_features(features_m_leaf, phi_r)
+            loss = self.learner.criterion**2(preds, sup_y)
             g_phi = autograd.grad(loss, phi_r, create_graph=True, retain_graph=True)
             
             h = sum((g * l.detach()).sum() for g, l in zip(g_phi, lam_m))
-            grad_x = autograd.grad(h, sup_x_leaf, retain_graph=False)[0]
-            
-            saliency += self.alpha * grad_x.detach()
+            grad_features = autograd.grad(h, features_m_leaf, retain_graph=False)[0]
+
+            # Global Average Pooling -> Tính trọng số (alpha) cho từng kênh đặc trưng
+            weights = grad_features.mean(dim=(2, 3), keepdim=True)
+            cam = (weights * A_m.detach()).sum(dim=1, keepdim=True)
+            cam_upsampled = F.interpolate(cam, size=sup_x.shape[-2:], mode='bilinear', align_corners=False)
+
+            saliency += self.alpha * cam_upsampled
         
         return saliency
+
+        # ====================== MAIN PUBLIC METHOD ======================
 
     # ====================== MAIN PUBLIC METHOD ======================
 

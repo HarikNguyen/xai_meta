@@ -29,16 +29,29 @@ class Conv4(nn.Module):
             }
         )
 
-    def forward(self, x):
-        features = self.model.features(x)
-        out = self.model.out(features)
-        return out
+    def forward(self, x, weights=None, only_features=False):
+        # Normal forward
+        if weights is not None:
+            features = self.model.features(x)
+            out = self.model.out(features)
+            return out
 
-    def forward_weights(self, x, weights):
-        x = self.model.features.conv_block1.forward_weights(x, weights[0:4])
-        x = self.model.features.conv_block2.forward_weights(x, weights[4:8])
-        x = self.model.features.conv_block3.forward_weights(x, weights[8:12])
-        x = self.model.features.conv_block4.forward_weights(x, weights[12:16])
+        # Functional forward (meta-learning)
+        x = self.model.features.conv_block1(x, weights[0:4])
+        x = self.model.features.conv_block2(x, weights[4:8])
+        x = self.model.features.conv_block3(x, weights[8:12])
+        x = self.model.features.conv_block4(x, weights[12:16])
+        
+        # Return features (A)
+        if only_features:
+            return x
+
         x = self.model.features.flatten(x)
         x = F.linear(x, weights[16], weights[17])
         return x
+
+    def forward_features(features, weights):
+        x = self.model.features.flatten(features)
+        x = F.linear(x, weights[16], weights[17])
+        return x
+

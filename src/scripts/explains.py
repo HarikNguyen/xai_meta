@@ -53,8 +53,8 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
             result = explainer.interpret(
                 sup_x, sup_y, que_x, que_y, T=T,
                 return_gain=True,
-                return_saliency=False,      # Không cần total nếu chỉ xem trajectory
-                return_trajectory=True
+                # return_saliency=False,      # Không cần total nếu chỉ xem trajectory
+                # return_trajectory=True
             )
 
             if isinstance(result, tuple):
