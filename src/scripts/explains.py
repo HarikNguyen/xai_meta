@@ -10,7 +10,7 @@ from interpreters import MAMLPostHocExplainer
 
 def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=True,
             checkpoint_dir="checkpoints", log_dir="logs"):
-   
+    
     algo_mgr = algo_class(**algo_conf)
     T = algo_mgr.T_test
     device = algo_conf.get("device", "cpu")
@@ -49,19 +49,19 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
             sup_x, sup_y = support
             que_x, que_y = query
 
-            # Gọi interpret với cả gain và trajectory
+            # ĐÃ SỬA: Mở khóa các cờ để lấy chính xác (Gain, Trajectory)
             result = explainer.interpret(
                 sup_x, sup_y, que_x, que_y, T=T,
                 return_gain=True,
-                # return_saliency=False,      # Không cần total nếu chỉ xem trajectory
-                # return_trajectory=True
+                return_saliency=False,      # Không cần Saliency tổng
+                return_trajectory=True      # Bắt buộc True để vẽ theo step
             )
 
-            if isinstance(result, tuple):
+            # Unpack an toàn
+            if isinstance(result, tuple) and len(result) == 2:
                 adaptation_gain, trajectory_saliencies = result
             else:
-                adaptation_gain = None
-                trajectory_saliencies = result
+                raise ValueError("Expected interpret to return a tuple of (gain, trajectory_saliencies).")
 
             show_explaination(
                 sup_x, trajectory_saliencies, adaptation_gain,
@@ -72,15 +72,16 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
 def show_explaination(sup_x, trajectory_saliencies, adaptation_gain,
                       algo, log_dir, metabatch_id, task_id, T):
     """
-    Vẽ một ảnh lớn chứa saliency map theo từng bước adaptation (T steps).
+    Vẽ ảnh Saliency Map Bidirectional (Âm/Dương) theo từng bước adaptation.
+    Đỏ: Tích cực (Giảm Loss). Xanh dương: Tiêu cực (Nhiễu/Tăng Loss).
     """
-    num_shot = sup_x.shape[0]
-    cols = min(num_shot, 5)
-    rows = T * 2  # Mỗi step có 2 hàng: Overlay + Original
+    # ĐÃ SỬA: Chỉ vẽ tối đa 5 shot để tránh vỡ layout
+    num_shot_to_plot = min(sup_x.shape[0], 5) 
+    cols = num_shot_to_plot
+    rows = T * 2  
 
     fig, axes = plt.subplots(rows, cols, figsize=(4 * cols, 3.5 * rows))
     
-    # Đảm bảo axes là mảng 2D
     if rows == 1 and cols == 1:
         axes = np.array([[axes]])
     elif rows == 1:
@@ -89,11 +90,11 @@ def show_explaination(sup_x, trajectory_saliencies, adaptation_gain,
         axes = axes[:, np.newaxis]
 
     for step_idx in range(T):
-        saliency_step = trajectory_saliencies[step_idx]  # saliency tại bước này
+        saliency_step = trajectory_saliencies[step_idx]
 
-        for shot_idx in range(num_shot):
+        for shot_idx in range(num_shot_to_plot):
             row_base = step_idx * 2
-            col_idx = shot_idx % cols
+            col_idx = shot_idx
 
             # --- Original Image ---
             original_img_tensor = sup_x[shot_idx].cpu().detach()
@@ -108,11 +109,18 @@ def show_explaination(sup_x, trajectory_saliencies, adaptation_gain,
             # --- Overlay (Hàng trên) ---
             ax_overlay = axes[row_base, col_idx]
             saliency_tensor = saliency_step[shot_idx].cpu().detach()
-            heatmap = torch.abs(saliency_tensor).sum(dim=0).numpy()   # sum channels nếu multi-channel
-            heatmap_norm = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min() + 1e-8)
-
+            
+            # ĐÃ SỬA CHÍNH: KHÔNG DÙNG torch.abs(). FAMA chỉ có 1 channel, sum(0) để làm phẳng
+            heatmap = saliency_tensor.sum(dim=0).numpy()
+            
+            # Chuẩn hóa đối xứng qua 0 để giữ nguyên ý nghĩa Âm/Dương
+            max_abs = np.max(np.abs(heatmap)) + 1e-8
+            
             ax_overlay.imshow(img_to_show, cmap=cmap_img)
-            ax_overlay.imshow(heatmap_norm, cmap='jet', alpha=0.6)
+            
+            # Sử dụng cmap='RdBu_r' với vmin âm và vmax dương
+            # Red = Positive Gain (Tốt), Blue = Negative Gain (Nhiễu)
+            img_overlay = ax_overlay.imshow(heatmap, cmap='RdBu_r', alpha=0.55, vmin=-max_abs, vmax=max_abs)
             ax_overlay.set_title(f"Step {step_idx+1} | Shot {shot_idx+1}")
             ax_overlay.axis('off')
 
@@ -122,20 +130,19 @@ def show_explaination(sup_x, trajectory_saliencies, adaptation_gain,
             ax_orig.set_title(f"Original Shot {shot_idx+1}")
             ax_orig.axis('off')
 
-    # Tắt các ô trống (nếu num_shot < cols)
-    for i in range(rows):
-        for j in range(cols):
-            if (i // 2) * cols + j >= num_shot:
-                axes[i, j].axis('off')
+    # Thêm thanh màu (Colorbar) để chú thích cho toàn bộ ảnh
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+    fig.colorbar(img_overlay, cax=cbar_ax, label="Feature Contribution\n(Red: Helpful, Blue: Harmful)")
 
-    gain_text = f"Adaptation Gain: {adaptation_gain:.4f}" if adaptation_gain is not None else ""
+    # Hiển thị % Gain chuẩn hóa
+    gain_text = f"Adaptation Gain: {adaptation_gain:.2f}%" if adaptation_gain is not None else ""
     plt.suptitle(
-        f"Saliency Trajectory - Task {metabatch_id}-{task_id} (T={T})\n{gain_text}",
-        fontsize=16, y=0.98
+        f"Bidirectional FAMA Trajectory - Task {metabatch_id}-{task_id}\n{gain_text}",
+        fontsize=18, fontweight='bold', y=0.98
     )
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.subplots_adjust(right=0.9, top=0.92, wspace=0.1, hspace=0.3)
 
     save_path = os.path.join(log_dir, "plots", 
-                            f"{algo}_task{metabatch_id}-{task_id}_trajectory.png")
+                            f"{algo}_task{metabatch_id}-{task_id}_fama_trajectory.png")
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.close(fig)
