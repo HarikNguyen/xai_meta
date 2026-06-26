@@ -31,7 +31,7 @@ class Conv4(nn.Module):
 
     def forward(self, x, weights=None, only_features=False):
         # Normal forward
-        if weights is not None:
+        if weights is None:
             features = self.model.features(x)
             out = self.model.out(features)
             return out
