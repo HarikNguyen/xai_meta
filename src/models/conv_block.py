@@ -21,7 +21,7 @@ class ConvBlock(nn.Module):
         self.pool = pool
 
     def forward(self, x, weights=None):
-        if weights is not None:
+        if weights is None:
             x = self.conv(x)
             x = self.batchnorm(x)
         else:
