@@ -129,7 +129,7 @@ class MAMLPostHocExplainer:
 
             # Global Average Pooling -> Tính trọng số (alpha) cho từng kênh đặc trưng
             weights = grad_features.mean(dim=(2, 3), keepdim=True)
-            cam = (weights * A_m.detach()).sum(dim=1, keepdim=True)
+            cam = (weights * features_m.detach()).sum(dim=1, keepdim=True)
             cam_upsampled = F.interpolate(cam, size=sup_x.shape[-2:], mode='bilinear', align_corners=False)
 
             saliency += self.alpha * cam_upsampled
