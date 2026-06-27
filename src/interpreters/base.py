@@ -2,13 +2,12 @@
 algos/interpreter.py
 ====================
 Post-hoc XAI for MAML: Feature Saliency Map of the support set S
-w.r.t. adaptation gain ΔM = E_{Q~T_i}[L_Q(φᵢ*(S))] - E_{Q~T_i}[L_Q(θ₀)].
+w.r.t. adaptation gain ΔM = -(E_{Q~T_i}[L_Q(φᵢ*(S))] - E_{Q~T_i}[L_Q(θ₀)]).
 
 ──────────────────────────────────────────────────────────────────
-  ∂ΔM/∂xⱼ = E_{Q~T_i}[∂L_Q(φᵢ*(S))/∂xⱼ] - E_{Q~T_i}[∂L_Q(θ₀)/∂xⱼ]; xⱼ ∈ S
-          = E_{Q~T_i}[∂l_q(φᵢ*(s))/∂xⱼ]
-  ∂l_q(φᵢ*(s))/∂xⱼ = -(α/k) Σₘ [∇²_{φ,xⱼ} ℓⱼ(φ^(m-1))]ᵀ λ^(m)      ∈ ℝᴰ
-
+  ∂ΔM/∂S = - (E_{Q~T_i}[∂L_Q(φᵢ*(S))/∂S] - E_{Q~T_i}[∂L_Q(θ₀)/∂S])
+          = - E_{Q~T_i}[∂l_q(φᵢ*(S))/∂S]
+          = Σₘ λ^(m) ∂φₘ(S))/∂S
 Adjoint:
   λ^(K) = ∇_φ L_Q(φ^(K))
   λ^(m-1) = λ^(m) − α·H^(m-1)·λ^(m)     [H symmetric → no transpose needed]
@@ -94,7 +93,7 @@ class MAMLPostHocExplainer:
     def _compute_adaptation_gain(
         self, theta_0, phi_T, bootstrap_query, num_bootstraps
     ) -> float:
-        """Tính ΔM = E[L_Q(θ₀)] - E[L_Q(φ_T)]"""
+        """Tính ΔM = E_{Q~T_i}[L_Q(θ₀)] - E_{Q~T_i}[L_Q(φᵢ*(S))]"""
         pre_sum = 0.0
         post_sum = 0.0
 
@@ -147,7 +146,7 @@ class MAMLPostHocExplainer:
                 cam, size=sup_x.shape[-2:], mode="bilinear", align_corners=False
             )
 
-            saliency -= self.alpha * cam_upsampled
+            saliency += self.alpha * cam_upsampled
 
         return saliency
 
