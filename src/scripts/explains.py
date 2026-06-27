@@ -88,7 +88,7 @@ def show_explaination(sup_x, saliency_map, adaptation_gain,
         ax_overlay = axes[shot_idx, 0]
         ax_overlay.imshow(img_to_show, cmap=cmap_img)
         # red = positive gain (tốt), blue = negative gain (nhiễu)
-        img_overlay = ax_overlay.imshow(heatmap, cmap='rdbu_r', alpha=0.75, vmin=-max_abs, vmax=max_abs)
+        img_overlay = ax_overlay.imshow(heatmap, cmap='RdBu_r', alpha=0.75, vmin=-max_abs, vmax=max_abs)
         ax_overlay.set_title(f"shot {shot_idx+1} saliency map", fontsize=8)
         ax_overlay.axis('off')
 
