@@ -68,7 +68,7 @@ def show_explaination(sup_x, saliency_map, adaptation_gain,
     if rows == 1:
         axes = axes[np.newaxis, :]
 
-    for shot_idx in range(num_shot_to_plot):
+    for shot_idx in range(rows):
         # original image 
         original_img_tensor = sup_x[shot_idx].cpu().detach()
         img_min, img_max = original_img_tensor.min(), original_img_tensor.max()
