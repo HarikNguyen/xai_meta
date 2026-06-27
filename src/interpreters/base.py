@@ -166,7 +166,7 @@ class MAMLPostHocExplainer:
             self.device, [sup_x, sup_y, que_x, que_y]
         )
         bootstrap_query_gen = get_stratified_bootstrap_batches(
-            num_bootstraps, samples_per_class
+            que_x, que_y, num_bootstraps, samples_per_class
         )
         bootstrap_query = list(bootstrap_query_gen)
 
