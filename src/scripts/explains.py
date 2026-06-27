@@ -51,9 +51,6 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
 
             adaptation_gain, saliency_map = explainer.interpret(
                 sup_x, sup_y, que_x, que_y, T=T,
-                return_gain=True,
-                return_saliency=False,      # Không cần Saliency tổng
-                return_trajectory=True      # Bắt buộc True để vẽ theo step
             )
 
             show_explaination(
