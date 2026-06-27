@@ -60,87 +60,57 @@ def explain(algo, algo_class, test_loader, algo_conf, use_best=False, use_last=T
 
 
 def show_explaination(sup_x, saliency_map, adaptation_gain,
-                      algo, log_dir, metabatch_id, task_id, T):
-    """
-    Vẽ ảnh Saliency Map Bidirectional theo từng bước adaptation.
-    Red: Positive contribution (Giảm loss), Blue: Negative (Tăng loss).
-    """
-    # saliency_map shape expected: [T, num_shots, C, H, W] or similar
-    if len(saliency_map.shape) == 4:  # [T, shots, H, W]
-        num_steps = saliency_map.shape[0]
-    else:
-        num_steps = 1
-        saliency_map = saliency_map.unsqueeze(0)
-
-    num_shots_to_plot = min(sup_x.shape[0], 5)
+                      algo, log_dir, metabatch_id, task_id, t):
+    cols = 2
+    rows = sup_x.shape[0]
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 4.2 * rows))
     
-    # Create figure: 2 rows per step (Overlay + Original)
-    rows = num_steps * 2
-    cols = num_shots_to_plot
-    fig, axes = plt.subplots(rows, cols, figsize=(4.5 * cols, 3.8 * rows))
-    
-    if rows == 1 and cols == 1:
-        axes = np.array([[axes]])
-    elif rows == 1:
+    if rows == 1:
         axes = axes[np.newaxis, :]
-    elif cols == 1:
-        axes = axes[:, np.newaxis]
 
-    for step_idx in range(num_steps):
-        for shot_idx in range(num_shots_to_plot):
-            row_base = step_idx * 2
-            col_idx = shot_idx
+    for shot_idx in range(num_shot_to_plot):
+        # original image 
+        original_img_tensor = sup_x[shot_idx].cpu().detach()
+        img_min, img_max = original_img_tensor.min(), original_img_tensor.max()
+        original_img_np = (original_img_tensor - img_min) / (img_max - img_min + 1e-8)
+        original_img_np = original_img_np.permute(1, 2, 0).numpy()
+        
+        is_gray = original_img_np.shape[-1] == 1
+        cmap_img = 'gray' if is_gray else None
+        img_to_show = original_img_np[:, :, 0] if is_gray else original_img_np
 
-            # --- Original Image ---
-            original_img_tensor = sup_x[shot_idx].cpu().detach()
-            img_min, img_max = original_img_tensor.min(), original_img_tensor.max()
-            original_img_np = (original_img_tensor - img_min) / (img_max - img_min + 1e-8)
-            original_img_np = original_img_np.permute(1, 2, 0).numpy()
+        # saliency map
+        saliency_tensor = saliency_map[shot_idx].cpu().detach()
+        heatmap = saliency_tensor.sum(dim=0).numpy()
+        max_abs = np.max(np.abs(heatmap)) + 1e-8 # normalization for colorbar
 
-            is_gray = original_img_np.shape[-1] == 1
-            cmap_img = 'gray' if is_gray else None
-            img_to_show = original_img_np[:, :, 0] if is_gray else original_img_np
+        # overlay pic (first col)
+        ax_overlay = axes[shot_idx, 0]
+        ax_overlay.imshow(img_to_show, cmap=cmap_img)
+        # red = positive gain (tốt), blue = negative gain (nhiễu)
+        img_overlay = ax_overlay.imshow(heatmap, cmap='rdbu_r', alpha=0.75, vmin=-max_abs, vmax=max_abs)
+        ax_overlay.set_title(f"shot {shot_idx+1} saliency map", fontsize=8)
+        ax_overlay.axis('off')
 
-            # --- Saliency for this step ---
-            saliency_tensor = saliency_map[step_idx, shot_idx].cpu().detach()
-            heatmap = saliency_tensor.sum(dim=0).numpy()  # sum over channels
+        # original pic (second col)
+        ax_orig = axes[shot_idx, 1]
+        ax_orig.imshow(img_to_show, cmap=cmap_img)
+        ax_orig.set_title(f"original shot {shot_idx+1}", fontsize=8)
+        ax_orig.axis('off')
 
-            # Symmetric normalization for bidirectional meaning
-            max_abs = np.max(np.abs(heatmap)) + 1e-8
-
-            # Overlay (Top row)
-            ax_overlay = axes[row_base, col_idx]
-            ax_overlay.imshow(img_to_show, cmap=cmap_img)
-            img_overlay = ax_overlay.imshow(
-                heatmap, 
-                cmap='RdBu_r', 
-                alpha=0.6, 
-                vmin=-max_abs, 
-                vmax=max_abs
-            )
-            ax_overlay.set_title(f"Step {step_idx+1} | Shot {shot_idx+1}")
-            ax_overlay.axis('off')
-
-            # Original (Bottom row)
-            ax_orig = axes[row_base + 1, col_idx]
-            ax_orig.imshow(img_to_show, cmap=cmap_img)
-            ax_orig.set_title(f"Original Shot {shot_idx+1}")
-            ax_orig.axis('off')
-
-    # Colorbar
+    # add colorbar to show color meaning
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
-    fig.colorbar(img_overlay, cax=cbar_ax, label="Feature Contribution\n(Red: Helpful, Blue: Harmful)")
+    fig.colorbar(img_overlay, cax=cbar_ax, label="feature contribution\n(red: helpful, blue: harmful)")
 
-    gain_text = f"Adaptation Gain: {adaptation_gain:.2f}%" if adaptation_gain is not None else ""
+    # title
+    gain_text = f"adaptation gain: {adaptation_gain:.2f}%" if adaptation_gain is not None else ""
     plt.suptitle(
-        f"Bidirectional FAMA Trajectory - Task {metabatch_id}-{task_id}\n{gain_text}",
+        f"explaination - task {metabatch_id}-{task_id}\n{gain_text}",
         fontsize=18, fontweight='bold', y=0.98
     )
-    
-    plt.subplots_adjust(right=0.9, top=0.92, wspace=0.15, hspace=0.35)
-    
-    save_path = os.path.join(log_dir, "plots",
+    plt.subplots_adjust(right=0.9, top=0.92, wspace=0.1, hspace=0.3)
+
+    save_path = os.path.join(log_dir, "plots", 
                             f"{algo}_task{metabatch_id}-{task_id}_fama_trajectory.png")
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.close(fig)
