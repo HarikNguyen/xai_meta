@@ -46,11 +46,11 @@ def get_stratified_bootstrap_batches(
             idx_of_class = class_indices[c.item()]
             num_available = len(idx_of_class)
             
-            # Bốc thăm CÓ HOÀN LẠI
+            # random sampling WITH REPLACEMENT
             rand_picks = torch.randint(low=0, high=num_available, size=(samples_per_class,))
             bootstrap_idx_list.append(idx_of_class[rand_picks])
 
-        # Gộp lại thành một batch hoàn chỉnh
+        # Combine into a single complete batch
         final_bootstrap_indices = torch.cat(bootstrap_idx_list)
         
         yield que_x[final_bootstrap_indices], que_y[final_bootstrap_indices]

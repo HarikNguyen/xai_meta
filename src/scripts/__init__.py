@@ -4,9 +4,9 @@ import torch
 from tqdm import tqdm
 
 from .warm_up import warm_up
-from .trains import run_train
-from .tests import run_test
-from .explains import explain
+from .train import run_train
+from .test import run_test
+from .explain import explain
 from algos.maml import MAML
 from loaders.utils import boT_to_stack
 

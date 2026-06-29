@@ -18,12 +18,12 @@ def explain(
     checkpoint_dir="checkpoints",
     log_dir="logs",
 ):
-
+    # Inits
     algo_mgr = algo_class(**algo_conf)
     T = algo_mgr.T_test
     device = algo_conf.get("device", "cpu")
 
-    # Xóa và tạo thư mục plots
+    # Create dir for plots saving
     plots_dir = os.path.join(log_dir, "plots")
     if os.path.exists(plots_dir):
         shutil.rmtree(plots_dir)

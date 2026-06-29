@@ -1,1 +1,1 @@
-from .base import MAMLPostHocExplainer
+from .fama import MAMLPostHocExplainer

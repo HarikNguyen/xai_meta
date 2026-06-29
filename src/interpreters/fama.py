@@ -1,5 +1,5 @@
 """
-algos/interpreter.py
+Feature-space Adjoint Meta-Learning Attribution
 ====================
 Post-hoc XAI for MAML: Feature Saliency Map of the support set S
 w.r.t. adaptation gain ΔM = -(E_{Q~T_i}[L_Q(φᵢ*(S))] - E_{Q~T_i}[L_Q(θ₀)]).
@@ -23,7 +23,7 @@ from algos.utils import get_loss_n_preds, put_on_device
 from loaders.utils import get_stratified_bootstrap_batches
 
 
-class MAMLPostHocExplainer:
+class FAMAExplainer:
     """
     Post-hoc XAI for MAML
     Compute Adaptation Gain and Feature Saliency Map.
@@ -34,8 +34,6 @@ class MAMLPostHocExplainer:
         self.device = device or maml.device
         self.alpha = maml.base_lr
         self.learner = maml.baselearner
-
-    # ====================== CORE HELPERS ======================
 
     def _compute_trajectory(
         self, sup_x: torch.Tensor, sup_y: torch.Tensor, T: int
