@@ -52,14 +52,14 @@ def split_to_superpixels(sup_x, saliency_map, n_segs=150, compactness=10.0):
     }
 
 
-def blur_mask_sup(sup_x, sp_data, blur_sps, blur_sigma=5.0):
+def blur_mask_sup(sup_x, segs, blur_sps, blur_sigma=5.0):
     N, C, H, W = sup_x.shape
     device = sup_x.device
 
     mask = torch.zeros((N, 1, H, W), dtype=torch.float32, device=device)
     for sp in blur_sps:
         img_idx = sp["image_idx"]
-        segments = sp_data["segments_list"][img_idx]
+        segments = segs[img_idx]
         sp_mask_np = segments == sp["spl_label"]
         mask[img_idx, 0] += torch.from_numpy(sp_mask_np.astype(np.float32)).to(device)
 
@@ -123,7 +123,7 @@ def adt(
     pixel_ratios = [0.0]
     if scale == "all":
         for sp_id, _ in enumerate(sp_sorted):
-            sup_x_masked = blur_mask_sup(sup_x, sp[: sp_id + 1], blur_sigma=blur_sigma)
+            sup_x_masked = blur_mask_sup(sup_x, sps["segments_list"], sp[: sp_id + 1], blur_sigma=blur_sigma)
             adapt_gain, _ = explainer.interpret(sup_x_masked, sup_y, que_x, que_y, T)
             gains.append(adapt_gain)
             pixel_ratios.append(float(sp_id + 1) / len(sp_sorted))
