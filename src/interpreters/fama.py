@@ -116,7 +116,7 @@ class FAMAExplainer:
         max_steps: Optional[int] = None,
     ) -> torch.Tensor:
 
-        saliency = torch.zeros_like(sup_x)
+        saliency = torch.zeros_like(sup_x[:, :1)
         T_max = max_steps or len(phis) - 1
 
         for m in range(1, T_max + 1):
