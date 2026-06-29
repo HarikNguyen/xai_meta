@@ -11,6 +11,7 @@ def split_to_superpixels(sup_x, saliency_map, n_segs=150, compactness=10.0):
     device = sup_x.device
     imgs_np = sup_x.detach().cpu().numpy().transpose(0, 2, 3, 1)  # [N, H, W, C]
     sal_np = saliency_map.detach().cpu().squeeze(1).numpy()  # [N, H, W]
+    print(saliency_map.shape)
 
     segments_list = []  # for each image
     sp_info = []
@@ -51,7 +52,7 @@ def split_to_superpixels(sup_x, saliency_map, n_segs=150, compactness=10.0):
     }
 
 
-def blur_mask_sup(sup_x, blur_sps, blur_sigma=5.0):
+def blur_mask_sup(sup_x, sp_data, blur_sps, blur_sigma=5.0):
     N, C, H, W = sup_x.shape
     device = sup_x.device
 
