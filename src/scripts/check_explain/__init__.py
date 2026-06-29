@@ -49,7 +49,7 @@ def check_explain(
 
     # Define explainer
     if algo_class.__name__ == "MAML":
-        explainer = MAMLPostHocExplainer(algo_mgr, device=device)
+        explainer = FAMAExplainer(algo_mgr, device=device)
     else:
         raise NotImplementedError(f"Algorithm {algo} can not be explained.")
 
