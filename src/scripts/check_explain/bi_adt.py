@@ -123,7 +123,7 @@ def adt(
     pixel_ratios = [0.0]
     if scale == "all":
         for sp_id, _ in enumerate(sp_sorted):
-            sup_x_masked = blur_mask_sup(sup_x, sps["segments_list"], sp[: sp_id + 1], blur_sigma=blur_sigma)
+            sup_x_masked = blur_mask_sup(sup_x, sps["segments_list"], sp_sorted[: sp_id + 1], blur_sigma=blur_sigma)
             adapt_gain, _ = explainer.interpret(sup_x_masked, sup_y, que_x, que_y, T)
             gains.append(adapt_gain)
             pixel_ratios.append(float(sp_id + 1) / len(sp_sorted))
