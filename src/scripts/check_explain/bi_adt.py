@@ -1,6 +1,6 @@
 import copy
 import torch
-import torch.nn.functional as F
+import torchvision.transforms.functional as TF
 import numpy as np
 from tqdm import tqdm
 from skimage.segmentation import slic  # hoặc felzenszwalb
@@ -66,11 +66,11 @@ def blur_mask_sup(sup_x, segs, blur_sps, blur_sigma=5.0):
     # Blur mask
     if blur_sigma > 0:
         ksize = int(blur_sigma * 4) | 1
-        mask = F.gaussian_blur(mask, kernel_size=(ksize, ksize), sigma=blur_sigma)
+        mask = TF.gaussian_blur(mask, kernel_size=(ksize, ksize), sigma=blur_sigma)
         mask = torch.clamp(mask, 0.0, 1.0)
 
     # Blur original image for baseline
-    blurred_baseline = F.gaussian_blur(sup_x, kernel_size=(11, 11), sigma=5.0)
+    blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=(11, 11), sigma=5.0)
 
     # Apply mask
     sup_x_masked = sup_x * (1 - mask) + blurred_baseline * mask
