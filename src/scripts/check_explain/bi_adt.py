@@ -129,7 +129,7 @@ def adt(
             pixel_ratios.append(float(sp_id + 1) / len(sp_sorted))
 
     # cumpute the Area Under the Curve
-    auc = np.trapz(gains, pixel_ratios)
+    auc = np.trapezoid(gains, pixel_ratios)
     return auc
 
 
