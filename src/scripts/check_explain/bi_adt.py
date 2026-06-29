@@ -100,9 +100,10 @@ def adt(
         raise ValueError(f"Invalid scale: {scale}. Must be one of {__SCALES}")
 
     # split image to superpixels
-    sp_info = split_to_superpixels(
+    sps = split_to_superpixels(
         sup_x, saliency_map, n_segs=n_segs, compactness=compactness
     )
+    sp_info = sps["sp_info"]
 
     # sort by mode (asc or desc or random of salience)
     if mode == "pos":
