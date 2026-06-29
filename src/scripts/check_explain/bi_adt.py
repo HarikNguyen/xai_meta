@@ -19,7 +19,7 @@ def split_to_superpixels(sup_x, saliency_map, n_segs=150, compactness=10.0):
         # create superpixels
         segments = slic(
             imgs_np[i],
-            n_segments=n_segments,
+            n_segments=n_segs,
             compactness=compactness,
             sigma=1.0,
             start_label=0,
