@@ -7,6 +7,7 @@ from .warm_up import warm_up
 from .train import run_train
 from .test import run_test
 from .explain import explain
+from .check_explain import check_explain
 from algos.maml import MAML
 from loaders.utils import boT_to_stack
 
