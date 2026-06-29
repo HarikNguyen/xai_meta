@@ -185,6 +185,7 @@ def compute_bidirectional_faithfulness(
             nda = auc_neg - auc_random
             combined = auc_pos - auc_random
             print(f"Task {task_id}: PDA = {pda}, NDA = {nda}, Combined = {combined}")
+            print(f"Task {task_id}: AUC_pos = {auc_pos}, AUC_neg = {auc_neg}, AUC_random = {auc_random}")
 
             pdas.append(pda)
             ndas.append(nda)
