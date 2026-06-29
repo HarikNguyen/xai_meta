@@ -18,6 +18,7 @@ from loaders.utils import boT_to_stack
 TRAIN_MODE = "train"
 TEST_MODE = "test"
 EXPLAIN_MODE = "explain"
+CHECK_EXPLAIN_MODE = "check_explain"
 
 def run(args):
     if args.algo == "maml":
@@ -51,3 +52,6 @@ def run(args):
 
     elif args.mode == EXPLAIN_MODE:
         explain(args.algo, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
+
+    elif args.mode == CHECK_EXPLAIN_MODE:
+        check_explain(args.algo, algo_class, test_loader, algo_conf, args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir)

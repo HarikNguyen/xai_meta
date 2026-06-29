@@ -67,6 +67,13 @@ def parse_args():
         help="Use the last checkpoint from the checkpoint directory. Default: True",
     )
 
+    parser.add_argument(
+        "--check_method",
+        default="biADT",
+        type=str,
+        help="Method to check the explaination.",
+    )
+
     # Return args
     return parser.parse_args()
 
