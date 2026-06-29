@@ -122,7 +122,7 @@ def adt(
     if scale == "all":
         for sp_id, _ in enumerate(sp_sorted):
             sup_x_masked = blur_mask_sup(sup_x, sp[: sp_id + 1], blur_sigma=blur_sigma)
-            adapt_gain, _ = explainer.explain(sup_x_masked, sup_y, que_x, que_y, T)
+            adapt_gain, _ = explainer.interpret(sup_x_masked, sup_y, que_x, que_y, T)
             gains.append(adapt_gain)
             pixel_ratios.append(float(sp_id + 1) / len(sp_sorted))
 
@@ -149,12 +149,12 @@ def compute_bidirectional_faithfulness(
             sup_x, sup_y = support
             que_x, que_y = query
 
-            adapt_gain_base, saliency_map = explainer.explain(
+            adapt_gain_base, saliency_map = explainer.interpret(
                 sup_x, sup_y, que_x, que_y, T
             )
             auc_pos = adt(explainer, sup_x, sup_y, que_x, que_y, T,
-                adapt_gain_base=explainer.adapt_gain_base,
-                saliency_map=explainer.saliency_map,
+                adapt_gain_base=adapt_gain_base,
+                saliency_map=esaliency_map,
                 scale=scale,
                 mode="pos",
                 blur_sigma=blur_sigma,
