@@ -154,7 +154,7 @@ def compute_bidirectional_faithfulness(
             )
             auc_pos = adt(explainer, sup_x, sup_y, que_x, que_y, T,
                 adapt_gain_base=adapt_gain_base,
-                saliency_map=esaliency_map,
+                saliency_map=saliency_map,
                 scale=scale,
                 mode="pos",
                 blur_sigma=blur_sigma,
