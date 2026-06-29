@@ -1,8 +1,9 @@
+import copy
 import torch
 import torch.nn.functional as F
 import numpy as np
+from tqdm import tqdm
 from skimage.segmentation import slic  # hoặc felzenszwalb
-import copy
 
 
 def split_to_superpixels(sup_x, saliency_map, n_segs=150, compactness=10.0):
