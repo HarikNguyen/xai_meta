@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from interpreters import MAMLPostHocExplainer
+from interpreters import FAMAExplainer
 
 
 def explain(
