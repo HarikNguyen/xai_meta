@@ -139,8 +139,7 @@ def compute_bidirectional_faithfulness(
             nda = auc_neg - auc_random  # Neg làm Gain tăng -> auc_neg > auc_random -> NDA > 0
             combined = pda + nda
             
-            print(f"Task {task_id}: AUC_pos={auc_pos:.2f}, AUC_neg={auc_neg:.2f}, AUC_rnd={auc_random:.2f}")
-            print(f"Task {task_id}: PDA = {pda:.4f}, NDA = {nda:.4f}, Combined = {combined:.4f}")
+            print(f"Task {metabatch_id} {task_id}: AUC_pos={auc_pos:.2f}, AUC_neg={auc_neg:.2f}, AUC_rnd={auc_random:.2f}")
 
             pdas.append(pda)
             ndas.append(nda)
