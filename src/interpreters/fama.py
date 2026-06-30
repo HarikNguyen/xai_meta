@@ -34,6 +34,7 @@ class FAMAExplainer:
         self.device = device or self.algo_mgr.device
         self.learner = self.algo_mgr.baselearner
         self.theta_0 = self.algo_mgr.theta_0
+        self.base_lr = self.algo_mgr.base_lr
 
     def _compute_trajectory(
         self, sup_x: torch.Tensor, sup_y: torch.Tensor, T: int
@@ -136,14 +137,14 @@ class FAMAExplainer:
             )
             grad_features = autograd.grad(h, features_m_leaf, retain_graph=False)[0]
 
-            # Global Average Pooling -> Tính trọng số (alpha) cho từng kênh đặc trưng
+            # Global Average Pooling
             weights = grad_features.mean(dim=(2, 3), keepdim=True)
             cam = (weights * features_m.detach()).sum(dim=1, keepdim=True)
             cam_upsampled = F.interpolate(
                 cam, size=sup_x.shape[-2:], mode="bilinear", align_corners=False
             )
 
-            saliency += self.alpha * cam_upsampled
+            saliency += self.base_lr * cam_upsampled
 
         return saliency
 
@@ -185,7 +186,7 @@ class FAMAExplainer:
         for m in range(T, 0, -1):
             Hv = self._hvp(phis[m - 1], lambdas[m], sup_x, sup_y)
             lambdas[m - 1] = [
-                (l - self.alpha * hv).detach() for l, hv in zip(lambdas[m], Hv)
+                (l - self.base_lr * hv).detach() for l, hv in zip(lambdas[m], Hv)
             ]
 
         # Saliency Computation
