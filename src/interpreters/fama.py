@@ -45,7 +45,7 @@ class FAMAExplainer:
         # fast-forward (fast-adaptation)
         for _ in range(T):
             phi_r = [p.detach().clone().requires_grad_(True) for p in phis[-1]]
-            phi_next = self.algo_mgr._fast_forward(phi_r, sup_x, sup_y)
+            phi_next = self.algo_mgr._fast_weights(phi_r, sup_x, sup_y)
             phis.append(phi_next)
 
         # return the full trajectory (from φ^(0) to φ^(T))
