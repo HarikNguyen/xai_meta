@@ -108,7 +108,7 @@ def adt(
 def compute_bidirectional_faithfulness(
     explainer, test_loader, T, n_segs=150, compactness=10.0, blur_sigma=5.0, num_steps=10
 ):
-    test_loader_pbar = tqdm(test_loader, desc="Explaining", position=0, leave=True, unit="boT")
+    test_loader_pbar = tqdm(test_loader, desc="BiDAT", position=0, leave=True, unit="boT")
     pdas, ndas, combines = [], [], []
 
     for metabatch_id, boT in enumerate(test_loader_pbar):
