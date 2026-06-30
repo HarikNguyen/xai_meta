@@ -25,30 +25,27 @@ from loaders.utils import get_stratified_bootstrap_batches
 
 class FAMAExplainer:
     """
-    Post-hoc XAI for MAML
+    Post-hoc XAI for MAML-based
     Compute Adaptation Gain and Feature Saliency Map.
     """
 
-    def __init__(self, maml, device: Optional[str] = None):
-        self.maml = maml
-        self.device = device or maml.device
-        self.alpha = maml.base_lr
-        self.learner = maml.baselearner
+    def __init__(self, algo_mgr, device: Optional[str] = None):
+        self.algo_mgr = algo_mgr
+        self.device = device or self.algo_mgr.device
+        self.alpha = self.algo_mgr.base_lr
+        self.learner = self.algo_mgr.baselearner
+        self.theta_0 = self.algo_mgr.theta_0
 
     def _compute_trajectory(
         self, sup_x: torch.Tensor, sup_y: torch.Tensor, T: int
     ) -> List[List[torch.Tensor]]:
         """Compute the parameter trajectory φ^(0) → φ^(T) on the support set."""
-        phis = [[p.detach().clone() for p in self.maml.theta_0]]
+        phis = [[p.detach().clone() for p in self.theta_0]]
 
         # fast-forward (fast-adaptation)
         for _ in range(T):
             phi_r = [p.detach().clone().requires_grad_(True) for p in phis[-1]]
-            loss, _ = get_loss_n_preds(phi_r, self.learner, sup_x, sup_y)
-            grads = autograd.grad(loss, phi_r, create_graph=False)
-            phi_next = [
-                (p - self.alpha * g).detach().clone() for p, g in zip(phi_r, grads)
-            ]
+            phi_next = self.algo_mgr._fast_forward(phi_r, sup_x, sup_y)
             phis.append(phi_next)
 
         # return the full trajectory (from φ^(0) to φ^(T))
@@ -178,7 +175,7 @@ class FAMAExplainer:
 
         # compute adaptation gain
         adaptation_gain = self._compute_adaptation_gain(
-            self.maml.theta_0, phi_T, bootstrap_query, num_bootstraps
+            self.theta_0, phi_T, bootstrap_query, num_bootstraps
         )
 
         # adjoint backward pass
