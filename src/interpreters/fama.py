@@ -32,9 +32,7 @@ class FAMAExplainer:
     def __init__(self, algo_mgr, device: Optional[str] = None):
         self.algo_mgr = algo_mgr
         self.device = device or self.algo_mgr.device
-        self.alpha = self.algo_mgr.base_lr
         self.learner = self.algo_mgr.baselearner
-        self.theta_0 = self.algo_mgr.theta_0
 
     def _compute_trajectory(
         self, sup_x: torch.Tensor, sup_y: torch.Tensor, T: int
@@ -43,9 +41,12 @@ class FAMAExplainer:
         phis = [[p.detach().clone() for p in self.theta_0]]
 
         # fast-forward (fast-adaptation)
+
         for _ in range(T):
             phi_r = [p.detach().clone().requires_grad_(True) for p in phis[-1]]
-            phi_next = self.algo_mgr._fast_weights(phi_r, sup_x, sup_y)
+            loss, _ = get_loss_n_preds(phi_r, self.learner, sup_x, sup_y)
+            grads = autograd.grad(loss, phi_r, create_graph=False)
+            phi_next = self.algo_mgr._forward_weight(phi_r, grads)
             phis.append(phi_next)
 
         # return the full trajectory (from φ^(0) to φ^(T))
