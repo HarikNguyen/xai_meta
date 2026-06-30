@@ -33,6 +33,7 @@ class FAMAExplainer:
         self.algo_mgr = algo_mgr
         self.device = device or self.algo_mgr.device
         self.learner = self.algo_mgr.baselearner
+        self.theta_0 = self.algo_mgr.theta_0
 
     def _compute_trajectory(
         self, sup_x: torch.Tensor, sup_y: torch.Tensor, T: int
