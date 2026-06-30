@@ -106,11 +106,11 @@ def adt(
 
     # sort by mode (asc or desc or random of salience)
     if mode == "pos":
-        positive_sps = [sp for sp in sp_info if sp["avg_sal"] > 0]
+        positive_sps = copy.deepcopy(sp_info)
         positive_sps.sort(key=lambda x: x["avg_sal"], reverse=True)
         sp_sorted = positive_sps
     elif mode == "neg":
-        negative_sps = [sp for sp in sp_info if sp["avg_sal"] < 0]
+        negative_sps = copy.deepcopy(sp_info)
         negative_sps.sort(key=lambda x: x["avg_sal"], reverse=False)
         sp_sorted = negative_sps
     else:
