@@ -47,7 +47,7 @@ class FAMAExplainer:
             phi_r = [p.detach().clone().requires_grad_(True) for p in phis[-1]]
             loss, _ = get_loss_n_preds(phi_r, self.learner, sup_x, sup_y)
             grads = autograd.grad(loss, phi_r, create_graph=False)
-            phi_next = self.algo_mgr._forward_weights(phi_r, grads)
+            phi_next = self.algo_mgr._fast_weights(phi_r, grads)
             phis.append(phi_next)
 
         # return the full trajectory (from φ^(0) to φ^(T))
