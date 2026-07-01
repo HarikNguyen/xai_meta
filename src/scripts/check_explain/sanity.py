@@ -64,7 +64,7 @@ def check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T):
         task_pearson.append(scores["pearson"])
         task_spearman.append(scores["spearman"])
 
-        corrupted_saliencies.append((param_idx, new_saliency_map[0]))
+        corrupted_saliencies.append((param_idx, new_saliency_map))
         
     save_full_nxm_grid(
         images_tensor=sup_x,              # (N, C, H, W)
