@@ -20,21 +20,15 @@ def permute_label(sup_y, flip_ratio=0.6):
     avail_indices = list(flip_indices)
     print(avail_indices)
 
-    # for idx, flip_idx in enumerate(flip_indices):
-        # orig_val = sup_y[flip_idx]
-        # avail_indices.pop(idx)
-        
-        # while True:
-            # per_idx = np.random.choice(avail_indices)
-            # per_val = sup_y[per_idx]
-            # print(per_val)
-            # print(orig_val)
-            # print()
-            # print(torch.equal(per_val, orig_val))
-            # if not torch.equal(per_val, orig_val):
-                # sup_y_np[idx] = per_val
-                # break
-
+    for idx, flip_idx in enumerate(flip_indices):
+        orig_val = sup_y[flip_idx]
+        avail_indices.pop(idx)
+        for aidx, avail_idx in enumerate(avail_indices):
+            avail_val = sup_y[avail_idx]
+            if not torch.equal(orig_val, avail_val):
+                sup_y_np[flip_idx] = avail_val
+                avail_indices.pop(aidx)
+                break
 
     sup_y_np = torch.from_numpy(sup_y_np).to(device)
     return sup_y_np
