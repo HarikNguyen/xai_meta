@@ -65,7 +65,6 @@ def sanity_check_support_set(explainer, test_loader, T):
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
     theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
-    net_layers = get_layer_parameters_map(explainer.algo_mgr.baselearner, theta_0) 
     noisy_check_results = {
         "pearson": [],
         "spearman": []
