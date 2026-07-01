@@ -26,7 +26,7 @@ def permute_label(sup_y, flip_ratio=0.6):
         while True:
             per_idx = np.random.choice(avail_indices)
             per_val = sup_y[per_idx]
-            if not per_val == orig_val:
+            if not torch.equal(per_val, orig_val):
                 sup_y_np[idx] = per_val
                 break
 
