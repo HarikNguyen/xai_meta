@@ -10,7 +10,7 @@ from scipy.stats import pearsonr, spearmanr
 def hard_task_mining():
     pass
 
- def max_change_permutation(lo_tuple):
+def max_change_permutation(lo_tuple):
     if len(lo_tuple) < 2:
         return lo_tuple  # Không thể hoán vị nếu có ít hơn 2 phần tử
 
