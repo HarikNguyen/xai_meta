@@ -11,7 +11,7 @@ from collections import Counter
 
 def blur_sup(sup_x, kernel_size=7, sigma=3.0):
     sup_x_blurred = sup_x.clone()
-    sup_x_blurred = F.gaussian_blur(
+    sup_x_blurred = vF.gaussian_blur(
         sup_x_blurred, 
         kernel_size=[kernel_size, kernel_size], 
         sigma=[sigma, sigma]
