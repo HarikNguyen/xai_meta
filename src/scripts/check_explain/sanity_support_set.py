@@ -4,82 +4,31 @@ import torch
 import torch.nn as nn
 import math
 import numpy as np
-from collections import Counter
 from tqdm import tqdm
 from scipy.stats import pearsonr, spearmanr
 
 def hard_task_mining():
     pass
 
-def max_change_permutation(lo_tuple):
-    if len(lo_tuple) < 2:
-        return lo_tuple  # Không thể hoán vị nếu có ít hơn 2 phần tử
+def permute_label(sup_y, flip_ratio=0.6):
+    N, C = sup_y.shape
+    device = sup_y.device
+    sup_y_np = sup_y.clone().detach().cpu().numpy()
 
-    n = len(lo_tuple)
-    
-    # 1. Chuyển đổi nhãn (dù là số hay vector) thành tuple để Counter có thể băm (hash) và đếm được
-    def to_hashable(label):
-        if isinstance(label, torch.Tensor):
-            # Nếu là tensor nhiều phần tử hoặc 1 phần tử, chuyển hết về tuple/số nguyên bản
-            return tuple(label.tolist()) if label.ndim > 0 else label.item()
-        return label
+    num_flip = int(N * flip_ratio)
+    flip_indices = np.random.choice(N, num_flip, replace=False)
+    avail_indices = list(flip_indices)
 
-    # labels_hashable sẽ chứa các tuple đại diện cho các vector nhãn
-    labels_hashable = [to_hashable(item[1]) for item in lo_tuple]
-    counts = Counter(labels_hashable)
-    
-    # 2. Sắp xếp danh sách dựa trên tần suất xuất hiện của nhãn
-    # Cần zip kèm chỉ số i trong lo_tuple để hàm sorted không cố so sánh 2 Tensor trực tiếp (gây lỗi logic)
-    sorted_indices = sorted(
-        range(n), 
-        key=lambda i: (counts[labels_hashable[i]], labels_hashable[i]), 
-        reverse=True
-    )
-    
-    # Tạo lại mảng đã sắp xếp từ các chỉ số trên
-    sorted_tuple = [lo_tuple[i] for i in sorted_indices]
-    sorted_labels_hashable = [labels_hashable[i] for i in sorted_indices]
-    
-    # 3. Tính toán độ dịch chuyển K tối ưu
-    max_freq = counts.most_common(1)[0][1]
-    shift = n // 2
-    if max_freq > shift:
-        shift = max_freq
+    for idx, filp_idx in enumerate(flip_indices):
+        orig_val = sup_y[flip_idx]
+        avail_indices.pop(idx)
         
-    # 4. Tạo danh sách nhãn mới bằng cách dịch vòng (giữ nguyên Tensor gốc ban đầu ở vị trí [1])
-    permuted_labels = [None] * n
-    for i in range(n):
-        permuted_labels[(i + shift) % n] = sorted_tuple[i][1]
-        
-    # 5. Ghép nhãn mới đã hoán vị lại với các chỉ số ban đầu (index nằm ở vị trí [0])
-    result_tuple = []
-    for i in range(n):
-        original_idx = sorted_tuple[i][0]
-        new_label = permuted_labels[i]
-        result_tuple.append((original_idx, new_label))
-        
-    return result_tuple
-
-def flip_label(sup_y, flip_ratio=0.6):
-    num_samples = sup_y.size(0)
-    sup_y_noisy = sup_y.clone()
-
-    num_flip = int(num_samples * flip_ratio)
-    if num_flip == 0:
-        return sup_y_noisy
-
-    # 1. Lựa chọn ngẫu nhiên các chỉ số để tiến hành làm nhiễu (flip)
-    flip_indices = torch.randperm(num_samples)[:num_flip].tolist()
-    flip_lo_tuple = [(idx, sup_y_noisy[idx]) for idx in flip_indices]
-    
-    # 2. Gọi hàm hoán vị tối đa nhãn trên các chỉ số đã chọn
-    permuted_lo_tuple = max_change_permutation(flip_lo_tuple)
-    
-    # 3. Cập nhật các nhãn mới đã hoán vị vào tensor sup_y_noisy
-    for idx, new_label in permuted_lo_tuple:
-        sup_y_noisy[idx] = new_label
-
-    return sup_y_noisy
+        while True:
+            per_idx = np.random.choice(avail_indices)
+            per_val = sup_y[per_idx]
+            if not per_val == orig_val:
+                sup_y_np[idx] = per_val
+                break
 
 def mix_set():
     pass
