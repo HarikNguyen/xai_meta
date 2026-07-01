@@ -154,7 +154,7 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T)
         layer = randomize_layer(corrupted_theta_grouped[layer_idx])
         # destroy layer
         for param_tensor in layer["params"]:
-            param_tensor.data = randomize_layer(param_tensor.data)
+            param_tensor = randomize_layer(param_tensor)
         corrupted_theta = []
         for l in corrupted_theta_grouped:
             corrupted_theta.extend(l["params"])
