@@ -30,7 +30,7 @@ def permute_label(sup_y, flip_ratio=0.6):
                 sup_y_np[flip_idx] = avail_val
                 avail_indices.pop(aidx)
                 break
-        if len(avail_indices) == 0:
+        if len(avail_indices) <= 1:
             break
 
     sup_y_np = torch.from_numpy(sup_y_np).to(device)
