@@ -29,6 +29,7 @@ def permute_label(sup_y, flip_ratio=0.6):
             print(per_val)
             print(orig_val)
             print()
+            print(torch.equal(per_val, orig_val))
             if not torch.equal(per_val, orig_val):
                 sup_y_np[idx] = per_val
                 break
