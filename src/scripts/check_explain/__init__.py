@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from interpreters import FAMAExplainer
 
 from .bi_adt import compute_bidirectional_faithfulness
-from .sanity_check import sanity_check
+from .sanity import sanity_check
 
 
 def check_explain(
