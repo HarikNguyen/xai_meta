@@ -176,7 +176,7 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T)
     )
     return task_pearson, task_spearman
 
-def sanity_check(explainer, test_loader, T):
+def sanity_check_params(explainer, test_loader, T):
     test_loader_pbar = tqdm(
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )

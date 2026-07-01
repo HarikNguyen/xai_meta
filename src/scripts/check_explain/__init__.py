@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from interpreters import FAMAExplainer
 
 from .bi_adt import compute_bidirectional_faithfulness
-from .sanity import sanity_check
+from .sanity_params import sanity_check_params
 
 
 def check_explain(
@@ -61,8 +61,8 @@ def check_explain(
         for i in range(len(pdas)):
             print(f"PDAS: {pdas[i]}, NDAS: {ndas[i]}, Combined: {combineds[i]}")
 
-    elif method == "sanity":
-        results = sanity_check(explainer, test_loader, T=T)
+    elif method == "sanity_params":
+        results = sanity_check_params(explainer, test_loader, T=T)
 
     else:
         raise NotImplementedError(f"Method {method} not implemented.")
