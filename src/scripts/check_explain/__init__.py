@@ -8,7 +8,7 @@ from interpreters import FAMAExplainer
 
 from .bi_adt import compute_bidirectional_faithfulness
 from .sanity_params import sanity_check_params
-
+from .sanity_support_set import sanity_check_support_set
 
 def check_explain(
     algo,
@@ -63,6 +63,9 @@ def check_explain(
 
     elif method == "sanity_params":
         results = sanity_check_params(explainer, test_loader, T=T)
+
+    elif method == "sanity_support_set":
+        results = sanity_check_support_set(explainer, test_loader, T=T)
 
     else:
         raise NotImplementedError(f"Method {method} not implemented.")
