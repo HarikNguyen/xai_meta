@@ -4,8 +4,10 @@ import torch
 import torch.nn as nn
 import math
 import numpy as np
+from itertools import permutations
 from tqdm import tqdm
 from scipy.stats import pearsonr, spearmanr
+from collections import Counter
 
 def hard_task_mining():
     pass
@@ -15,24 +17,47 @@ def permute_label(sup_y, flip_ratio=0.6):
     device = sup_y.device
     sup_y_np = sup_y.clone().detach().cpu().numpy()
 
+    # 1. Lấy ngẫu nhiên các chỉ số (indices) cần xáo trộn nhãn
     num_flip = int(N * flip_ratio)
+    if num_flip <= 1:
+        # Không đủ phần tử để hoán vị
+        return torch.from_numpy(sup_y_np).to(device)
+        
     flip_indices = np.random.choice(N, num_flip, replace=False)
-    avail_indices = list(flip_indices)
-    print(avail_indices)
 
-    for idx, flip_idx in enumerate(flip_indices):
-        orig_val = sup_y[flip_idx]
-        print(avail_indices)
-        avail_indices.pop(idx)
-        for aidx, avail_idx in enumerate(avail_indices):
-            avail_val = sup_y[avail_idx]
-            if not torch.equal(orig_val, avail_val):
-                sup_y_np[flip_idx] = avail_val
-                avail_indices.pop(aidx)
-                break
-        if len(avail_indices) <= 1:
-            break
+    # 2. Lấy ra các nhãn tương ứng của các vị trí cần xáo trộn
+    # Để thuật toán tối ưu hoạt động, ta chuyển nhãn sang dạng số nguyên (0, 1, 2... C-1)
+    # Nếu sup_y_np là nhãn dạng số nguyên sẵn (N, 1), bỏ qua argmax. Ở đây giả định dạng (N, C)
+    labels = np.argmax(sup_y_np[flip_indices], axis=1)
 
+    # 3. Áp dụng thuật toán Sắp xếp & Dịch chuyển (Sort & Shift)
+    # Lưu lại index gốc trong nhóm cần flip để khôi phục
+    indexed_labels = sorted(enumerate(labels), key=lambda x: x[1])
+    
+    # Đếm số lần xuất hiện của nhãn phổ biến nhất trong nhóm này
+    counts = Counter(labels)
+    max_freq = max(counts.values())
+    
+    # Dịch chuyển vòng tròn mảng đã sắp xếp một khoảng bằng max_freq
+    # Việc dịch chuyển này ép các nhãn trùng nhau rời xa vị trí của nhau nhất có thể
+    shifted_indexed = indexed_labels[-max_freq:] + indexed_labels[:-max_freq]
+    
+    # 4. Ghi đè nhãn mới đã hoán vị tối ưu ngược lại mảng sup_y_np
+    # Tạo một bản sao lưu tạm thời của các vector nhãn gốc trước khi bị ghi đè
+    temp_targets = sup_y_np[flip_indices].copy()
+    
+    for i in range(num_flip):
+        original_pos_in_flip = indexed_labels[i][0]
+        # Vị trí thực tế trên ma trận sup_y_np
+        actual_global_idx = flip_indices[original_pos_in_flip] 
+        
+        # Lấy vector nhãn từ vị trí được dịch chuyển tới
+        from_pos_in_flip = shifted_indexed[i][0]
+        
+        # Ghi đè vector nhãn (one-hot hoặc xác suất)
+        sup_y_np[actual_global_idx] = temp_targets[from_pos_in_flip]
+
+    # 5. Chuyển lại về Tensor và trả về thiết bị cũ
     sup_y_np = torch.from_numpy(sup_y_np).to(device)
     return sup_y_np
 
