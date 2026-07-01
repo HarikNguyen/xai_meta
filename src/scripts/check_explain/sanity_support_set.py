@@ -30,6 +30,9 @@ def permute_label(sup_y, flip_ratio=0.6):
                 sup_y_np[idx] = per_val
                 break
 
+    sup_y_np = torch.from_numpy(sup_y_np).to(device)
+    return sup_y_np
+
 def mix_set():
     pass
 
@@ -90,7 +93,7 @@ def sanity_check_support_set(explainer, test_loader, T):
     return results
 
 def check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T):
-    sup_y_noisy = flip_label(sup_y, flip_ratio=0.6)
+    sup_y_noisy = permute_label(sup_y, flip_ratio=0.6)
     print(sup_y, sup_y_noisy)
     
     _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
