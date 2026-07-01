@@ -69,7 +69,7 @@ def check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T):
     save_full_nxm_grid(
         images_tensor=sup_x,              # (N, C, H, W)
         orig_saliencies=orig_saliency_map, # (N, H, W)
-        corrupted_data=corrupted_data,     # List of (layer_idx, (N, H, W))
+        corrupted_data=corrupted_saliencies,     # List of (layer_idx, (N, H, W))
         save_path=f"task_{sup_x.shape[0]}_saliency_grid.png", 
         alpha=0.5
     )
