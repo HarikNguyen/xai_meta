@@ -19,7 +19,7 @@ def permute_label(sup_y, flip_ratio=0.6):
     flip_indices = np.random.choice(N, num_flip, replace=False)
     avail_indices = list(flip_indices)
 
-    for idx, filp_idx in enumerate(flip_indices):
+    for idx, flip_idx in enumerate(flip_indices):
         orig_val = sup_y[flip_idx]
         avail_indices.pop(idx)
         
