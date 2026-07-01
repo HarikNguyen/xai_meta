@@ -133,14 +133,10 @@ def compute_bidirectional_faithfulness(
             auc_neg = adt(mode="neg", **kwargs)
             auc_random = adt(mode="random", **kwargs)
 
-            # CÔNG THỨC CHUẨN: 
-            # Giả định Gain càng LỚN (dương) càng TỐT (Delta M = Pre - Post)
-            pda = auc_random - auc_pos  # Pos làm Gain rớt -> auc_pos < auc_random -> PDA > 0
-            nda = auc_neg - auc_random  # Neg làm Gain tăng -> auc_neg > auc_random -> NDA > 0
+            pda = auc_random - auc_pos
+            nda = auc_neg - auc_random
             combined = pda + nda
             
-            print(f"Task {metabatch_id} {task_id}: AUC_pos={auc_pos:.2f}, AUC_neg={auc_neg:.2f}, AUC_rnd={auc_random:.2f}")
-
             pdas.append(pda)
             ndas.append(nda)
             combines.append(combined)
