@@ -62,7 +62,7 @@ def check_explain(
             print(f"PDAS: {pdas[i]}, NDAS: {ndas[i]}, Combined: {combineds[i]}")
 
     elif method == "sanity":
-        sanity_check(explainer, test_loader, T=T, plots_dir=plots_dir)
+        results = sanity_check(explainer, test_loader, T=T)
 
     else:
         raise NotImplementedError(f"Method {method} not implemented.")
