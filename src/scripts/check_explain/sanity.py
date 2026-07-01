@@ -79,9 +79,9 @@ def sanity_check(explainer, test_loader, T):
             sup_x, sup_y = support
             que_x, que_y = query
 
-            task_pear, task_spear = check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T)
+            task_pearson, task_spearman = check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T)
             
-            for idx, (p, s) in enumerate(zip(mean_pearson, mean_spearman)):
+            for idx, (p, s) in enumerate(zip(task_pearson, task_spearman)):
                 print(f"Step {idx+1} (Randomized to Layer Index {len(theta_0)-1-idx}): Pearson={p:.4f}, Spearman={s:.4f}")
 
     return {
