@@ -151,7 +151,7 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T)
     corrupted_saliencies = []
     corrupted_theta_grouped = copy.deepcopy(net_layers)
     for layer_idx in range(len(corrupted_theta_grouped) - 1, -1, -1):
-        layer = randomize_layer(corrupted_theta_grouped[layer_idx])
+        layer = corrupted_theta_grouped[layer_idx]
         # destroy layer
         for param_tensor in layer["params"]:
             param_tensor = randomize_layer(param_tensor)
