@@ -2,15 +2,21 @@ import copy
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import torchvision.transforms.functional as vF
 import math
 import numpy as np
-from itertools import permutations
 from tqdm import tqdm
 from scipy.stats import pearsonr, spearmanr
 from collections import Counter
 
-def hard_task_mining():
-    pass
+def blur_sup(sup_x, kernel_size=7, sigma=3.0):
+    sup_x_blurred = sup_x.clone()
+    sup_x_blurred = F.gaussian_blur(
+        sup_x_blurred, 
+        kernel_size=[kernel_size, kernel_size], 
+        sigma=[sigma, sigma]
+    )
+    return sup_x_blurred
 
 def permute_label(sup_y, flip_ratio=0.6):
     N, C = sup_y.shape
@@ -95,7 +101,12 @@ def sanity_check_support_set(explainer, test_loader, T):
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
     theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
+    
     noisy_check_results = {
+        "pearson": [],
+        "spearman": []
+    }
+    hard_check_results = {
         "pearson": [],
         "spearman": []
     }
@@ -107,11 +118,18 @@ def sanity_check_support_set(explainer, test_loader, T):
             sup_x, sup_y = support
             que_x, que_y = query
             
-            # check noisy task
+            # check on noisy task
             scores = check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T)
             noisy_check_results["pearson"].append(scores["pearson"])
             noisy_check_results["spearman"].append(scores["spearman"])
             print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
+
+            # check on hard task
+            scores = check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T)
+            hard_check_results["pearson"].append(scores["pearson"])
+            hard_check_results["spearman"].append(scores["spearman"])
+            print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
+
 
     results = {
         "noisy_check": noisy_check_results
@@ -126,4 +144,12 @@ def check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T):
     _, noisy_saliency_map = explainer.interpret(sup_x, sup_y_noisy, que_x, que_y, T)
 
     scores = correlation_sample_wise(orig_saliency_map, noisy_saliency_map)
+    return scores
+
+def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T):
+    sup_x_hard = blur_sup(sup_x, kernel_size=7, sigma=3.0)
+    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+    _, hard_saliency_map = explainer.interpret(sup_x_hard, sup_y, que_x, que_y, T)
+
+    scores = correlation_sample_wise(orig_saliency_map, hard_saliency_map)
     return scores

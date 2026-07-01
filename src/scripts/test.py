@@ -54,7 +54,6 @@ def test_on_wholeset(algo_mgr, test_loader):
     all_que_accs = defaultdict(list)
 
     test_pbar = tqdm(test_loader, desc="Testing", leave=True)
-    # with torch.no_grad():
     for boT in test_pbar:
         # fast-adaptation for each task in meta-batch
         sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks
