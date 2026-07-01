@@ -71,6 +71,10 @@ def sanity_check(explainer, test_loader, T):
     )
     theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
 
+    results = {
+        "pearson": [],
+        "spearman": []
+    }
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(
             boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
@@ -80,11 +84,7 @@ def sanity_check(explainer, test_loader, T):
             que_x, que_y = query
 
             task_pearson, task_spearman = check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T)
-            
-            for idx, (p, s) in enumerate(zip(task_pearson, task_spearman)):
-                print(f"Step {idx+1} (Randomized to Layer Index {len(theta_0)-1-idx}): Pearson={p:.4f}, Spearman={s:.4f}")
+            results["pearson"].append(task_pearson)
+            results["spearman"].append(task_spearman)
 
-    return {
-        "mean_pearson_steps": mean_pearson,
-        "mean_spearman_steps": mean_spearman
-    }
+    return results
