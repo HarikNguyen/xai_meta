@@ -133,7 +133,7 @@ def sanity_check_support_set(explainer, test_loader, T):
             noisy_check_results["spearman"].append(scores["spearman"])
             print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
 
-            
+        break 
     results = {
         "noisy_check": noisy_check_results
     }
@@ -142,6 +142,7 @@ def sanity_check_support_set(explainer, test_loader, T):
 
 def check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T):
     sup_y_noisy = flip_label(sup_y, flip_ratio=0.6)
+    print(sup_y, sup_y_noisy)
     
     _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
     _, noisy_saliency_map = explainer.interpret(sup_x, sup_y_noisy, que_x, que_y, T)
