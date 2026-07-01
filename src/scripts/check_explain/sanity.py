@@ -1,5 +1,6 @@
 import copy
 import torch
+import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 from scipy.stats import pearsonr, spearmanr
