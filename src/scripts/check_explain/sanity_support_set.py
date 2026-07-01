@@ -16,27 +16,41 @@ def max_change_permutation(lo_tuple):
 
     n = len(lo_tuple)
     
-    # 1. Đếm tần suất xuất hiện của các nhãn (label nằm ở vị trí tuple[1])
-    labels = [item[1].item() if isinstance(item[1], torch.Tensor) else item[1] for item in lo_tuple]
-    counts = Counter(labels)
+    # 1. Chuyển đổi nhãn (dù là số hay vector) thành tuple để Counter có thể băm (hash) và đếm được
+    def to_hashable(label):
+        if isinstance(label, torch.Tensor):
+            # Nếu là tensor nhiều phần tử hoặc 1 phần tử, chuyển hết về tuple/số nguyên bản
+            return tuple(label.tolist()) if label.ndim > 0 else label.item()
+        return label
+
+    # labels_hashable sẽ chứa các tuple đại diện cho các vector nhãn
+    labels_hashable = [to_hashable(item[1]) for item in lo_tuple]
+    counts = Counter(labels_hashable)
     
-    # 2. Sắp xếp danh sách tuple dựa trên tần suất của nhãn (giảm dần)
-    # Điều này đưa các tuple có nhãn giống nhau đứng cạnh nhau
-    sorted_tuple = sorted(lo_tuple, key=lambda x: (counts[x[1].item() if isinstance(x[1], torch.Tensor) else x[1]], x[1]), reverse=True)
+    # 2. Sắp xếp danh sách dựa trên tần suất xuất hiện của nhãn
+    # Cần zip kèm chỉ số i trong lo_tuple để hàm sorted không cố so sánh 2 Tensor trực tiếp (gây lỗi logic)
+    sorted_indices = sorted(
+        range(n), 
+        key=lambda i: (counts[labels_hashable[i]], labels_hashable[i]), 
+        reverse=True
+    )
+    
+    # Tạo lại mảng đã sắp xếp từ các chỉ số trên
+    sorted_tuple = [lo_tuple[i] for i in sorted_indices]
+    sorted_labels_hashable = [labels_hashable[i] for i in sorted_indices]
     
     # 3. Tính toán độ dịch chuyển K tối ưu
     max_freq = counts.most_common(1)[0][1]
     shift = n // 2
     if max_freq > shift:
-        shift = max_freq  # Bắt buộc dịch chuyển bằng số lượng nhãn phổ biến nhất nếu nó chiếm đa số
+        shift = max_freq
         
-    # 4. Tạo danh sách nhãn mới bằng cách dịch vòng (chỉ lấy phần nhãn ở vị trí [1])
+    # 4. Tạo danh sách nhãn mới bằng cách dịch vòng (giữ nguyên Tensor gốc ban đầu ở vị trí [1])
     permuted_labels = [None] * n
     for i in range(n):
         permuted_labels[(i + shift) % n] = sorted_tuple[i][1]
         
     # 5. Ghép nhãn mới đã hoán vị lại với các chỉ số ban đầu (index nằm ở vị trí [0])
-    # final_tuple[original_idx] sẽ chứa nhãn mới
     result_tuple = []
     for i in range(n):
         original_idx = sorted_tuple[i][0]
@@ -64,8 +78,7 @@ def flip_label(sup_y, flip_ratio=0.6):
     for idx, new_label in permuted_lo_tuple:
         sup_y_noisy[idx] = new_label
 
-    return sup_y_noisy   
-
+    return sup_y_noisy
 
 def mix_set():
     pass
