@@ -22,6 +22,7 @@ def permute_label(sup_y, flip_ratio=0.6):
 
     for idx, flip_idx in enumerate(flip_indices):
         orig_val = sup_y[flip_idx]
+        print(avail_indices)
         avail_indices.pop(idx)
         for aidx, avail_idx in enumerate(avail_indices):
             avail_val = sup_y[avail_idx]
