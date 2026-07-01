@@ -45,36 +45,6 @@ def correlation_sample_wise(A, A_prime):
         "spearman": np.mean(spearman_list)
     }
 
-def check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T):
-    task_pearson = []
-    task_spearman = []
-
-    explainer.theta_0 = [p.clone().detach() for p in theta_0]
-    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
-
-    corrupted_saliencies = []
-    corrupted_theta = [p.clone().detach() for p in theta_0]
-    for param_idx in range(len(corrupted_theta) - 1, -1, -1):
-        destroyed_weight = randomize_layer(corrupted_theta[param_idx])
-        corrupted_theta[param_idx] = destroyed_weight
-        explainer.theta_0 = [p.clone().detach() for p in corrupted_theta]
-        _, new_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
-
-        scores = correlation_sample_wise(orig_saliency_map, new_saliency_map)
-        task_pearson.append(scores["pearson"])
-        task_spearman.append(scores["spearman"])
-
-        corrupted_saliencies.append((param_idx, new_saliency_map))
-        
-    save_full_nxm_grid(
-        images_tensor=sup_x,              # (N, C, H, W)
-        orig_saliencies=orig_saliency_map, # (N, H, W)
-        corrupted_data=corrupted_saliencies,     # List of (layer_idx, (N, H, W))
-        save_path=f"task_{sup_x.shape[0]}_saliency_grid.png", 
-        alpha=0.5
-    )
-    return task_pearson, task_spearman
-
 def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path, alpha=0.5):
     """
     Vẽ 1 ảnh duy nhất chứa lưới N (ảnh) x M (trạng thái corrupt).
@@ -145,12 +115,73 @@ def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path
     fig.subplots_adjust(wspace=0.05, hspace=0.05) # Hoặc chỉnh thủ công hẹp hơn
     plt.savefig(save_path, bbox_inches='tight', dpi=150) #dpi cao hơn để ảnh sắc nét
     plt.close()
+
+def get_layer_parameters_map(baselearner, theta_0):
+    """
+    Map danh sách phẳng theta_0 vào các Layer thực tế của baselearner
+    """
+    param_iterator = iter(theta_0)
+    net_info_with_params = []
+    
+    # Lặp qua các sub-modules chứa param theo đúng thứ tự của PyTorch
+    for name, module in baselearner.named_modules():
+        # Chỉ xét module có parameter cục bộ (không tính module cha bọc ngoài)
+        local_params = list(module.parameters(recurse=False))
+        if len(local_params) > 0:
+            layer_dict = {
+                "name": name,
+                "type": module.__class__.__name__,
+                "params": []
+            }
+            # Bốc chính xác các tensor từ theta_0 ra theo đúng số lượng param của layer đó
+            for _ in range(len(local_params)):
+                layer_dict["params"].append(next(param_iterator))
+                
+            net_info_with_params.append(layer_dict)
+            
+    return net_info_with_params
+
+def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T):
+    task_pearson = []
+    task_spearman = []
+
+    explainer.theta_0 = [p.clone().detach() for p in theta_0]
+    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+
+    corrupted_saliencies = []
+    corrupted_theta_grouped = copy.deepcopy(net_info)
+    for layer_idx in range(len(corrupted_theta_grouped) - 1, -1, -1):
+        layer = randomize_layer(corrupted_theta_grouped[layer_idx])
+        # destroy layer
+        for param_tensor in layer["params"]:
+            param_tensor.data = randomize_layer(param_tensor.data)
+        corrupted_theta = []
+        for l in corrupted_theta_grouped:
+            corrupted_theta.extend(l["params"])
+        explainer.theta_0 = [p.clone().detach() for p in corrupted_theta]
+        _, new_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+
+        scores = correlation_sample_wise(orig_saliency_map, new_saliency_map)
+        task_pearson.append(scores["pearson"])
+        task_spearman.append(scores["spearman"])
+
+        corrupted_saliencies.append((layer_idx, new_saliency_map))
+        
+    save_full_nxm_grid(
+        images_tensor=sup_x,              # (N, C, H, W)
+        orig_saliencies=orig_saliency_map, # (N, H, W)
+        corrupted_data=corrupted_saliencies,     # List of (layer_idx, (N, H, W))
+        save_path=f"task_{sup_x.shape[0]}_saliency_grid.png", 
+        alpha=0.5
+    )
+    return task_pearson, task_spearman
+
 def sanity_check(explainer, test_loader, T):
     test_loader_pbar = tqdm(
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
     theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
-
+    net_layers = get_layer_parameters_map(explainer.algo_mgr.baselearner, theta_0) 
     results = {
         "pearson": [],
         "spearman": []
@@ -163,7 +194,7 @@ def sanity_check(explainer, test_loader, T):
             sup_x, sup_y = support
             que_x, que_y = query
 
-            task_pearson, task_spearman = check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T)
+            task_pearson, task_spearman = check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T)
             results["pearson"].append(task_pearson)
             results["spearman"].append(task_spearman)
         break
