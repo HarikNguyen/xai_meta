@@ -10,25 +10,61 @@ from scipy.stats import pearsonr, spearmanr
 def hard_task_mining():
     pass
 
+ def max_change_permutation(lo_tuple):
+    if len(lo_tuple) < 2:
+        return lo_tuple  # Không thể hoán vị nếu có ít hơn 2 phần tử
+
+    n = len(lo_tuple)
+    
+    # 1. Đếm tần suất xuất hiện của các nhãn (label nằm ở vị trí tuple[1])
+    labels = [item[1].item() if isinstance(item[1], torch.Tensor) else item[1] for item in lo_tuple]
+    counts = Counter(labels)
+    
+    # 2. Sắp xếp danh sách tuple dựa trên tần suất của nhãn (giảm dần)
+    # Điều này đưa các tuple có nhãn giống nhau đứng cạnh nhau
+    sorted_tuple = sorted(lo_tuple, key=lambda x: (counts[x[1].item() if isinstance(x[1], torch.Tensor) else x[1]], x[1]), reverse=True)
+    
+    # 3. Tính toán độ dịch chuyển K tối ưu
+    max_freq = counts.most_common(1)[0][1]
+    shift = n // 2
+    if max_freq > shift:
+        shift = max_freq  # Bắt buộc dịch chuyển bằng số lượng nhãn phổ biến nhất nếu nó chiếm đa số
+        
+    # 4. Tạo danh sách nhãn mới bằng cách dịch vòng (chỉ lấy phần nhãn ở vị trí [1])
+    permuted_labels = [None] * n
+    for i in range(n):
+        permuted_labels[(i + shift) % n] = sorted_tuple[i][1]
+        
+    # 5. Ghép nhãn mới đã hoán vị lại với các chỉ số ban đầu (index nằm ở vị trí [0])
+    # final_tuple[original_idx] sẽ chứa nhãn mới
+    result_tuple = []
+    for i in range(n):
+        original_idx = sorted_tuple[i][0]
+        new_label = permuted_labels[i]
+        result_tuple.append((original_idx, new_label))
+        
+    return result_tuple
+
 def flip_label(sup_y, flip_ratio=0.6):
+    num_samples = sup_y.size(0)
     sup_y_noisy = sup_y.clone()
-    num_samples = sup_y_noisy.size(0)
 
     num_flip = int(num_samples * flip_ratio)
     if num_flip == 0:
         return sup_y_noisy
+
+    # 1. Lựa chọn ngẫu nhiên các chỉ số để tiến hành làm nhiễu (flip)
+    flip_indices = torch.randperm(num_samples)[:num_flip].tolist()
+    flip_lo_tuple = [(idx, sup_y_noisy[idx]) for idx in flip_indices]
     
-    flip_indices = torch.randperm(num_samples)[:num_flip]
-    unique_classes = torch.unique(sup_y)
-    for idx in flip_indices:
-        orig_label = sup_y_noisy[idx].item()
-        while True:
-            random_idx = torch.randint(len(unique_classes), (1,)).item()
-            new_label = unique_classes[random_idx].item()
-            if new_label != orig_label:
-                sup_y_noisy[idx] = new_label
-                break
-    return sup_y_noisy
+    # 2. Gọi hàm hoán vị tối đa nhãn trên các chỉ số đã chọn
+    permuted_lo_tuple = max_change_permutation(flip_lo_tuple)
+    
+    # 3. Cập nhật các nhãn mới đã hoán vị vào tensor sup_y_noisy
+    for idx, new_label in permuted_lo_tuple:
+        sup_y_noisy[idx] = new_label
+
+    return sup_y_noisy   
 
 
 def mix_set():
