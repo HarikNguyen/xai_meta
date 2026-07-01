@@ -81,9 +81,8 @@ def sanity_check(explainer, test_loader, T):
 
             task_pear, task_spear = check_on_task(explainer, theta_0, sup_x, sup_y, que_x, que_y, T)
             
-            print("\n--- SANITY CHECK RESULT (CASCADING FROM LAST TO FIRST LAYER) ---")
-    for idx, (p, s) in enumerate(zip(mean_pearson, mean_spearman)):
-        print(f"Step {idx+1} (Randomized to Layer Index {len(theta_0)-1-idx}): Pearson={p:.4f}, Spearman={s:.4f}")
+            for idx, (p, s) in enumerate(zip(mean_pearson, mean_spearman)):
+                print(f"Step {idx+1} (Randomized to Layer Index {len(theta_0)-1-idx}): Pearson={p:.4f}, Spearman={s:.4f}")
 
     return {
         "mean_pearson_steps": mean_pearson,
