@@ -197,6 +197,5 @@ def sanity_check_params(explainer, test_loader, T):
             task_pearson, task_spearman = check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T)
             results["pearson"].append(task_pearson)
             results["spearman"].append(task_spearman)
-        break
 
     return results

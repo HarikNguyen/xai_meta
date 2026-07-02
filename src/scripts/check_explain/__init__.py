@@ -2,6 +2,7 @@ import os
 import shutil
 import math
 import numpy as np
+import pandas as pd
 import torch
 import matplotlib.pyplot as plt
 from interpreters import FAMAExplainer
@@ -60,17 +61,35 @@ def check_explain(
         pdas, ndas, combineds = compute_bidirectional_faithfulness(
             explainer, test_loader, T=T
         )
-
-        for i in range(len(pdas)):
-            print(f"PDAS: {pdas[i]}, NDAS: {ndas[i]}, Combined: {combineds[i]}")
+        res_df = pd.DataFrame({
+            "PDAS": pdas,
+            "NDAS": ndas,
+            "Combined": combineds
+        })
+        res_df.to_csv(os.path.join(log_dir, "biADT_results.csv"), index=False)
+        res_df.mean().to_csv(os.path.join(log_dir, "biADT_results_mean.csv"), index=True)
 
     elif method == "sanity_params":
         results = sanity_check_params(explainer, test_loader, T=T)
+        res_df = pd.DataFrame(results)
+        res_df.to_csv(os.path.join(log_dir, "sanity_params_results.csv"), index=False)
+        res_df.mean().to_csv(os.path.join(log_dir, "sanity_params_results_mean.csv"), index=True)
 
     elif method == "sanity_support_set":
         if ood_test_loader is None:
             raise ValueError("OOD test loader is None. Please provide a valid OOD test loader.")
         results = sanity_check_support_set(explainer, test_loader, ood_test_loader, T=T)
+        noisy_check_df = pd.DataFrame(results["noisy_check"])
+        hard_check_df = pd.DataFrame(results["hard_check"])
+        ood_check_df = pd.DataFrame(results["ood_check"])
+
+        noisy_check_df.to_csv(os.path.join(log_dir, "sanity_support_set_noisy_check_results.csv"), index=False)
+        hard_check_df.to_csv(os.path.join(log_dir, "sanity_support_set_hard_check_results.csv"), index=False)
+        ood_check_df.to_csv(os.path.join(log_dir, "sanity_support_set_ood_check_results.csv"), index=False)
+
+        noisy_check_df.mean().to_csv(os.path.join(log_dir, "sanity_support_set_noisy_check_results_mean.csv"), index=True)
+        hard_check_df.mean().to_csv(os.path.join(log_dir, "sanity_support_set_hard_check_results_mean.csv"), index=True)
+        ood_check_df.mean().to_csv(os.path.join(log_dir, "sanity_support_set_ood_check_results_mean.csv"), index=True)
 
     else:
         raise NotImplementedError(f"Method {method} not implemented.")

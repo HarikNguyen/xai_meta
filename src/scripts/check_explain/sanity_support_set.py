@@ -160,20 +160,17 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
             scores = check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T)
             noisy_check_results["pearson"].append(scores["pearson"])
             noisy_check_results["spearman"].append(scores["spearman"])
-            print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
 
             # check on hard task
             scores = check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T)
             hard_check_results["pearson"].append(scores["pearson"])
             hard_check_results["spearman"].append(scores["spearman"])
-            print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
             
             # check on mixed task (ood task)
             boT_ood_task = boT_ood[task_id]
             scores = check_on_mixed_task(explainer, (support, query), boT_ood_task, T)
             ood_check_results["pearson"].append(scores["pearson"])
             ood_check_results["spearman"].append(scores["spearman"])
-            print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
 
     results = {
         "noisy_check": noisy_check_results,
