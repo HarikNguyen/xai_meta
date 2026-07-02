@@ -12,12 +12,6 @@ download_and_extract() {
     local file_url="$BASE_URL/$file_name?download=true"
     local target_file="$TARGET_DIR/$file_name" # Cập nhật đường dẫn đích
 
-    echo "=> Checking: $file_name"
-    HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" -L "$file_url")
-    if [ "$HTTP_STATUS" -ne 200 ]; then
-        return 1 # File not found, return flag 1 to break the loop
-    fi
-
     echo "Downloading: $file_name..."
     wget -q --show-progress -O "$target_file" "$file_url"
 
