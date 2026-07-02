@@ -60,8 +60,7 @@ def warm_up(config):
         },
         seed=42,
     )
-    print(ds_cfg.get("ood_test_root"), ds_cfg.get("ood_test_name"))
-    if ds_cfg.get("ood_test_root") and ds_cfg.get("ood_test_name"):
+    if ds_cfg.get("ood_explain_root") and ds_cfg.get("explain_root"):
         explain_loader = get_dataloader(
             data_root=ds_cfg["explain_root"],
             dataset=ds_cfg["explain_name"],
