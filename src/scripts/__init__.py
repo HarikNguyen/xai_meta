@@ -28,7 +28,7 @@ def run(args):
         raise NotImplementedError(f"Algorithm {algo} not implemented.")
 
     # warm up
-    train_loader, val_loader, test_loader, algo_conf = warm_up(args.yaml_config)
+    train_loader, val_loader, test_loader, explain_loader, ood_explain_loader, algo_conf = warm_up(args.yaml_config)
     algo_conf["vmap_chunk_size"] = args.vmap_chunk_size
 
     checkpoint_dir = args.checkpoint_dir
@@ -52,7 +52,7 @@ def run(args):
         run_test(args, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
 
     elif args.mode == EXPLAIN_MODE:
-        explain(args.algo, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
+        explain(args.algo, algo_class, explain_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
 
     elif args.mode == CHECK_EXPLAIN_MODE:
-        check_explain(args.algo, algo_class, test_loader, algo_conf, args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir)
+        check_explain(args.algo, algo_class, explain_loader, ood_explain_loader, algo_conf, args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir)

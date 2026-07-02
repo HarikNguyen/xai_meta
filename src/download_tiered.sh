@@ -9,7 +9,7 @@ mkdir -p "$TARGET_DIR"
 # Function: Download -> Extract -> Delete
 download_and_extract() {
     local file_name=$1
-    local file_url="$BASE_URL/$file_name"
+    local file_url="$BASE_URL/$file_name?download=true"
     local target_file="$TARGET_DIR/$file_name" # Cập nhật đường dẫn đích
 
     echo "=> Checking: $file_name"

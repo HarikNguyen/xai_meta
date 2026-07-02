@@ -60,6 +60,42 @@ def warm_up(config):
         },
         seed=42,
     )
+    
+    if ds_cfg.get("ood_test_root") and ds_cfg.get("ood_test_name"):
+        explain_loader = get_dataloader(
+            data_root=ds_cfg["explain_root"],
+            dataset=ds_cfg["explain_name"],
+            dataset_type="test",
+            num_workers=dl_cfg["num_workers"],
+            sample={
+                "metatrain_iterations": metatest_iterations,
+                "n_way": dl_cfg["n_way"],
+                "k_shot": dl_cfg["k_shot"],
+                "k_query": dl_cfg["test_k_query"],
+                "meta_batch_size": dl_cfg["metatest_batch_size"],  # Really equal (metatrain_iterations = 600 || meta_batch_size = 1)
+                "shuffle": True,
+            },
+            seed=42,
+        )
+
+        ood_explain_loader = get_dataloader(
+            data_root=ds_cfg["ood_explain_root"],
+            dataset=ds_cfg["ood_explain_name"],
+            dataset_type="test",
+            num_workers=dl_cfg["num_workers"],
+            sample={
+                "metatrain_iterations": metatest_iterations,
+                "n_way": dl_cfg["n_way"],
+                "k_shot": dl_cfg["k_shot"],
+                "k_query": dl_cfg["test_k_query"],
+                "meta_batch_size": dl_cfg["metatest_batch_size"],  # Really equal (metatrain_iterations = 600 || meta_batch_size = 1)
+                "shuffle": True,
+            },
+            seed=42,
+        )
+    else:
+        explain_loader = None
+        ood_explain_loader = None
 
     # Define model conf
     baselearner_args = {
@@ -78,4 +114,4 @@ def warm_up(config):
         "test_batch_size": 1,
     })
 
-    return train_loader, val_loader, test_loader, algo_conf
+    return train_loader, val_loader, test_loader, explain_loader, ood_explain_loader, algo_conf

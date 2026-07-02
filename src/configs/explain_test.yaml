@@ -1,0 +1,36 @@
+# mini2cub.yaml
+dataset:
+  train_root: "tieredImagenet"
+  train_name: "tieredImagenet"
+  val_root: "cub_200"
+  val_name: "cub_200"
+  test_root: "cub_200"
+  test_name: "cub_200"
+  explain_root: "tieredImagenet"
+  explain_name: "tieredImagenet"
+  ood_explain_root: "cub_200"
+  ood_explain_name: "cub_200"
+
+dataloader:
+  num_workers: 2
+  metatrain_iterations: 60000
+  metatest_iterations: 600
+  val_after: 1000
+  meta_batch_size: 4
+  metatest_batch_size: 1
+  n_way: 5
+  k_shot: 1
+  k_query: 15
+  test_k_query: 24
+
+algo:
+  train_base_lr: 0.01
+  base_lr: 0.01
+  second_order: false
+  T: 5
+  T_val: 1
+  T_test: 10
+  lr: 0.001
+  batching_eps: false
+  test_adam: false
+  grad_clip: 10

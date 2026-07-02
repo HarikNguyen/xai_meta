@@ -14,6 +14,7 @@ def check_explain(
     algo,
     algo_class,
     test_loader,
+    ood_test_loader,
     algo_conf,
     method=None,
     use_best=False,
@@ -21,7 +22,9 @@ def check_explain(
     checkpoint_dir="checkpoints",
     log_dir="logs",
 ):
-
+    if test_loader is None:
+        raise ValueError("Test loader is None. Please provide a valid test loader.")
+    
     # Inits
     algo_mgr = algo_class(**algo_conf)
     T = algo_mgr.T_test
@@ -65,7 +68,9 @@ def check_explain(
         results = sanity_check_params(explainer, test_loader, T=T)
 
     elif method == "sanity_support_set":
-        results = sanity_check_support_set(explainer, test_loader, T=T)
+        if ood_test_loader is None:
+            raise ValueError("OOD test loader is None. Please provide a valid OOD test loader.")
+        results = sanity_check_support_set(explainer, test_loader, ood_test_loader, T=T)
 
     else:
         raise NotImplementedError(f"Method {method} not implemented.")

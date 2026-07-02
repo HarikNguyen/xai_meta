@@ -67,8 +67,39 @@ def permute_label(sup_y, flip_ratio=0.6):
     sup_y_np = torch.from_numpy(sup_y_np).to(device)
     return sup_y_np
 
-def mix_set():
-    pass
+def mix_set(task_source, task_another, num_mixed_classes=2):
+    (task_ssx, task_ssy), (task_sqx, task_sqy) = task_source
+    (task_asx, task_asy), (task_aqx, task_aqy) = task_another
+
+    mixed_sx = task_ssx.clone()
+    mixed_sy = task_ssy.clone()
+
+    C_source = task_ssy.size(1)
+    C_another = task_asy.size(1)
+    if num_mixed_classes >= C_source:
+        raise ValueError("num_mixed_classes must be less than the number of classes in the source task.")
+
+    target_classes_in_source = torch.randperm(C_source)[:num_mixed_classes]
+    source_classes_from_another = torch.randperm(C_another)[:num_mixed_classes]
+
+    for i in range(num_mixed_classes):
+        tgt_c = target_classes_in_source[i].item()
+        src_c = source_classes_from_another[i].item()
+
+        idx_tgt = torch.where(task_ssy[:, tgt_c] == 1)[0]
+        idx_src = torch.where(task_asy[:, src_c] == 1)[0]
+
+        num_replace = min(len(idx_tgt), len(idx_src))
+        idx_tgt = idx_tgt[:num_replace]
+        idx_src = idx_src[:num_replace]
+
+        mixed_sx[idx_tgt] = task_asx[idx_src]
+        ood_indices.extend(idx_tgt.tolist())
+    
+    ood_indices.sort()
+    task_mixed = ((mixed_sx, mixed_sy), (task_sqx, task_sqy))
+
+    return task_mixed
 
 def correlation_sample_wise(A, A_prime):
     N = A.shape[0]
@@ -96,7 +127,7 @@ def correlation_sample_wise(A, A_prime):
         "spearman": np.mean(spearman_list)
     }
 
-def sanity_check_support_set(explainer, test_loader, T):
+def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
     test_loader_pbar = tqdm(
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
@@ -110,10 +141,17 @@ def sanity_check_support_set(explainer, test_loader, T):
         "pearson": [],
         "spearman": []
     }
+    ood_check_results = {
+        "pearson": [],
+        "spearman": []
+    }
+
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(
             boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
         )
+        ood_iter = iter(ood_test_loader)
+        boT_ood = next(ood_iter)
         for task_id, (support, query) in enumerate(boT_pbar):
             sup_x, sup_y = support
             que_x, que_y = query
@@ -129,10 +167,18 @@ def sanity_check_support_set(explainer, test_loader, T):
             hard_check_results["pearson"].append(scores["pearson"])
             hard_check_results["spearman"].append(scores["spearman"])
             print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
-
+            
+            # check on mixed task (ood task)
+            boT_ood_task = boT_ood[task_id]
+            scores = check_on_mixed_task(explainer, (support, query), boT_ood_task, T)
+            ood_check_results["pearson"].append(scores["pearson"])
+            ood_check_results["spearman"].append(scores["spearman"])
+            print(f"Task {task_id}: Pearson={scores['pearson']:.4f}, Spearman={scores['spearman']:.4f}")
 
     results = {
-        "noisy_check": noisy_check_results
+        "noisy_check": noisy_check_results,
+        "hard_check": hard_check_results,
+        "ood_check": ood_check_results,
     }
 
     return results
@@ -153,3 +199,14 @@ def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T):
 
     scores = correlation_sample_wise(orig_saliency_map, hard_saliency_map)
     return scores
+
+def check_on_mixed_task(explainer, source_task, another_task, T):
+    (sup_x, sup_y), (que_x, que_y) = source_task
+    (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(source_task, another_task, num_mixed_classes=2)
+
+    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+    _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_x, ood_que_x, ood_que_y, T)
+
+    scores = correlation_sample_wise(orig_saliency_map, mixed_saliency_map)
+    return scores
+
