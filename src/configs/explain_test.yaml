@@ -1,13 +1,13 @@
 # mini2cub.yaml
 dataset:
-  train_root: "tieredImagenet"
-  train_name: "tieredImagenet"
+  train_root: "tiered_imagenet"
+  train_name: "tiered_imagenet"
   val_root: "cub_200"
   val_name: "cub_200"
   test_root: "cub_200"
   test_name: "cub_200"
-  explain_root: "tieredImagenet"
-  explain_name: "tieredImagenet"
+  explain_root: "tiered_imagenet"
+  explain_name: "tiered_imagenet"
   ood_explain_root: "cub_200"
   ood_explain_name: "cub_200"
 
