@@ -41,8 +41,8 @@ def correlation_sample_wise(A, A_prime):
         spearman_list.append(s_corr)
 
     return {
-        "pearson": np.mean(pearson_list),
-        "spearman": np.mean(spearman_list)
+        "pearson": np.mean(pearson_list).item(),
+        "spearman": np.mean(spearman_list).item()
     }
 
 def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path, alpha=0.5):

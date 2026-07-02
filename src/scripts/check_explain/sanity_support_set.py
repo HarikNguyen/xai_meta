@@ -123,8 +123,8 @@ def correlation_sample_wise(A, A_prime):
         spearman_list.append(s_corr)
 
     return {
-        "pearson": np.mean(pearson_list),
-        "spearman": np.mean(spearman_list)
+        "pearson": np.mean(pearson_list).item(),
+        "spearman": np.mean(spearman_list).item()
     }
 
 def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
