@@ -202,9 +202,6 @@ def check_on_mixed_task(explainer, source_task, another_task, T):
     (sup_x, sup_y), (que_x, que_y) = source_task
     (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(source_task, another_task, num_mixed_classes=2)
     
-    print(ood_sup_x.shape, ood_sup_y.shape, ood_que_x.shape, ood_que_y.shape)
-    print(ood_
-
     _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
     _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_y, ood_que_x, ood_que_y, T)
 
