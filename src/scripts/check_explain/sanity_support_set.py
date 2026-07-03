@@ -82,6 +82,7 @@ def mix_set(task_source, task_another, num_mixed_classes=2):
     target_classes_in_source = torch.randperm(C_source)[:num_mixed_classes]
     source_classes_from_another = torch.randperm(C_another)[:num_mixed_classes]
 
+    ood_indices = []
     for i in range(num_mixed_classes):
         tgt_c = target_classes_in_source[i].item()
         src_c = source_classes_from_another[i].item()
