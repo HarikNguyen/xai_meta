@@ -146,3 +146,4 @@ def show_explaination(
     )
     plt.savefig(save_path, bbox_inches="tight", dpi=300)
     plt.close(fig)
+    print(save_path)
