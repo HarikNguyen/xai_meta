@@ -72,6 +72,7 @@ def check_explain(
     elif method == "sanity_params":
         results = sanity_check_params(explainer, test_loader, T=T)
         res_df = pd.DataFrame(results)
+        mean_res_df = pd.DataFrame(res_df.apply(lambda col: np.mean(col.to_list(), axis=0)))
         res_df.to_csv(os.path.join(log_dir, "sanity_params_results.csv"), index=False)
         res_df.mean().to_csv(os.path.join(log_dir, "sanity_params_results_mean.csv"), index=True)
 
