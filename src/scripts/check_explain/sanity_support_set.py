@@ -201,14 +201,12 @@ def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T):
 def check_on_mixed_task(explainer, source_task, another_task, T):
     (sup_x, sup_y), (que_x, que_y) = source_task
     (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(source_task, another_task, num_mixed_classes=2)
-    print(f"Mixed task support set shape: {ood_sup_x.shape}, {ood_sup_y.shape}")
-    print(f"Mixed task query set shape: {ood_que_x.shape}, {ood_que_y.shape}")
-    print(ood_sup_y)
-    print(ood_que_y)
-    print(f"Original support set shape: {sup_x.shape}, {sup_y.shape}")
+    
+    print(ood_sup_x.shape, ood_sup_y.shape, ood_que_x.shape, ood_que_y.shape)
+    print(ood_
 
     _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
-    _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_x, ood_que_x, ood_que_y, T)
+    _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_y, ood_que_x, ood_que_y, T)
 
     scores = correlation_sample_wise(orig_saliency_map, mixed_saliency_map)
     return scores
