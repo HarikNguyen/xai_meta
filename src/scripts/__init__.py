@@ -1,13 +1,11 @@
 import os
-import numpy as np
-import torch
-from tqdm import tqdm
 
 from .warm_up import warm_up
-from .trains import run_train
-from .tests import run_test
+from .train import run_train
+from .test import run_test
+from .explain import explain
+from .check_explain import check_explain
 from algos.maml import MAML
-from loaders.utils import boT_to_stack
 
 
 ############################################################################################
@@ -16,29 +14,24 @@ from loaders.utils import boT_to_stack
 
 TRAIN_MODE = "train"
 TEST_MODE = "test"
+EXPLAIN_MODE = "explain"
+CHECK_EXPLAIN_MODE = "check_explain"
 
 def run(args):
     if args.algo == "maml":
         algo_class = MAML
     else:
-        raise NotImplementedError(f"Algorithm {algo} not implemented.")
+        raise NotImplementedError(f"Algorithm {args.algo} not implemented.")
 
     # warm up
-    train_loader, val_loader, test_loader, algo_conf = warm_up(args.yaml_config)
+    train_loader, val_loader, test_loader, explain_loader, ood_explain_loader, algo_conf = warm_up(args.yaml_config)
     algo_conf["vmap_chunk_size"] = args.vmap_chunk_size
 
-    checkpoint_dir = args.checkpoint_dir
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
-
-    if not os.path.exists(os.path.join(checkpoint_dir, algo_class.__name__)):
-        os.makedirs(os.path.join(checkpoint_dir, algo_class.__name__))
-
-    checkpoint_dir = os.path.join(checkpoint_dir, algo_class.__name__)
+    checkpoint_dir = os.path.join(args.checkpoint_dir, algo_class.__name__)
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     log_dir = args.log_dir
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    os.makedirs(log_dir, exist_ok=True)
 
     # run
     if args.mode == TRAIN_MODE:
@@ -46,3 +39,9 @@ def run(args):
 
     elif args.mode == TEST_MODE:
         run_test(args, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
+
+    elif args.mode == EXPLAIN_MODE:
+        explain(args.algo, algo_class, explain_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
+
+    elif args.mode == CHECK_EXPLAIN_MODE:
+        check_explain(args.algo, algo_class, explain_loader, ood_explain_loader, algo_conf, args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir)

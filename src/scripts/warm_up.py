@@ -45,20 +45,30 @@ def warm_up(config):
     )
 
     metatest_iterations = dl_cfg["metatest_iterations"] // dl_cfg["metatest_batch_size"] # each task only use for 1 iteration
-    test_loader = get_dataloader(
-        data_root=ds_cfg["test_root"],
-        dataset=ds_cfg["test_name"],
-        dataset_type="test",
-        num_workers=dl_cfg["num_workers"],
-        sample={
-            "metatrain_iterations": metatest_iterations,
-            "n_way": dl_cfg["n_way"],
-            "k_shot": dl_cfg["k_shot"],
-            "k_query": dl_cfg["test_k_query"],
-            "meta_batch_size": dl_cfg["metatest_batch_size"],  # Really equal (metatrain_iterations = 600 || meta_batch_size = 1)
-            "shuffle": True,
-        },
-    )
+    def _get_test_loader(root, name):
+        return get_dataloader(
+            data_root=root,
+            dataset=name,
+            dataset_type="test",
+            num_workers=dl_cfg["num_workers"],
+            sample={
+                "metatrain_iterations": metatest_iterations,
+                "n_way": dl_cfg["n_way"],
+                "k_shot": dl_cfg["k_shot"],
+                "k_query": dl_cfg["test_k_query"],
+                "meta_batch_size": dl_cfg["metatest_batch_size"],  # really equal (metatrain_iterations = 600 || meta_batch_size = 1)
+                "shuffle": True,
+            },
+            seed=42,
+        )
+    
+    test_loader = _get_test_loader(ds_cfg["test_root"], ds_cfg["test_name"])
+    if ds_cfg.get("ood_explain_root") and ds_cfg.get("explain_root"):
+        explain_loader = _get_test_loader(ds_cfg["explain_root"], ds_cfg["explain_name"])
+        ood_explain_loader = _get_test_loader(ds_cfg["ood_explain_root"], ds_cfg["ood_explain_name"])
+    else:
+        explain_loader = None
+        ood_explain_loader = None
 
     # Define model conf
     baselearner_args = {
@@ -77,4 +87,4 @@ def warm_up(config):
         "test_batch_size": 1,
     })
 
-    return train_loader, val_loader, test_loader, algo_conf
+    return train_loader, val_loader, test_loader, explain_loader, ood_explain_loader, algo_conf

@@ -1,0 +1,181 @@
+from collections import Counter
+
+import numpy as np
+import torch
+import torchvision.transforms.functional as vF
+from tqdm import tqdm
+
+from ..utils import correlation_sample_wise
+
+def blur_sup(sup_x, kernel_size=7, sigma=3.0):
+    sup_x_blurred = sup_x.clone()
+    sup_x_blurred = vF.gaussian_blur(
+        sup_x_blurred, 
+        kernel_size=[kernel_size, kernel_size], 
+        sigma=[sigma, sigma]
+    )
+    return sup_x_blurred
+
+def permute_label(sup_y, flip_ratio=0.6):
+    N, C = sup_y.shape
+    device = sup_y.device
+    sup_y_np = sup_y.clone().detach().cpu().numpy()
+
+    # 1. Randomly pick the indices whose labels will be shuffled
+    num_flip = int(N * flip_ratio)
+    if num_flip <= 1:
+        # Not enough elements to permute
+        return torch.from_numpy(sup_y_np).to(device)
+
+    flip_indices = np.random.choice(N, num_flip, replace=False)
+
+    # 2. Get the labels at the selected positions
+    # For the optimal-shift algorithm to work, convert labels to integer class ids (0, 1, 2... C-1)
+    # If sup_y_np already holds integer labels (N, 1), skip argmax. Here we assume one-hot format (N, C)
+    labels = np.argmax(sup_y_np[flip_indices], axis=1)
+
+    # 3. Apply the Sort & Shift algorithm
+    # Keep the original index within the flip group so we can map values back
+    indexed_labels = sorted(enumerate(labels), key=lambda x: x[1])
+
+    # Count occurrences of the most frequent label in this group
+    counts = Counter(labels)
+    max_freq = max(counts.values())
+
+    # Circularly shift the sorted array by max_freq positions
+    # This shift pushes identical labels as far apart from each other as possible
+    shifted_indexed = indexed_labels[-max_freq:] + indexed_labels[:-max_freq]
+
+    # 4. Write the optimally permuted labels back into sup_y_np
+    # Keep a temporary copy of the original label vectors before they get overwritten
+    temp_targets = sup_y_np[flip_indices].copy()
+
+    for i in range(num_flip):
+        original_pos_in_flip = indexed_labels[i][0]
+        # Actual position in the sup_y_np matrix
+        actual_global_idx = flip_indices[original_pos_in_flip]
+
+        # Get the label vector from the shifted-to position
+        from_pos_in_flip = shifted_indexed[i][0]
+
+        # Overwrite the label vector (one-hot or probability distribution)
+        sup_y_np[actual_global_idx] = temp_targets[from_pos_in_flip]
+
+    # 5. Convert back to a tensor on the original device
+    sup_y_np = torch.from_numpy(sup_y_np).to(device)
+    return sup_y_np
+
+def mix_set(task_source, task_another, num_mixed_classes=2):
+    (task_ssx, task_ssy), (task_sqx, task_sqy) = task_source
+    (task_asx, task_asy), (task_aqx, task_aqy) = task_another
+
+    mixed_sx = task_ssx.clone()
+    mixed_sy = task_ssy.clone()
+
+    C_source = task_ssy.size(1)
+    C_another = task_asy.size(1)
+    if num_mixed_classes >= C_source:
+        raise ValueError("num_mixed_classes must be less than the number of classes in the source task.")
+
+    target_classes_in_source = torch.randperm(C_source)[:num_mixed_classes]
+    source_classes_from_another = torch.randperm(C_another)[:num_mixed_classes]
+
+    ood_indices = []
+    for i in range(num_mixed_classes):
+        tgt_c = target_classes_in_source[i].item()
+        src_c = source_classes_from_another[i].item()
+
+        idx_tgt = torch.where(task_ssy[:, tgt_c] == 1)[0]
+        idx_src = torch.where(task_asy[:, src_c] == 1)[0]
+
+        num_replace = min(len(idx_tgt), len(idx_src))
+        idx_tgt = idx_tgt[:num_replace]
+        idx_src = idx_src[:num_replace]
+
+        mixed_sx[idx_tgt] = task_asx[idx_src]
+        ood_indices.extend(idx_tgt.tolist())
+    
+    ood_indices.sort()
+    task_mixed = ((mixed_sx, mixed_sy), (task_sqx, task_sqy))
+
+    return task_mixed
+
+def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
+    test_loader_pbar = tqdm(
+        test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
+    )
+    theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
+    
+    noisy_check_results = {
+        "pearson": [],
+        "spearman": []
+    }
+    hard_check_results = {
+        "pearson": [],
+        "spearman": []
+    }
+    ood_check_results = {
+        "pearson": [],
+        "spearman": []
+    }
+
+    for metabatch_id, boT in enumerate(test_loader_pbar):
+        boT_pbar = tqdm(
+            boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
+        )
+        ood_iter = iter(ood_test_loader)
+        boT_ood = next(ood_iter)
+        for task_id, (support, query) in enumerate(boT_pbar):
+            sup_x, sup_y = support
+            que_x, que_y = query
+            
+            # check on noisy task
+            scores = check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T)
+            noisy_check_results["pearson"].append(scores["pearson"])
+            noisy_check_results["spearman"].append(scores["spearman"])
+
+            # check on hard task
+            scores = check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T)
+            hard_check_results["pearson"].append(scores["pearson"])
+            hard_check_results["spearman"].append(scores["spearman"])
+            
+            # check on mixed task (ood task)
+            boT_ood_task = boT_ood[task_id]
+            scores = check_on_mixed_task(explainer, (support, query), boT_ood_task, T)
+            ood_check_results["pearson"].append(scores["pearson"])
+            ood_check_results["spearman"].append(scores["spearman"])
+
+    results = {
+        "noisy_check": noisy_check_results,
+        "hard_check": hard_check_results,
+        "ood_check": ood_check_results,
+    }
+
+    return results
+
+def check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T):
+    sup_y_noisy = permute_label(sup_y, flip_ratio=0.8)
+
+    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+    _, noisy_saliency_map = explainer.interpret(sup_x, sup_y_noisy, que_x, que_y, T)
+
+    scores = correlation_sample_wise(orig_saliency_map, noisy_saliency_map)
+    return scores
+
+def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T):
+    sup_x_hard = blur_sup(sup_x, kernel_size=7, sigma=3.0)
+    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+    _, hard_saliency_map = explainer.interpret(sup_x_hard, sup_y, que_x, que_y, T)
+
+    scores = correlation_sample_wise(orig_saliency_map, hard_saliency_map)
+    return scores
+
+def check_on_mixed_task(explainer, source_task, another_task, T):
+    (sup_x, sup_y), (que_x, que_y) = source_task
+    (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(source_task, another_task, num_mixed_classes=2)
+    
+    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+    _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_y, ood_que_x, ood_que_y, T)
+
+    scores = correlation_sample_wise(orig_saliency_map, mixed_saliency_map)
+    return scores

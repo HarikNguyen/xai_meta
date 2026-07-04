@@ -1,28 +1,15 @@
 import os
 import csv
-import torch
 from collections import defaultdict
 from tqdm import tqdm
 
-from .utils import log_to_csv, compute_stats
+from .utils import log_to_csv, compute_stats, load_trained_algo
 from loaders.utils import boT_to_stack
 
 
 def run_test(args, algo_class, test_loader, algo_conf, use_best=False, use_last=True, checkpoint_dir="checkpoints", log_dir="logs"):
     # define algo_obj for manage training and validating strategies
-    algo_mgr = algo_class(**algo_conf)
-
-    # load checkpoint
-    if use_best:
-        checkpoint_path = os.path.join(checkpoint_dir, f"best_checkpoint.pt")
-    elif use_last:
-        checkpoint_path = os.path.join(checkpoint_dir, f"last_checkpoint.pt")
-    else:
-        raise ValueError("Please specify a checkpoint to load")
-    print("Loading checkpoint from", checkpoint_path)
-    if not os.path.exists(checkpoint_path):
-        raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}. Please run training first.")
-    algo_mgr.read_file(checkpoint_path)
+    algo_mgr = load_trained_algo(algo_class, algo_conf, checkpoint_dir, use_best, use_last)
 
     # test on whole test set
     all_sup_losses, all_que_losses, all_sup_accs, all_que_accs = test_on_wholeset(algo_mgr, test_loader)
@@ -54,7 +41,6 @@ def test_on_wholeset(algo_mgr, test_loader):
     all_que_accs = defaultdict(list)
 
     test_pbar = tqdm(test_loader, desc="Testing", leave=True)
-    # with torch.no_grad():
     for boT in test_pbar:
         # fast-adaptation for each task in meta-batch
         sup_x, sup_y, que_x, que_y = boT_to_stack(boT) # stack of meta_batch_size tasks

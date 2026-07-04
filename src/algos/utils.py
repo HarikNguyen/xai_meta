@@ -10,7 +10,7 @@ def put_on_device(dev, tensors):
     return tensors
 
 def get_loss_n_preds(weights, learner, x, y):
-    preds = learner.forward_weights(x, weights)
+    preds = learner(x, weights)
     loss = learner.criterion(preds, y)
     return loss, preds
 

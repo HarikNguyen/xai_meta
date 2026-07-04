@@ -36,6 +36,6 @@ def resize_all_images(dataset_name, size=(84, 84)):
         print(f"Finished {root_dir}")
 
 # Call the function
-# resize_all_images("miniImagenet")
-# resize_all_images("cub_200")
+resize_all_images("miniImagenet")
+resize_all_images("cub_200")
 resize_all_images("tiered_imagenet")

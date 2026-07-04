@@ -16,7 +16,7 @@ def parse_args():
         default="train",
         type=str,
         help="Mode to run the script in.\n - train: start meta-training.\n - val: meta-testing on validation set.\n - test: meta-testing on test set.\nDefault: train",
-        choices=["train", "val", "test"],
+        choices=["train", "val", "test", "explain", "check_explain"],
     )
 
     parser.add_argument(
@@ -65,6 +65,13 @@ def parse_args():
         "--use_last",
         action="store_true",
         help="Use the last checkpoint from the checkpoint directory. Default: True",
+    )
+
+    parser.add_argument(
+        "--check_method",
+        default="biADT",
+        type=str,
+        help="Method to check the explaination.",
     )
 
     # Return args
