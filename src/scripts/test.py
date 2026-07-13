@@ -12,7 +12,7 @@ def run_test(args, algo_class, test_loader, algo_conf, use_best=False, use_last=
     algo_mgr = load_trained_algo(algo_class, algo_conf, checkpoint_dir, use_best, use_last)
 
     # test on whole test set
-    all_sup_losses, all_que_losses, all_sup_accs, all_que_accs = test_on_wholeset(algo_mgr, test_loader)
+    all_sup_losses, all_que_losses, all_sup_accs, all_que_accs, all_sup_outpaths, all_que_outpaths = test_on_wholeset(algo_mgr, test_loader)
 
     # compute stats
     num_steps = len(all_sup_losses)
@@ -63,7 +63,7 @@ def test_on_wholeset(algo_mgr, test_loader):
         all_sup_outpaths.append(sup_outpath)
         all_que_outpaths.append(que_outpath)
 
-    return all_sup_losses, all_que_losses, all_sup_accs, all_que_accs
+    return all_sup_losses, all_que_losses, all_sup_accs, all_que_accs, all_sup_outpaths, all_que_outpaths
 
 def print_n_log_test(metrics_dict, num_steps, total_tasks, log_dir="logs"):
     print(f"\n\n{'#'*70}\nMETA-TESTING RESULTS OVER {total_tasks} TASKS\n{'#'*70}")
