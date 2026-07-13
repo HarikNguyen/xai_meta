@@ -37,21 +37,20 @@ for csv in "train.csv" "test.csv" "val.csv"; do
 done
 
 # 2. Sequentially download and extract parts for train, test, and val
+declare -A categories
+categories=( ["test"]=5 ["train"]=9 ["val"]=3 )
+
 for category in "train" "test" "val"; do
-    part_num=1
-    while true; do
+    total_parts=${categories[$category]}
+    echo "---------------------------------------------------"
+    echo "Starting $category set (Total parts: $total_parts)..."
+
+    for ((part_num=1; part_num<=total_parts; part_num++)); do
         file_name="${category}_part_${part_num}.tar"
-        
-        # Call the function. If it returns 1 (file not found), break the category loop
         download_and_extract "$file_name"
-        if [ $? -eq 1 ]; then
-            echo "--> All parts for $category downloaded and extracted."
-            echo "==================================================="
-            break
-        fi
-        
-        ((part_num++))
     done
+
+    echo "--> All $total_parts parts for $category downloaded and extracted."
 done
 
 echo "PROCESS COMPLETED!"
