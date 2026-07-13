@@ -31,8 +31,8 @@ def run_test(args, algo_class, test_loader, algo_conf, use_best=False, use_last=
     save_details(metrics_dict, num_steps, total_tasks, log_dir)
 
     # save image paths
-    save_paths(all_sup_outpaths, "support", log_dir)
-    save_paths(all_que_outpaths, "query", log_dir)
+    save_paths(all_sup_outpaths, "support_paths", log_dir)
+    save_paths(all_que_outpaths, "query_paths", log_dir)
 
 ############################################################################################
 ### Helper Funcs

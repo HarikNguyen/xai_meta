@@ -65,8 +65,8 @@ def explain(
             )
 
     _write_csv("adaptation_gain.csv", ["metabatch_id", "task_id", "adaptation_gain"], ad_gains, log_dir)
-    _write_csv("support_paths.csv", ["metabatch_id", "task_id", "support_path"], sup_paths, log_dir)
-    _write_csv("query_paths.csv", ["metabatch_id", "task_id", "query_path"], que_paths, log_dir)
+    _write_csv("S_paths.csv", ["metabatch_id", "task_id", "support_path"], sup_paths, log_dir)
+    _write_csv("Q_paths.csv", ["metabatch_id", "task_id", "query_path"], que_paths, log_dir)
 
 def show_explaination(
     sup_x, saliency_map, adaptation_gain, algo, log_dir, metabatch_id, task_id, t

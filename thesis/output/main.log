@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.3.15)  13 JUL 2026 21:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.3.15)  13 JUL 2026 21:16
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1302,16 +1302,7 @@ File: tikzlibrarycalc.code.tex 2023-01-15 v3.1.10 (3.1.10)
 \@quotereset=\count485
  (output/main.aux (output/Appendix/thanks.aux)
 (output/Appendix/decuong.aux) (output/Appendix/tomtat.aux)
-(output/Chapter1/chapter1.aux) (output/Chapter2/chapter2.aux)
-(output/Chapter3/chapter3.aux) (output/Chapter4/chapter4.aux
-
-LaTeX Warning: Label `Chapter3' multiply defined.
-
-) (output/Chapter5/chapter5.aux
-
-LaTeX Warning: Label `Chapter3' multiply defined.
-
-))
+(output/Chapter1/chapter1.aux))
 \openout1 = `main.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 125.
@@ -1336,7 +1327,8 @@ LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 125.
 LaTeX Font Info:    ... okay on input line 125.
 Package biblatex Info: Trying to load language 'english'...
 Package biblatex Info: ... file 'english.lbx' found.
- (/usr/share/texlive/texmf-dist/tex/latex/biblatex/lbx/english.lbx
+
+(/usr/share/texlive/texmf-dist/tex/latex/biblatex/lbx/english.lbx
 File: english.lbx 2022/07/12 v3.18b biblatex localization (PK/MW)
 )
 Package biblatex Info: Input encoding 'utf8' detected.
@@ -1357,7 +1349,13 @@ Package biblatex Warning: The following entry could not be found
 
 )
 
-Package biblatex Warning: citation 'selvaraju2019gradcam'
+Package biblatex Warning: citation 'lum2016predict'
+(biblatex)                was not found at all in the .bbl file,
+(biblatex)                bibliography labels cannot be generated,
+(biblatex)                please correct the citation.
+
+
+Package biblatex Warning: citation 'angwin2016machine'
 (biblatex)                was not found at all in the .bbl file,
 (biblatex)                bibliography labels cannot be generated,
 (biblatex)                please correct the citation.
@@ -1451,32 +1449,23 @@ No file main.acr.
 
 
 
-] (output/main.toc
-LaTeX Font Info:    Trying to load font information for U+msa on input line 6.
- (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
-File: umsa.fd 2013/01/14 v3.01 AMS symbols A
-)
-LaTeX Font Info:    Trying to load font information for U+msb on input line 6.
-(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
-File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) [3
-
-])
+] (output/main.toc)
 \tf@toc=\write9
 \openout9 = `main.toc'.
 
- [4]
-(output/main.lof)
+ [3
+
+] (output/main.lof)
 \tf@lof=\write10
 \openout10 = `main.lof'.
 
- [5
+ [4
 
 ] (output/main.lot)
 \tf@lot=\write11
 \openout11 = `main.lot'.
 
- [6
+ [5
 
 ]
 \openout2 = `Appendix/tomtat.aux'.
@@ -1487,6 +1476,17 @@ No file Appendix/tomtat.tex.
 
 (./Chapter1/chapter1.tex
 Chương 1.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 10.
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 10.
+
+
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
 
 LaTeX Warning: Citation 'lum2016predict' on page 1 undefined on input line 10.
 
@@ -1515,31 +1515,44 @@ been already used, duplicate ignored
 l.17 
       [2] [3] [4]
 
-! Package glossaries Error: Glossary entry `biadt' has not been defined.
+LaTeX Warning: Reference `Chapter3' on page 5 undefined on input line 46.
+
+
+LaTeX Warning: Reference `Chapter3' on page 5 undefined on input line 48.
+
+
+LaTeX Warning: Reference `Chapter3' on page 5 undefined on input line 50.
+
+
+LaTeX Warning: Reference `Chapter4' on page 5 undefined on input line 52.
+
+[5]
+
+! Package glossaries Error: Glossary entry `FAMA' has not been defined.
 
 See the glossaries package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.39 ...��m tra. Thứ nhất là \acrfull{biadt},
-                                                   điều chỉnh từ các...
+l.61 ...elta M$ và phương pháp \acrfull{FAMA},
+                                                   cơ sở toán học và ...
 
 ? 
 ! Emergency stop.
  ...                                              
                                                   
-l.39 ...��m tra. Thứ nhất là \acrfull{biadt},
-                                                   điều chỉnh từ các...
+l.61 ...elta M$ và phương pháp \acrfull{FAMA},
+                                                   cơ sở toán học và ...
 
 You need to define a glossary entry before you can use it.
 
  
 Here is how much of TeX's memory you used:
- 35541 strings out of 477466
- 657986 string characters out of 5828687
- 1860330 words of memory out of 5000000
- 55167 multiletter control sequences out of 15000+600000
- 522551 words of font info for 51 fonts, out of 8000000 for 9000
+ 35470 strings out of 477466
+ 655644 string characters out of 5828687
+ 1858330 words of memory out of 5000000
+ 55127 multiletter control sequences out of 15000+600000
+ 522892 words of font info for 52 fonts, out of 8000000 for 9000
  309 hyphenation exceptions out of 8191
  94i,6n,90p,2248b,854s stack positions out of 10000i,1000n,20000p,200000b,200000s
 !  ==> Fatal error occurred, no output PDF file produced!
