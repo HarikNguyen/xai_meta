@@ -1,116 +1,172 @@
-\chapter{Trình bày báo cáo}
+\chapter{Tổng quan nghiên cứu}
 \label{Chapter2}
 
-\section{Quy định chung}
+\section{Cơ sở lý thuyết}
+\label{sec:background}
+\subsection{Bài toán \acrfull{fsl} và Meta-Learning}
+Bài toán \textbf{\acrfull{fsl}} khởi nguồn từ các công trình về one-shot learning dựa trên suy luận Bayesian, khai thác tri thức đã học từ các lớp đối tượng trước đó để nhận diện một lớp mới chỉ từ một hoặc vài mẫu quan sát \cite{fei2006one}. Khái niệm này ra đời từ trước khi deep learning bùng nổ, nhưng trở nên đặc biệt cấp thiết trở lại trong kỷ nguyên deep learning và từ đó phát triển thành một nhánh nghiên cứu riêng với hàng loạt phương pháp dựa trên mạng nơ-ron sâu, hướng đến việc xây dựng một mô hình có khả năng khái quát hoá tốt trên các lớp/tác vụ mới chỉ với một lượng rất nhỏ mẫu minh hoạ \cite{wang2020generalizing}.
 
-Báo cáo phải được trình bày ngắn gọn, rõ ràng, mạch lạc, sạch sẽ, không được tẩy xóa, có đánh số trang, đánh số bảng biểu, hình vẽ, đồ thị. 
+Về mặt hình thức, \acrshort{fsl} được phát biểu phổ biến nhất dưới dạng bài toán $N$-way $K$-shot, tại mỗi tác vụ, mô hình cần phân biệt $N$ lớp, mỗi lớp chỉ có $K$ mẫu gán nhãn làm minh hoạ. Để mô hình có thể học được năng lực khái quát hoá này, quá trình huấn luyện được tổ chức thành các \emph{episodic training} trên một tập hợp tác vụ nền (base tasks) phong phú, gọi là giai đoạn \emph{meta-training}. Và năng lực của mô hình sau khi đã học sẽ được kiểm chứng trên các tác vụ hoàn toàn mới, không trùng với các tập lớp đã thấy trong meta-training, gọi là giai đoạn \emph{meta-testing}. Mỗi tác vụ $\mathcal{T}_i$ trong cả hai giai đoạn đều được chia thành hai tập con không giao nhau. Với tập hỗ trợ (support set) $S_i = \{(x_k^S, y_k^S)\}_{k=1}^{NK}$, đóng vai trò như một "cuốn sách giáo khoa" chỉ với vài mẫu mà mô hình được phép quan sát để thích nghi với tác vụ, và tập truy vấn (query set) $Q_i = \{(x_k^Q, y_k^Q)\}_{k=1}^{M}$, dùng để đánh giá mô hình sau khi đã thích nghi trên $S_i$ tương ứng.
 
-Nội dung báo cáo được phân thành các chương. Số thứ tự của các chương, mục được đánh số bằng hệ thống số Ả-rập, không dùng số La mã. Các mục và tiểu mục được đánh số bằng các nhóm hai hoặc ba chữ số, cách nhau một dấu chấm: số thứ nhất chỉ số chương, chỉ số thứ hai chỉ số mục, số thứ ba chỉ số tiểu mục.
+Dựa trên góc độ khai thác tri thức tiên nghiệm (prior knowledge) mà thông thường \acrshort{fsl} chia thành các nhóm phương pháp song song \cite{wang2020generalizing, song2023comprehensive}. Nhóm dựa trên tăng cường dữ liệu (data augmentation/hallucination), nhằm sinh thêm mẫu tổng hợp hoặc mẫu biến đổi để làm giàu tập hỗ trợ vốn đã ít ỏi. Nhóm dựa trên học chuyển giao (transfer learning), tinh chỉnh (fine-tune) một mô hình đã huấn luyện sẵn trên tập dữ liệu nguồn lớn sang tác vụ đích. Và nhóm dựa trên Meta-Learning, nhằm khai thác tri thức tiên nghiệm thông qua việc học trên một phân phối tác vụ $p(\mathcal{T})$ thay vì một tác vụ đơn lẻ. Các nhóm này không loại trừ lẫn nhau và trên thực tế thường được kết hợp trong cùng một hệ thống.
 
+\textbf{Meta-Learning}, hay còn gọi là "học cách học", tiếp cận bài toán \acrshort{fsl} bằng cách không tối ưu trực tiếp trên một tác vụ đơn lẻ, mà tối ưu trên toàn bộ phân phối tác vụ $p(\mathcal{T})$, với mục tiêu tìm ra một cơ chế thích nghi sao cho, khi tính trung bình trên phân phối này, mô hình sau khi thích nghi trên $S_i$ của bất kỳ tác vụ $\mathcal{T}_i$ nào cũng đạt hiệu năng tốt trên $Q_i$ tương ứng. Dựa trên thành phần nào của hệ thống được meta-learner học, tức được tối ưu ở cấp độ phân phối tác vụ thay vì cấp độ từng tác vụ riêng lẻ, các phương pháp Meta-Learning thường được phân thành ba nhóm chính \cite{gharoun2024meta}.
 
-%Báo cáo cần dùng LaTEX để viết và trình bày theo mẫu đã được cung cấp.
+Nhóm thứ nhất là các phương pháp dựa trên độ đo (metric-based), tiêu biểu là Mạng Siamese (Siamese Networks), Mạng So khớp (Matching Networks) và Mạng Nguyên mẫu (Prototypical Networks), các phương pháp này học một không gian nhúng (embedding space) sao cho khoảng cách giữa các mẫu cùng lớp nhỏ hơn khoảng cách giữa các mẫu khác lớp, và thực hiện phân loại một tác vụ mới bằng một quy tắc so khớp khoảng cách đơn giản, không cần bất kỳ bước cập nhật gradient nào tại thời điểm kiểm thử. Nhóm thứ hai là các phương pháp dựa trên mô hình (model-based), sử dụng một kiến trúc có bộ nhớ ngoài hoặc một siêu mạng (hypernetwork) để trực tiếp sinh ra tham số cho tác vụ mới. Nhóm thứ ba, và cũng là nhóm có liên quan trực tiếp nhất đến đề tài này, là các phương pháp dựa trên tối ưu hoá (optimization-based), trong đó quá trình thích nghi được thực hiện tường minh thông qua một hoặc nhiều bước cập nhật gradient trên tập hỗ trợ.
 
- Báo cáo trình bày sử dụng khổ giấy với việc canh lề như sau: Lề trên 3 cm, lề dưới 2,5 cm, lề trái 3 cm, lề phải 2 cm. Đánh số trang ở giữa bên dưới. Đánh số trang ở giữa bên dưới.
+\subsection{\acrfull{maml}}
+\textbf{\acrfull{maml}} là đại diện tiêu biểu và có ảnh hưởng nhất của nhóm các phương pháp dựa trên tối ưu hóa, cùng với các biến thể mở rộng như Reptile (một xấp xỉ bậc nhất của MAML), Meta-SGD (học luôn cả tốc độ học - learning rate - như một siêu tham số), ALFA (học một cơ chế sinh siêu tham số thích nghi theo từng bước và từng tác vụ), Meta-Curvature (học một ma trận tiền điều kiện - preconditioner - để định hình lại hình học của không gian tham số trong inner loop), iMAML (sử dụng định lý hàm ẩn để tránh phải lan truyền ngược qua toàn bộ quỹ đạo $K$ bước của inner loop), và Task2Vec (xây dựng một biểu diễn vector đặc trưng cho độ khó và độ tương đồng giữa các tác vụ dựa trên thông tin Fisher). Điểm chung của toàn bộ các phương pháp dựa trên tối ưu hoá này là chúng đều thừa nhận vai trò trung tâm của tập hỗ trợ $S$ như một "lực định hướng" cho quá trình thích nghi thông qua quá trình tối ưu hai tầng (bi-level optimization) đối với bộ tham số khởi tạo chung (shared initialization parameters) $\theta_0$.
 
-Font chữ dùng trong báo cáo (Times New Roman) với kích cỡ (size) 13-14pt, sử dụng chế độ dãn dòng (line spacing) chế độ 1.5 lines.
+Cụ thể, với \acrshort{maml} quá trình này gồm hai giai đoạn. Tầng lặp trong (inner loop), với mỗi tác vụ $\mathcal{T}_i$, mô hình xuất phát từ tham số khởi tạo chung $\theta_0$ và thực hiện $K$ bước cập nhật gradient trên hàm mất mát tính trên tập hỗ trợ $S_i$:
+\[
+\theta_{i,j+1} = \theta_{i,j} - \alpha \nabla_{\theta_{i,j}} L_{S_i}(\theta_{i,j}), \qquad j = 0, 1, \dots, K-1, \quad \theta_{i,0} = \theta_0
+\]
+Trong đó $\alpha$ là tốc độ học của inner loop, và nghiệm sau $K$ bước được ký hiệu là $\varphi_i^*(S_i) := \theta_{i,K}$. Tầng lặp ngoài (outer loop), tham số khởi tạo chung $\theta_0$ được cập nhật sao cho tổng (hoặc trung bình) hàm mất mát trên tập truy vấn $Q_i$, tính tại nghị đã thích nghi $\varphi_i^*(S_i)$, được tối thiểu hóa trên toàn bộ phân phối tác vụ:
+\[
+\min_{\theta_0}  \mathbb{E}_{\mathcal{T}_i \sim p(\mathcal{T})} \left[ \mathcal{L}_{Q_i}\left(\varphi_i^*(S_i)\right) \right]
+\]
+Nhưng, như đã được đề cập tại Mục \ref{subsec:debate} và \ref{subsec:relatedwork_synthesis}, bản thân cơ chế mà lực định hướng đó vận hành ở cấp độ mẫu và đặc trưng cụ thể lại chưa được các phương pháp này làm sáng tỏ trực tiếp, chúng cải thiện \emph{cách} mô hình thích nghi, chứ không đưa ra một cơ chế giải thích \emph{tại sao} một tập hỗ trợ cụ thể lại tạo ra một hướng thích nghi cụ thể.
 
-%Các bảng biểu trình bày theo chiều ngang khổ giấy thì đầu bảng là lề trái của trang. 
+\subsection{\acrfull{xai}}
 
+\textbf{\acrfull{xai}} là lĩnh vực nghiên cứu các phương pháp giúp con người hiểu được cơ chế ra quyết định của một mô hình học máy. Lĩnh vực này ra đời như một phản ứng tất yếu trước sự phát triển của các mô hình học sâu. Trong khi các mô hình như hồi quy tuyến tính hay cây quyết định vốn có tính minh bạch nội tại (inherently transparent), cho phép truy vết trực tiếp đường đi từ đặc trưng đầu vào đến dự đoán đầu ra, thì các kiến trúc phức tạp hơn như mạng nơ-ron sâu lại đánh đổi tính minh bạch đó để lấy độ chính xác, trở thành những mô hình "hộp đen" mà cơ chế nội tại không thể quan sát trực tiếp \cite{wilkinson2026explaining}.
 
-\section{Bố cục của báo cáo}
+Và dựa trên thời điểm can thiệp vào mô hình, các kỹ thuật \acrshort{xai} được chia thành hai nhóm. \emph{Ante-hoc}, trong đó tính khả giải được tích hợp ngay từ khi thiết kế kiến trúc mô hình (ví dụ: cây quyết định, cơ chế attention, Self-Explaining Neural Networks). Và \emph{post-hoc}, trong đó các kỹ thuật giải thích được áp dụng sau khi mô hình đã huấn luyện xong, phân tích và diễn giải một mô hình đã có sẵn mà không cần huấn luyện lại \cite{wilkinson2026explaining}. Do các phương pháp post-hoc không yêu cầu thay đổi kiến trúc hay quy trình huấn luyện gốc của mô hình, chúng có tính linh hoạt cao và có thể áp dụng cho các mô hình hộp đen phức tạp đã được huấn luyện sẵn. Theo Arrieta và các cộng sự, các kỹ thuật post-hoc thường dựa trên một trong ba cách tiếp cận chính: đơn giản hoá mô hình (model simplification), xây dựng một mô hình thay thế (surrogate) dễ diễn giải hơn để xấp xỉ hành vi cục bộ của mô hình hộp đen (như LIME). Độ liên quan đặc trưng (feature relevance), xếp hạng mức độ quan trọng của từng đặc trưng đầu vào đối với một dự đoán cụ thể (như SHAP). Và trực quan hoá (visualization), cho phép con người quan sát trực tiếp bằng hình ảnh cách mô hình đưa ra lựa chọn \cite{wilkinson2026explaining}.
 
-Nội dung của báo cáo tối thiểu 50 trang khổ A4 và không nên vượt quá 100 trang (không kể các trang bìa, lời cám ơn, mục lục, tài liệu tham khảo \ldots) theo trình tự như sau:
+Trong ba hướng trên, trực quan hoá cho phép con người dễ dàng diễn giải lựa chọn của mô hình thông qua hình ảnh trực quan thay vì các con số trừu tượng \cite{wilkinson2026explaining}. Đối với các mạng nơ-ron tích chập (CNN) dùng cho các bài toán thị giác máy tính, các kỹ thuật trực quan hoá dựa trên thuộc tính (attribution visualization) đã được phát triển nhằm làm nổi bật những vùng đầu vào có liên quan nhất đến quyết định của mô hình. Một trong những kỹ thuật được sử dụng phổ biến nhất theo hướng này là Gradient-weighted Class Activation Mapping (Grad-CAM) \cite{selvaraju2019gradcam}, kỹ thuật tổng quát hoá ý tưởng ban đầu của Class Activation Mapping (CAM), vốn đòi hỏi phải chèn thêm lớp global average pooling vào cuối kiến trúc mạng, sang dạng có thể áp dụng hậu nghiệm trên bất kỳ mạng CNN nào mà không cần thay đổi kiến trúc gốc, một điều kiện đặc biệt quan trọng khi làm việc với các mô hình đã huấn luyện sẵn. Về bản chất, Grad-CAM sử dụng gradient của lớp mục tiêu lan truyền ngược đến lớp tích chập cuối cùng để tạo ra một bản đồ nhiệt (heatmap) chồng lên ảnh gốc, thể hiện mức độ đóng góp không gian của từng vùng ảnh vào quyết định phân loại. Khác với các kỹ thuật như guided backpropagation vốn chỉ ra mức độ quan trọng ở cấp độ từng điểm ảnh riêng lẻ, Grad-CAM chỉ ra mức độ quan trọng ở cấp độ một vùng ảnh, nên trực quan và dễ diễn giải hơn đối với con người \cite{wilkinson2026explaining}. Đây chính là cơ sở kỹ thuật nền tảng mà phương pháp FAMA của đề tài này kế thừa và mở rộng, không dừng lại ở việc trực quan hoá một bản đồ nhiệt tĩnh tại một thời điểm suy luận, mà trải rộng ra nhiều bước gradient liên tiếp trong suốt quá trình thích nghi.
 
-\begin{itemize}
-\item MỞ ĐẦU (thường đặt tên là ``Giới thiệu''): Trình bày lý do chọn đề tài, mục đích, đối tượng và phạm vi nghiên cứu.
-Mô tả bài toán mà đề tài giải quyết.
-Bài toán này có gì hay?
-Tại sao lại cần giải quyết bài toán này?
-Bài toán này có gì khó?
-Có những hướng nào để giải quyết bài toán này?
-Những hướng giải quyết trước đây có những vấn đề gì chưa giải quyết được?
-Các câu hỏi nghiên cứu mà đề tài trả lời hoặc những vấn đề mà đề tài sẽ giải quyết.
-Các đóng góp của đề tài.
+\subsection{Các bài kiểm định và đánh giá phương pháp XAI}
+Một khó khăn cố hữu của nghiên cứu XAI là: một bản đồ phân bổ "nhìn có vẻ hợp lý" về mặt trực giác hoàn toàn có thể không phản ánh đúng cơ chế thực sự của mô hình. Vì vậy, cộng đồng nghiên cứu đã đề xuất một số nguyên lý đánh giá định lượng, độc lập với cảm nhận thị giác.
 
-\item TỔNG QUAN (thường đặt tên là ``Các công trình liên quan''): Phân tích đánh giá các hướng nghiên cứu đã có của các tác giả trong và ngoài nước liên quan đến đề tài; nêu những vấn đề còn tồn tại (những vấn đề nào mà các công trình khác chưa giải quyết được); chỉ ra những vấn đề mà đề tài cần tập trung, nghiên cứu giải quyết.
+Nguyên lý thứ nhất là \emph{tính đầy đủ} (completeness), được hình thức hoá chặt chẽ nhất trong công trình Integrated Gradients của Sundararajan và cộng sự: tổng các giá trị phân bổ trên toàn bộ đặc trưng đầu vào phải bằng đúng hiệu số giữa đầu ra của mô hình tại điểm dữ liệu quan tâm và đầu ra tại một điểm nền (baseline) tham chiếu \cite{sundararajan2017axiomatic}. Integrated Gradients đạt được tính chất này bằng cách tính tích phân đường đi của gradient dọc theo một đường thẳng nối điểm nền và điểm dữ liệu, thay vì chỉ lấy gradient tại một điểm duy nhất — nhờ định lý cơ bản của giải tích (fundamental theorem of calculus) áp dụng cho tích phân đường. 
 
-\item NGHIÊN CỨU THỰC NGHIỆM HOẶC LÝ THUYẾT (thường đặt tên là ``Phương pháp đề xuất''): Trình bày cơ sở lý thuyết, lý luận, giả thiết khoa học và phương pháp nghiên cứu đã được sử dụng trong đề tài.
+Nguyên lý thứ hai là \emph{kiểm tra tỉnh táo} (sanity check), được đề xuất bởi Adebayo và cộng sự trong công trình có ảnh hưởng lớn "Sanity Checks for Saliency Maps" \cite{adebayo2018sanity}. Ý tưởng cốt lõi là: nếu một bản đồ phân bổ thực sự phản ánh những gì mô hình đã học được, thì nó phải \emph{nhạy cảm} với những thay đổi phá vỡ tri thức đã học đó. Cụ thể, phép kiểm tra ngẫu nhiên hoá tham số mô hình (model parameter randomization test) ngẫu nhiên hoá lại trọng số của mô hình theo thứ tự tầng bậc, từ lớp đầu ra lùi dần về các lớp phía trước (cascading randomization), và so sánh bản đồ phân bổ trước và sau khi ngẫu nhiên hoá: nếu bản đồ phân bổ hầu như không đổi dù trọng số mô hình đã bị phá huỷ hoàn toàn, đó là dấu hiệu phương pháp attribution không thực sự phụ thuộc vào tri thức mà mô hình đã học, mà có thể chỉ đang hoạt động như một bộ dò biên cạnh (edge detector) độc lập với việc mô hình đã được huấn luyện hay chưa. Phát hiện đáng chú ý của Adebayo và cộng sự là một số phương pháp phổ biến (như Guided Backpropagation) gần như bất biến với việc ngẫu nhiên hoá các lớp phía trên, một sai sót nghiêm trọng mà chỉ riêng đánh giá trực quan không thể phát hiện ra.
 
-Nếu đề xuất hướng giải quyết mới, mô hình mới thì cần mô tả chi tiết cách giải quyết của mình (chi tiết tới mức người khác có thể dựa vào phần này mà cài đặt lại được đúng hoàn toàn phương pháp của mình đề ra).
+\section{Các nghiên cứu liên quan}
 
-\item TRÌNH BÀY, ĐÁNH GIÁ BÀN LUẬN VỀ CÁC KẾT QUẢ (thường đặt tên là ``Kết quả thí nghiệm''): Mô tả các kết quả nghiên cứu khoa học hoặc kết quả thực nghiệm.
-Đối với  đề tài ứng dụng có kết quả là sản phẩm phần mềm phải có hồ sơ thiết kế, cài đặt,\ldots theo một trong các mô hình đã học (UML,\ldots).
+Dựa trên nền tảng lý thuyết ở Mục \ref{sec:background}, mục này rà soát chi tiết năm nhóm nghiên cứu liên quan trực tiếp đến đề tài, được tổ chức theo trình tự đi từ các công cụ XAI tổng quát, qua các nghiên cứu về cơ chế nội tại của riêng MAML, các hiện tượng thất bại của quá trình thích nghi, cho đến nhóm nghiên cứu có liên hệ toán học gần nhất với FAMA — attribution dựa trên quỹ đạo huấn luyện. Mục \ref{subsec:relatedwork_synthesis} tổng hợp lại toàn bộ và định vị chính xác khoảng trống mà FAMA lấp đầy.
+\subsection{Các phương pháp giải thích hậu nghiệm dựa trên gradients và nhiễu loạn}
 
-Thông thường cần mô tả môi trường thí nghiệm trước như sử dụng dữ liệu nào, dùng độ đo nào để đánh giá, môi trường chạy thí nghiệm (cấu hình máy nếu cần phân tích thông tin về thời gian chạy thực nghiệm). Sau đó, nêu kết quả thực nghiệm, bàn luận và giải thích kết quả.
+%Grad-CAM của Selvaraju và cộng sự sử dụng gradient của điểm số lớp mục tiêu theo bản đồ đặc trưng (feature map) của lớp tích chập cuối cùng, kết hợp trọng số hoá theo trung bình toàn cục, để sinh ra một bản đồ nhiệt định vị vùng ảnh có đóng góp lớn nhất vào quyết định phân loại \cite{selvaraju2017gradcam}. Vì hoạt động trực tiếp trên bản đồ đặc trưng tích chập, Grad-CAM có ưu điểm dễ diễn giải bằng thị giác nhưng có độ phân giải không gian bị giới hạn bởi kích thước bản đồ đặc trưng ở lớp được chọn. SmoothGrad của Smilkov và cộng sự giải quyết vấn đề nhiễu hạt (visual noise) thường thấy ở saliency map thô bằng cách lấy trung bình gradient trên nhiều bản sao của đầu vào bị nhiễu loạn Gauss ngẫu nhiên, từ đó thu được bản đồ mượt hơn về mặt thị giác \cite{smilkov2017smoothgrad}. Integrated Gradients, như đã trình bày ở Mục \ref{subsec:eval_principles}, khắc phục một hạn chế lý thuyết sâu hơn — tính không đầy đủ (incompleteness) — bằng phép tích phân đường đi từ một điểm nền đến điểm dữ liệu quan tâm, đồng thời thoả mãn thêm tiên đề bất biến triển khai (implementation invariance): hai mạng có cùng hàm số đầu vào-đầu ra phải nhận cùng một giải thích, bất kể chi tiết kiến trúc bên trong khác nhau ra sao \cite{sundararajan2017ig}.
 
-\item KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN (thường đặt tên là ``Kết luận''): Trình bày những kết quả đạt được, những đóng góp mới và những đề xuất mới, kiến nghị về những hướng nghiên cứu tiếp theo.
+%Bên cạnh các phương pháp attribution thuần gradient nói trên, một nhóm phương pháp lan truyền quy tắc (rule-based propagation) — tiêu biểu là Layer-wise Relevance Propagation (LRP) và DeepLIFT — tiếp cận bài toán bằng cách phân rã điểm số đầu ra thành các đóng góp riêng phần, lan truyền ngược qua từng lớp mạng theo một quy tắc bảo toàn tổng (conservation rule) được thiết kế thủ công cho từng loại lớp (tuyến tính, tích chập, kích hoạt phi tuyến). Về mặt lý thuyết, các phương pháp này cũng hướng đến tính chất đầy đủ tương tự Integrated Gradients, nhưng đạt được nó thông qua quy tắc lan truyền đặc thù kiến trúc thay vì thông qua một phép tích phân đường đi tổng quát — khiến chúng nhạy cảm hơn với các lựa chọn thiết kế cụ thể (ví dụ cách xử lý các phép nối tắt residual hay các lớp chuẩn hoá) và khó khái quát hoá sang các kiến trúc mới mà không cần điều chỉnh quy tắc lan truyền tương ứng. Dù có nền tảng kỹ thuật khác biệt, các phương pháp lan truyền quy tắc này vẫn chia sẻ đầy đủ giới hạn về đối tượng giải thích đã nêu ở trên: chúng vẫn phân rã điểm số đầu ra của một mô hình \emph{cố định} tại một đầu vào cụ thể, chứ không phân rã sự \emph{khác biệt giữa hai mô hình} trước và sau một quá trình thích nghi.
 
-\item DANH MỤC TÀI LIỆU THAM KHẢO: Chỉ bao gồm các tài liệu được trích dẫn, sử dụng và đề cập tới để bàn luận trong báo cáo.
-Phần này các bạn chuẩn bị 1 file BIB để lưu các tài liệu trích dẫn.
-Khi các bạn trích dẫn một tài liệu nào đó, LaTeX sẽ tự động thêm vào danh mục tài liệu tham khảo giúp các bạn.
-Các bạn xem hướng dẫn cách trích dẫn ở chương sau.
+%Song song với nhóm phương pháp dựa trên gradient, nhóm phương pháp dựa trên nhiễu loạn và mô hình thay thế cục bộ cũng đóng vai trò quan trọng trong bức tranh XAI hậu nghiệm. LIME của Ribeiro và cộng sự xây dựng một mô hình tuyến tính đơn giản, dễ diễn giải, để xấp xỉ hành vi của một mô hình phức tạp trong một vùng lân cận nhỏ quanh điểm dữ liệu quan tâm, bằng cách lấy mẫu các phiên bản nhiễu loạn của đầu vào và quan sát phản ứng của mô hình gốc \cite{ribeiro2016lime}. SHAP của Lundberg và Lee thống nhất nhiều phương pháp attribution khác nhau dưới một khung lý thuyết trò chơi hợp tác duy nhất, sử dụng giá trị Shapley để phân bổ công bằng đóng góp giữa các đặc trưng, với tính chất công bằng (efficiency, tương đương completeness) được đảm bảo bởi các tiên đề của lý thuyết trò chơi \cite{lundberg2017shap}. Điểm chung xuyên suốt của toàn bộ các phương pháp trong nhóm này — bất kể dựa trên gradient hay nhiễu loạn — là chúng đều giả định một hàm số $f: x \mapsto f(x)$ \emph{cố định}, được tham số hoá bởi một bộ trọng số \emph{cố định}, và câu hỏi được đặt ra luôn là "đặc trưng nào của $x$ chịu trách nhiệm cho $f(x)$". Không có phương pháp nào trong nhóm này được thiết kế để trả lời câu hỏi khác về bản chất: "đặc trưng nào của một tập dữ liệu $S$ chịu trách nhiệm cho sự thay đổi \emph{của chính hàm số} $f$ (từ $f_{\theta_0}$ thành $f_{\varphi^*(S)}$)". Đây chính là ranh giới năng lực mà nhóm phương pháp thứ nhất này không vượt qua được, và là lý do luận văn xếp toàn bộ nhóm này vào tầng Liên kết (Association) hoặc cùng lắm là mấp mé tầng Can thiệp cục bộ trên bậc thang nhân quả Pearl, như đã phân tích ở Mục \ref{subsec:xai_pearl}.
+\subsection{Tác vụ dị biệt}
 
-\item PHỤ LỤC: Phần này bao gồm nội dung cần thiết nhằm minh họa hoặc hỗ trợ cho nội dung báo cáo như số liệu, mẫu biểu, tranh ảnh,\ldots Phụ lục không được dày hơn phần chính của báo cáo.
-Nếu có công trình công bố thì để vào phần phụ lục này.
-\end{itemize}
+\subsection{Tổng hợp và định vị nghiên cứu}
+\label{subsec:relatedwork_synthesis}
 
-\section{Bảng biểu, hình vẽ, phương trình}
+%\section{Quy định chung}
 
-%Những qui định dưới này các bạn có thể bỏ qua hoặc đọc để hiểu thêm.
-%Những định dạng này LaTeX đều tự động giúp các bạn.
-%Các bạn xem hướng dẫn chi tiết hơn ở chương sau.
+%Báo cáo phải được trình bày ngắn gọn, rõ ràng, mạch lạc, sạch sẽ, không được tẩy xóa, có đánh số trang, đánh số bảng biểu, hình vẽ, đồ thị. 
 
-Việc đánh số bảng biểu, hình vẽ, phương trình phải gắn với số chương; ví dụ hình 3.4 có nghĩa là hình thứ 4 trong Chương 3.
-Mọi đồ thị, bảng biểu, hình vẽ lấy từ các nguồn khác phải được trích dẫn đầy đủ.
-
-\subsection{Bảng biểu, hình vẽ}
+%Nội dung báo cáo được phân thành các chương. Số thứ tự của các chương, mục được đánh số bằng hệ thống số Ả-rập, không dùng số La mã. Các mục và tiểu mục được đánh số bằng các nhóm hai hoặc ba chữ số, cách nhau một dấu chấm: số thứ nhất chỉ số chương, chỉ số thứ hai chỉ số mục, số thứ ba chỉ số tiểu mục.
 
 
+%%Báo cáo cần dùng LaTEX để viết và trình bày theo mẫu đã được cung cấp.
 
-Đầu đề của bảng biểu ghi phía trên bảng, đầu đề của hình vẽ ghi phía dưới hình.
+ %Báo cáo trình bày sử dụng khổ giấy với việc canh lề như sau: Lề trên 3 cm, lề dưới 2,5 cm, lề trái 3 cm, lề phải 2 cm. Đánh số trang ở giữa bên dưới. Đánh số trang ở giữa bên dưới.
 
-Thông thường, những bảng ngắn và đồ thị phải đi liền với phần nội dung đề cập tới các bảng và đồ thị này ở lần thứ nhất.
-Các bảng dài có thể để ở những trang riêng nhưng cũng phải tiếp theo ngay phần nội dung đề cập tới bảng này ở lần đầu tiên.
-Các bảng rộng vẫn nên trình bày theo chiều đứng dài 297mm của trang giấy, chiều rộng của trang giấy có thể hơn 210mm.
-Chú ý gấp trang giấy sao cho số và đầu đề của hình vẽ hoặc bảng vẫn có thể nhìn thấy ngay mà không cần mở rộng tờ giấy.
-Tuy nhiên hạn chế sử dụng các bảng quá rộng này.
+%Font chữ dùng trong báo cáo (Times New Roman) với kích cỡ (size) 13-14pt, sử dụng chế độ dãn dòng (line spacing) chế độ 1.5 lines.
 
-Đối với những trang giấy có chiều đứng hơn 297mm (bản đồ, bản vẽ,\ldots) thì có thể để trong một phong bì cứng đính bên trong bìa sau của báo cáo.
-
-Các hình vẽ phải sạch sẽ bằng mực đen để có thể sao chụp lại; có đánh số và ghi đầy đủ đầu đề, cỡ chữ phải bằng cỡ chữ sử dụng trong báo cáo.
-
-Khi đề cập đến các bảng biểu và hình vẽ phải nêu rõ số của hình và bảng biểu đó, ví dụ ``... được nêu trong Bảng 4.1'' hoặc ``xem Hình 3.2'' mà không được viết ``… được nêu trong bảng dưới đây'' hoặc ``trong đồ thị của X và Y sau''.
-
-\subsection{Phương trình toán học}
-
-Việc trình bày phương trình toán học trên một dòng đơn hoặc dòng kép tùy ý, tuy nhiên phải thống nhất trong toàn báo cáo.
-
-Khi ký hiệu xuất hiện lần đầu tiên thì phải giải thích và đơn vị tính phải đi kèm ngay trong phương trình có ký hiệu đó.
-Nếu cần thiết, danh mục của tất cả các ký hiệu, chữ viết tắt và nghĩa của chúng cần được liệt kê và để ở phần đầu của báo cáo.
-
-Tất cả các phương trình cần được đánh số và để trong ngoặc đơn đặt bên phía lề phải.
-Nếu một nhóm phương trình mang cùng một số thì những số này cũng được để trong ngoặc, hoặc mỗi phương trình trong nhóm phương trình (5.1) có thể được đánh số là (5.1.1), (5.1.2), (5.1.3).
-
-\section{Viết tắt}
-
-\textbf{Không lạm dụng việc viết tắt} trong báo cáo.
-Chỉ viết tắt những từ, cụm từ hoặc thuật ngữ được sử dụng nhiều lần trong báo cáo.
-Không viết tắt những cụm từ  dài, những mệnh đề; không viết tắt những cụm từ ít xuất hiện trong báo cáo.
-Nếu cần viết tắt những từ thuật ngữ, tên các cơ quan, tổ chức,\ldots thì được viết tắt sau lần viết thứ nhất có kèm theo chữ viết tắt trong ngoặc đơn.
-Nếu báo cáo có nhiều chữ viết tắt thì phải có bảng danh mục các chữ viết tắt (xếp theo thứ tự ABC) ở phần đầu báo cáo.
-
-Nhắc lại: \textbf{không lạm dụng việc viết tắt} trong báo cáo.
-Khi các bạn sử dụng từ viết tắt, người đọc sẽ phải lật lại những phần đã đọc, để tìm lại xem từ viết tắt đó nghĩa là gì.
-Việc này sẽ làm chậm tốc độ đọc và sẽ khiến người đọc khó theo dõi báo cáo của bạn hơn.
-Nếu có thể, hạn chế hoàn toàn việc dùng viết tắt.
-
-\section{Tài liệu tham khảo và cách trích dẫn}
-
-Mọi ý kiến, khái niệm có ý nghĩa, mang tính chất gợi ý không phải của riêng tác giả và mọi tham khảo khác phải được trích dẫn và chỉ ra nguồn trong danh mục Tài liệu tham khảo của báo cáo. Nguồn được trích dẫn phải được liệt kê chính xác trong danh mục Tài liệu tham khảo.
-
-Việc trích dẫn, tham khảo chủ yếu nhằm thừa nhận nguồn của những ý tưởng có giá trị giúp người đọc theo được mạch suy nghĩ của tác giả, không làm trở ngại việc đọc.
+%%Các bảng biểu trình bày theo chiều ngang khổ giấy thì đầu bảng là lề trái của trang. 
 
 
-Không trích dẫn những kiến thức phổ biến, mọi người đều biết cũng như không làm báo cáo nặng nề với những tham khảo trích dẫn.
+%\section{Bố cục của báo cáo}
 
-Nếu không có điều kiện tiếp cận được một tài liệu gốc mà phải trích dẫn thông qua một tài liệu khác thì phải nêu ra trích dẫn này, đồng thời tài liệu gốc đó không được liệt kê trong danh mục tài liệu tham khảo của báo cáo.
+%Nội dung của báo cáo tối thiểu 50 trang khổ A4 và không nên vượt quá 100 trang (không kể các trang bìa, lời cám ơn, mục lục, tài liệu tham khảo \ldots) theo trình tự như sau:
+
+%\begin{itemize}
+%\item MỞ ĐẦU (thường đặt tên là ``Giới thiệu''): Trình bày lý do chọn đề tài, mục đích, đối tượng và phạm vi nghiên cứu.
+%Mô tả bài toán mà đề tài giải quyết.
+%Bài toán này có gì hay?
+%Tại sao lại cần giải quyết bài toán này?
+%Bài toán này có gì khó?
+%Có những hướng nào để giải quyết bài toán này?
+%Những hướng giải quyết trước đây có những vấn đề gì chưa giải quyết được?
+%Các câu hỏi nghiên cứu mà đề tài trả lời hoặc những vấn đề mà đề tài sẽ giải quyết.
+%Các đóng góp của đề tài.
+
+%\item TỔNG QUAN (thường đặt tên là ``Các công trình liên quan''): Phân tích đánh giá các hướng nghiên cứu đã có của các tác giả trong và ngoài nước liên quan đến đề tài; nêu những vấn đề còn tồn tại (những vấn đề nào mà các công trình khác chưa giải quyết được); chỉ ra những vấn đề mà đề tài cần tập trung, nghiên cứu giải quyết.
+
+%\item NGHIÊN CỨU THỰC NGHIỆM HOẶC LÝ THUYẾT (thường đặt tên là ``Phương pháp đề xuất''): Trình bày cơ sở lý thuyết, lý luận, giả thiết khoa học và phương pháp nghiên cứu đã được sử dụng trong đề tài.
+
+%Nếu đề xuất hướng giải quyết mới, mô hình mới thì cần mô tả chi tiết cách giải quyết của mình (chi tiết tới mức người khác có thể dựa vào phần này mà cài đặt lại được đúng hoàn toàn phương pháp của mình đề ra).
+
+%\item TRÌNH BÀY, ĐÁNH GIÁ BÀN LUẬN VỀ CÁC KẾT QUẢ (thường đặt tên là ``Kết quả thí nghiệm''): Mô tả các kết quả nghiên cứu khoa học hoặc kết quả thực nghiệm.
+%Đối với  đề tài ứng dụng có kết quả là sản phẩm phần mềm phải có hồ sơ thiết kế, cài đặt,\ldots theo một trong các mô hình đã học (UML,\ldots).
+
+%Thông thường cần mô tả môi trường thí nghiệm trước như sử dụng dữ liệu nào, dùng độ đo nào để đánh giá, môi trường chạy thí nghiệm (cấu hình máy nếu cần phân tích thông tin về thời gian chạy thực nghiệm). Sau đó, nêu kết quả thực nghiệm, bàn luận và giải thích kết quả.
+
+%\item KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN (thường đặt tên là ``Kết luận''): Trình bày những kết quả đạt được, những đóng góp mới và những đề xuất mới, kiến nghị về những hướng nghiên cứu tiếp theo.
+
+%\item DANH MỤC TÀI LIỆU THAM KHẢO: Chỉ bao gồm các tài liệu được trích dẫn, sử dụng và đề cập tới để bàn luận trong báo cáo.
+%Phần này các bạn chuẩn bị 1 file BIB để lưu các tài liệu trích dẫn.
+%Khi các bạn trích dẫn một tài liệu nào đó, LaTeX sẽ tự động thêm vào danh mục tài liệu tham khảo giúp các bạn.
+%Các bạn xem hướng dẫn cách trích dẫn ở chương sau.
+
+%\item PHỤ LỤC: Phần này bao gồm nội dung cần thiết nhằm minh họa hoặc hỗ trợ cho nội dung báo cáo như số liệu, mẫu biểu, tranh ảnh,\ldots Phụ lục không được dày hơn phần chính của báo cáo.
+%Nếu có công trình công bố thì để vào phần phụ lục này.
+%\end{itemize}
+
+%\section{Bảng biểu, hình vẽ, phương trình}
+
+%%Những qui định dưới này các bạn có thể bỏ qua hoặc đọc để hiểu thêm.
+%%Những định dạng này LaTeX đều tự động giúp các bạn.
+%%Các bạn xem hướng dẫn chi tiết hơn ở chương sau.
+
+%Việc đánh số bảng biểu, hình vẽ, phương trình phải gắn với số chương; ví dụ hình 3.4 có nghĩa là hình thứ 4 trong Chương 3.
+%Mọi đồ thị, bảng biểu, hình vẽ lấy từ các nguồn khác phải được trích dẫn đầy đủ.
+
+%\subsection{Bảng biểu, hình vẽ}
+
+
+
+%Đầu đề của bảng biểu ghi phía trên bảng, đầu đề của hình vẽ ghi phía dưới hình.
+
+%Thông thường, những bảng ngắn và đồ thị phải đi liền với phần nội dung đề cập tới các bảng và đồ thị này ở lần thứ nhất.
+%Các bảng dài có thể để ở những trang riêng nhưng cũng phải tiếp theo ngay phần nội dung đề cập tới bảng này ở lần đầu tiên.
+%Các bảng rộng vẫn nên trình bày theo chiều đứng dài 297mm của trang giấy, chiều rộng của trang giấy có thể hơn 210mm.
+%Chú ý gấp trang giấy sao cho số và đầu đề của hình vẽ hoặc bảng vẫn có thể nhìn thấy ngay mà không cần mở rộng tờ giấy.
+%Tuy nhiên hạn chế sử dụng các bảng quá rộng này.
+
+%Đối với những trang giấy có chiều đứng hơn 297mm (bản đồ, bản vẽ,\ldots) thì có thể để trong một phong bì cứng đính bên trong bìa sau của báo cáo.
+
+%Các hình vẽ phải sạch sẽ bằng mực đen để có thể sao chụp lại; có đánh số và ghi đầy đủ đầu đề, cỡ chữ phải bằng cỡ chữ sử dụng trong báo cáo.
+
+%Khi đề cập đến các bảng biểu và hình vẽ phải nêu rõ số của hình và bảng biểu đó, ví dụ ``... được nêu trong Bảng 4.1'' hoặc ``xem Hình 3.2'' mà không được viết ``… được nêu trong bảng dưới đây'' hoặc ``trong đồ thị của X và Y sau''.
+
+%\subsection{Phương trình toán học}
+
+%Việc trình bày phương trình toán học trên một dòng đơn hoặc dòng kép tùy ý, tuy nhiên phải thống nhất trong toàn báo cáo.
+
+%Khi ký hiệu xuất hiện lần đầu tiên thì phải giải thích và đơn vị tính phải đi kèm ngay trong phương trình có ký hiệu đó.
+%Nếu cần thiết, danh mục của tất cả các ký hiệu, chữ viết tắt và nghĩa của chúng cần được liệt kê và để ở phần đầu của báo cáo.
+
+%Tất cả các phương trình cần được đánh số và để trong ngoặc đơn đặt bên phía lề phải.
+%Nếu một nhóm phương trình mang cùng một số thì những số này cũng được để trong ngoặc, hoặc mỗi phương trình trong nhóm phương trình (5.1) có thể được đánh số là (5.1.1), (5.1.2), (5.1.3).
+
+%\section{Viết tắt}
+
+%\textbf{Không lạm dụng việc viết tắt} trong báo cáo.
+%Chỉ viết tắt những từ, cụm từ hoặc thuật ngữ được sử dụng nhiều lần trong báo cáo.
+%Không viết tắt những cụm từ  dài, những mệnh đề; không viết tắt những cụm từ ít xuất hiện trong báo cáo.
+%Nếu cần viết tắt những từ thuật ngữ, tên các cơ quan, tổ chức,\ldots thì được viết tắt sau lần viết thứ nhất có kèm theo chữ viết tắt trong ngoặc đơn.
+%Nếu báo cáo có nhiều chữ viết tắt thì phải có bảng danh mục các chữ viết tắt (xếp theo thứ tự ABC) ở phần đầu báo cáo.
+
+%Nhắc lại: \textbf{không lạm dụng việc viết tắt} trong báo cáo.
+%Khi các bạn sử dụng từ viết tắt, người đọc sẽ phải lật lại những phần đã đọc, để tìm lại xem từ viết tắt đó nghĩa là gì.
+%Việc này sẽ làm chậm tốc độ đọc và sẽ khiến người đọc khó theo dõi báo cáo của bạn hơn.
+%Nếu có thể, hạn chế hoàn toàn việc dùng viết tắt.
+
+%\section{Tài liệu tham khảo và cách trích dẫn}
+
+%Mọi ý kiến, khái niệm có ý nghĩa, mang tính chất gợi ý không phải của riêng tác giả và mọi tham khảo khác phải được trích dẫn và chỉ ra nguồn trong danh mục Tài liệu tham khảo của báo cáo. Nguồn được trích dẫn phải được liệt kê chính xác trong danh mục Tài liệu tham khảo.
+
+%Việc trích dẫn, tham khảo chủ yếu nhằm thừa nhận nguồn của những ý tưởng có giá trị giúp người đọc theo được mạch suy nghĩ của tác giả, không làm trở ngại việc đọc.
+
+
+%Không trích dẫn những kiến thức phổ biến, mọi người đều biết cũng như không làm báo cáo nặng nề với những tham khảo trích dẫn.
+
+%Nếu không có điều kiện tiếp cận được một tài liệu gốc mà phải trích dẫn thông qua một tài liệu khác thì phải nêu ra trích dẫn này, đồng thời tài liệu gốc đó không được liệt kê trong danh mục tài liệu tham khảo của báo cáo.
