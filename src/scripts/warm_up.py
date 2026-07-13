@@ -63,6 +63,7 @@ def warm_up(config):
             seed=42,
         )
     
+    print(ds_cfg["test_root"], ds_cfg["test_name"])
     test_loader = _get_test_loader(ds_cfg["test_root"], ds_cfg["test_name"])
     if ds_cfg.get("ood_explain_root") and ds_cfg.get("explain_root"):
         explain_loader = _get_test_loader(ds_cfg["explain_root"], ds_cfg["explain_name"])
