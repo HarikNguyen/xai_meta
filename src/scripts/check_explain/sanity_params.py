@@ -166,8 +166,8 @@ def sanity_check_params(explainer, test_loader, T):
             boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
         )
         for task_id, (support, query) in enumerate(boT_pbar):
-            sup_x, sup_y = support
-            que_x, que_y = query
+            sup_x, sup_y, _ = support
+            que_x, que_y, _ = query
 
             task_pearson, task_spearman = check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T)
             results["pearson"].append(task_pearson)

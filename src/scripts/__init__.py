@@ -41,6 +41,7 @@ def run(args):
         run_test(args, algo_class, test_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
 
     elif args.mode == EXPLAIN_MODE:
+        explain_loader = explain_loader if explain_loader is not None else test_loader
         explain(args.algo, algo_class, explain_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
 
     elif args.mode == CHECK_EXPLAIN_MODE:

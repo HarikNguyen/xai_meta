@@ -7,6 +7,16 @@ import scipy.stats as stats
 
 from interpreters import FAMAExplainer
 
+def _write_csv(filename, header, rows, log_dir="logs"):
+    """Helper function to make writing CSV files easier."""
+    os.makedirs(log_dir, exist_ok=True)
+    csv_path = os.path.join(log_dir, filename)
+    with open(csv_path, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(rows)
+    return csv_path
+
 def log_to_csv(csv_path, log, header=None):
     file_exists = os.path.isfile(csv_path)
     with open(csv_path, mode='a', newline='') as f:

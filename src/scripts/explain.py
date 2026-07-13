@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from .utils import load_checkpoint, prepare_plots_dir, build_explainer
+from .utils import load_checkpoint, prepare_plots_dir, build_explainer, _write_csv
 
 
 def explain(
@@ -34,17 +34,24 @@ def explain(
     test_loader_pbar = tqdm(
         test_loader, desc="Explaining", position=0, leave=True, unit="boT"
     )
+    ad_gains = []
+    sup_paths = []
+    que_paths = []
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(
             boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
         )
         for task_id, (support, query) in enumerate(boT_pbar):
-            sup_x, sup_y = support
-            que_x, que_y = query
+            sup_x, sup_y, sup_outpath = support
+            que_x, que_y, que_outpath = query
 
             adaptation_gain, saliency_map = explainer.interpret(
                 sup_x, sup_y, que_x, que_y, T=T
             )
+
+            ad_gains.append((metabatch_id, task_id, adaptation_gain))
+            sup_paths.append((metabatch_id, task_id, sup_outpath))
+            que_paths.append((metabatch_id, task_id, que_outpath))
 
             show_explaination(
                 sup_x,
@@ -57,6 +64,9 @@ def explain(
                 T,
             )
 
+    _write_csv("adaptation_gain.csv", ["metabatch_id", "task_id", "adaptation_gain"], ad_gains, log_dir)
+    _write_csv("support_paths.csv", ["metabatch_id", "task_id", "support_path"], sup_paths, log_dir)
+    _write_csv("query_paths.csv", ["metabatch_id", "task_id", "query_path"], que_paths, log_dir)
 
 def show_explaination(
     sup_x, saliency_map, adaptation_gain, algo, log_dir, metabatch_id, task_id, t

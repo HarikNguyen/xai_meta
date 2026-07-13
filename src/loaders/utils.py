@@ -1,6 +1,6 @@
 import torch
 
-def boT_to_stack(boT):
+def boT_to_stack(boT, has_outpath=False):
     """
     Convert a batch of tasks (boT) to stacked tensors (sup_x, sup_y, que_x, que_y).
     Parameters
@@ -12,14 +12,22 @@ def boT_to_stack(boT):
     """
     # destructure boT into lists
     supports, queries = zip(*boT)
-    sup_x, sup_y = zip(*supports)
-    que_x, que_y = zip(*queries)
+
+    if has_outpath:
+        sup_x, sup_y, sup_outpath = zip(*supports)
+        que_x, que_y, que_outpath = zip(*queries)
+    else:
+        sup_x, sup_y = zip(*supports)
+        que_x, que_y = zip(*queries)
 
     # stack all
     sup_x = torch.stack(sup_x)
     sup_y = torch.stack(sup_y)
     que_x = torch.stack(que_x)
     que_y = torch.stack(que_y)
+
+    if has_outpath:
+        return sup_x, sup_y, que_x, que_y, sup_outpath, que_outpath
     return sup_x, sup_y, que_x, que_y
 
 def get_stratified_bootstrap_batches(

@@ -114,8 +114,8 @@ def compute_bidirectional_faithfulness(
         boT_pbar = tqdm(boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task")
         
         for task_id, (support, query) in enumerate(boT_pbar):
-            sup_x, sup_y = support
-            que_x, que_y = query
+            sup_x, sup_y, _= support
+            que_x, que_y, _ = query
 
             # Compute the base gain and saliency map
             adapt_gain_base, saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)

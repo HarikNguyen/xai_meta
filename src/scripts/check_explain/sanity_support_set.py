@@ -126,8 +126,8 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
         ood_iter = iter(ood_test_loader)
         boT_ood = next(ood_iter)
         for task_id, (support, query) in enumerate(boT_pbar):
-            sup_x, sup_y = support
-            que_x, que_y = query
+            sup_x, sup_y, _ = support
+            que_x, que_y, _ = query
             
             # check on noisy task
             scores = check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T)
@@ -171,8 +171,13 @@ def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T):
     return scores
 
 def check_on_mixed_task(explainer, source_task, another_task, T):
-    (sup_x, sup_y), (que_x, que_y) = source_task
-    (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(source_task, another_task, num_mixed_classes=2)
+    (sup_x, sup_y, _), (que_x, que_y, _) = source_task
+    (a_sup_x, a_sup_y, _), (a_que_x, a_que_y, _) = another_task
+
+    (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(
+            ((sup_x, sup_y), (que_x, que_y)),
+            ((a_sup_x, a_sup_y), (a_que_x, a_que_y)),
+            num_mixed_classes=2)
     
     _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
     _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_y, ood_que_x, ood_que_y, T)
