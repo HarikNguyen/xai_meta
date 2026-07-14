@@ -42,7 +42,7 @@ def run(args):
 
     elif args.mode == EXPLAIN_MODE:
         explain_loader = explain_loader if explain_loader is not None else test_loader
-        explain(args.algo, algo_class, explain_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir)
+        explain(args.algo, algo_class, explain_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir, args.flip_ratio)
 
     elif args.mode == CHECK_EXPLAIN_MODE:
         check_explain(args.algo, algo_class, explain_loader, ood_explain_loader, algo_conf, args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir)

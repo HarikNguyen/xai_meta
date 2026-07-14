@@ -74,6 +74,13 @@ def parse_args():
         help="Method to check the explaination.",
     )
 
+    parser.add_argument(
+        "--flip_ratio",
+        default=None,
+        type=float,
+        help="Flip ratio for the noisy label. Default: None\n(no noise + No use for explaination)",
+    )
+    
     # Return args
     return parser.parse_args()
 

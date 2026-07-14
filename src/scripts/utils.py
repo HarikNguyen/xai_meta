@@ -4,6 +4,7 @@ import shutil
 
 import numpy as np
 import scipy.stats as stats
+import torchvision.transforms.functional as vF
 
 from interpreters import FAMAExplainer
 
@@ -102,3 +103,63 @@ def prepare_plots_dir(log_dir):
         shutil.rmtree(plots_dir)
     os.makedirs(plots_dir)
     return plots_dir
+
+def blur_sup(sup_x, kernel_size=7, sigma=3.0):
+    """Apply a Gaussian blur to the support set."""
+    sup_x_blurred = sup_x.clone()
+    sup_x_blurred = vF.gaussian_blur(
+        sup_x_blurred, 
+        kernel_size=[kernel_size, kernel_size], 
+        sigma=[sigma, sigma]
+    )
+    return sup_x_blurred
+
+def permute_label(sup_y, flip_ratio=0.6):
+    """Randomly permute (flip) the labels in the support set."""
+    N, C = sup_y.shape
+    device = sup_y.device
+    sup_y_np = sup_y.clone().detach().cpu().numpy()
+
+    # 1. Randomly pick the indices whose labels will be shuffled
+    num_flip = int(N * flip_ratio)
+    if num_flip <= 1:
+        # Not enough elements to permute
+        return torch.from_numpy(sup_y_np).to(device)
+
+    flip_indices = np.random.choice(N, num_flip, replace=False)
+
+    # 2. Get the labels at the selected positions
+    # For the optimal-shift algorithm to work, convert labels to integer class ids (0, 1, 2... C-1)
+    # If sup_y_np already holds integer labels (N, 1), skip argmax. Here we assume one-hot format (N, C)
+    labels = np.argmax(sup_y_np[flip_indices], axis=1)
+
+    # 3. Apply the Sort & Shift algorithm
+    # Keep the original index within the flip group so we can map values back
+    indexed_labels = sorted(enumerate(labels), key=lambda x: x[1])
+
+    # Count occurrences of the most frequent label in this group
+    counts = Counter(labels)
+    max_freq = max(counts.values())
+
+    # Circularly shift the sorted array by max_freq positions
+    # This shift pushes identical labels as far apart from each other as possible
+    shifted_indexed = indexed_labels[-max_freq:] + indexed_labels[:-max_freq]
+
+    # 4. Write the optimally permuted labels back into sup_y_np
+    # Keep a temporary copy of the original label vectors before they get overwritten
+    temp_targets = sup_y_np[flip_indices].copy()
+
+    for i in range(num_flip):
+        original_pos_in_flip = indexed_labels[i][0]
+        # Actual position in the sup_y_np matrix
+        actual_global_idx = flip_indices[original_pos_in_flip]
+
+        # Get the label vector from the shifted-to position
+        from_pos_in_flip = shifted_indexed[i][0]
+
+        # Overwrite the label vector (one-hot or probability distribution)
+        sup_y_np[actual_global_idx] = temp_targets[from_pos_in_flip]
+
+    # 5. Convert back to a tensor on the original device
+    sup_y_np = torch.from_numpy(sup_y_np).to(device)
+    return sup_y_np
