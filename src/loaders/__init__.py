@@ -66,9 +66,10 @@ def get_dataloader(
     out_path=False,
     sample=None,
     seed=None,
+    degree=0,
 ):
     # Get transform
-    transform = make_transform()
+    transform = make_transform(degrees=degree)
 
     # Get dataset
     dataset = FewShotDataset(

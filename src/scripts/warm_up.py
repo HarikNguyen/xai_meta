@@ -61,6 +61,7 @@ def warm_up(config):
             },
             out_path=True,
             seed=42,
+            degrees=dl_cfg["test_rt_deg"] if dl_cfg.get("test_rt_deg") else 0,
         )
     
     print(ds_cfg["test_root"], ds_cfg["test_name"])

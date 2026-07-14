@@ -35,6 +35,16 @@ class ToTensor(object):
         return self.__class__.__name__ + "()"
 
 
+class Rotate(object):
+    def __init__(self, degrees):
+        self.degrees = degrees
+
+    def __call__(self, img):
+        # Note: img must be tensor
+        # Random rotation
+        return vF.rotate(img, self.degrees)
+
+
 class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
@@ -63,10 +73,14 @@ class Normalize(object):
         return imgs
 
 
-def make_transform():
+def make_transform(degrees=0):
     normalize_value = [[0.485, 0.456, 0.406], [0.229, 0.224, 0.225]]
     selected_norm = normalize_value
-    normalize = Compose([ToTensor(), Normalize(selected_norm[0], selected_norm[1])])
+    normalize = Compose([
+        ToTensor(), 
+        Rotate(degrees),
+        Normalize(selected_norm[0], selected_norm[1])
+    ])
 
     return Compose(
         [
