@@ -21,8 +21,8 @@ python main.py --config ./configs/tiered.yaml --checkpoint_dir MAML_tiered_tiere
 
 # Check Explain Method (biADT + sanity check params + sanity support - hard/noise/ood)
 echo "Check Explain Method"
-python main.py --config ./configs/tiered.yaml --mode check_explain --use_last --check_method biADT
-python main.py --config ./configs/tiered.yaml --mode check_explain --use_last --check_method sanity_params
-python main.py --config ./configs/tiered.yaml --mode check_explain --use_last --check_method sanity_support_set
+python main.py --config ./configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method biADT
+python main.py --config ./configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method sanity_params
+python main.py --config ./configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method sanity_support_set
 
 echo "DONE!"
