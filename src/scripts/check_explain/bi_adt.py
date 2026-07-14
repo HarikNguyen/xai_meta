@@ -74,7 +74,7 @@ def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0)
 
 def adt(
     explainer, sup_x, sup_y, que_x, que_y, T, adapt_gain_base, saliency_map,
-    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=10
+    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=6
 ):
     __MODES = ["pos", "neg", "random"]
     if mode not in __MODES:
