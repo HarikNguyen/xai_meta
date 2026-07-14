@@ -30,4 +30,4 @@ algo:
   batching_eps: false
   test_adam: false
   grad_clip: 10
-  criterion: "ce_loss"
+  criterion: "sm_loss"
