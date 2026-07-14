@@ -1,4 +1,4 @@
-# mini2cub.yaml
+# tiered2strokes_omnig.yaml
 dataset:
   train_root: "tiered_imagenet"
   train_name: "tiered_imagenet"
@@ -31,3 +31,4 @@ algo:
   batching_eps: false
   test_adam: false
   grad_clip: 10
+  criterion: "sm_loss" # smooth margin loss

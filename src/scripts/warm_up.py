@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from models import Conv4
 from loaders import get_dataloader
-
+from losses import SmoothMarginLoss
 
 def warm_up(config):
     # Parse config
@@ -74,10 +74,14 @@ def warm_up(config):
         ood_explain_loader = None
 
     # Define model conf
+    if algo_cfg.get("criterion") == "sm_loss":
+        criterion = SmoothMarginLoss(m=algo_cfg["margin"])
+    else: # include "ce_loss"
+        criterion = nn.CrossEntropyLoss()
     baselearner_args = {
         "device": device,
         "train_classes": dl_cfg["n_way"],
-        "criterion": nn.CrossEntropyLoss(),
+        "criterion": criterion,
     }
 
     algo_conf = algo_cfg.copy() # copy from yaml

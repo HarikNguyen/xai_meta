@@ -1,0 +1,48 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class SmoothMarginLoss(nn.Module):
+    """
+    Approximate Margin Loss
+        L = softplus_beta( 1 - z_y + tau * logsumexp_{y'≠y}(z_{y'}/tau) )
+
+    tau  -> 0 : soft-max -> max cứng
+    beta -> ∞ : softplus -> ReLU
+    """
+
+    def __init__(self, tau: float = 0.5, beta: float = 5.0, reduction: str = "mean"):
+        super().__init__()
+        self.tau = tau
+        self.beta = beta
+        self.reduction = reduction
+
+    def forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        # logits: [B, C], y: [B]
+        B, C = logits.shape
+
+        # Get z_y
+        z_y = logits.gather(1, y.unsqueeze(1)).squeeze(1)  # [B]
+
+        # Remove the correct class from logits (the competition) by setting it to -inf
+        mask = torch.zeros_like(logits, dtype=torch.bool)
+        mask.scatter_(1, y.unsqueeze(1), True)
+        logits_masked = logits.masked_fill(mask, float("-inf"))  # [B, C]
+
+        # Calc soft max of the other classes (logsumexp with tau - heat rate)
+        # numerically stable: torch.logsumexp was minus local max
+        soft_max_other = self.tau * torch.logsumexp(logits_masked / self.tau, dim=1)  # [B]
+
+        # soft margin: m_tilde = z_y - soft_max_other
+        m_tilde = z_y - soft_max_other  # [B]
+
+        # Calc softplus_beta(1 - m_tilde)
+        u = 1.0 - m_tilde
+        loss = F.softplus(self.beta * u) / self.beta  # [B]
+
+        if self.reduction == "mean":
+            return loss.mean()
+        elif self.reduction == "sum":
+            return loss.sum()
+        return loss

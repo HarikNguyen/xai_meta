@@ -1,4 +1,4 @@
-# mini2cub.yaml
+# explain_test.yaml
 dataset:
   train_root: "tiered_imagenet"
   train_name: "tiered_imagenet"
@@ -34,3 +34,4 @@ algo:
   batching_eps: false
   test_adam: false
   grad_clip: 10
+  criterion: "ce_loss"
