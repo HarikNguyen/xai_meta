@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from .utils import load_checkpoint, prepare_plots_dir, build_explainer, _write_csv, permute_label
+from .utils import load_checkpoint, prepare_plots_dir, build_explainer, _write_csv, permute_label, blur_sup
 
 
 def explain(
@@ -16,6 +16,7 @@ def explain(
     checkpoint_dir="checkpoints",
     log_dir="logs",
     flip_ratio=None,
+    is_blur=False,
 ):
     # Inits
     algo_mgr = algo_class(**algo_conf)
@@ -49,6 +50,9 @@ def explain(
             # Random flip label in the support set if flip_ratio is not None
             if flip_ratio is not None:
                 sup_y = permute_label(sup_y, flip_ratio=flip_ratio)
+
+            if is_blur:
+                sup_x = blur_sup(sup_x)
 
             adaptation_gain, saliency_map = explainer.interpret(
                 sup_x, sup_y, que_x, que_y, T=T

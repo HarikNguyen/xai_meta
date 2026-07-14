@@ -10,12 +10,14 @@
 echo "Check n Explain - Mini 2 CUB"
 python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub --mode test --use_last
 python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub_ex --mode explain --use_last
-python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub_exwf --mode explain --use_last --flip_ratio 0.5
+python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub_exwf --mode explain --use_last --flip_ratio 0.75
+python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub_exb --mode explain --use_last --blur
 
 echo "Check n Explain - Tiered 2 CUB"
 python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub --mode test --use_last
 python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub_ex --mode explain --use_last
-python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub_exwf --mode explain --use_last --flip_ratio 0.5
+python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub_exwf --mode explain --use_last --flip_ratio 0.75
+python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub_exb --mode explain --use_last --blur
 
 echo "Check n Explain - Tiered"
 python main.py --config ./configs/tiered.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered --mode test --use_last
@@ -24,7 +26,8 @@ python main.py --config ./configs/tiered.yaml --checkpoint_dir MAML_tiered_tiere
 echo "Check n Explain - Tiered 2 Stroke Omniglot"
 python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig --mode test --use_last
 python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig_ex --mode explain --use_last
-python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig_exwf --mode explain --use_last --flip_ratio 0.5
+python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig_exwf --mode explain --use_last --flip_ratio 0.75
+python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig_exb --mode explain --use_last --blur
 
 # Check Explain Method (biADT + sanity check params + sanity support - hard/noise/ood)
 echo "Check Explain Method"

@@ -64,7 +64,7 @@ def parse_args():
     parser.add_argument(
         "--use_last",
         action="store_true",
-        help="Use the last checkpoint from the checkpoint directory. Default: True",
+        help="Use the last checkpoint from the checkpoint directory. Default: False",
     )
 
     parser.add_argument(
@@ -79,6 +79,12 @@ def parse_args():
         default=None,
         type=float,
         help="Flip ratio for the noisy label. Default: None\n(no noise + No use for explaination)",
+    )
+
+    parset.add_argument(
+        "--blur",
+        action="store_true",
+        help="Blur the sup_x while explaining. Default: False",
     )
     
     # Return args
