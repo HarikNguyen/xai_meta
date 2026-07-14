@@ -3,6 +3,8 @@ import torchvision.transforms.functional as TF
 import numpy as np
 from tqdm import tqdm
 from skimage.segmentation import slic
+from concurrent.futures import ThreadPoolExecutor
+
 
 def get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs=150, compactness=10.0):
     """
