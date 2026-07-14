@@ -69,7 +69,7 @@ def get_dataloader(
     degrees=0,
 ):
     # Get transform
-    transform = make_transform(degrees=degree)
+    transform = make_transform(degrees=degrees)
 
     # Get dataset
     dataset = FewShotDataset(
