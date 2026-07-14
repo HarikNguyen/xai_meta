@@ -75,24 +75,16 @@ class FAMAExplainer:
         self, phi_T, bootstrap_query, num_bootstraps
     ) -> List[torch.Tensor]:
         """Compute E_Q[∇_φ^t L_Q(φ_T)] by stratified bootstrap."""
-        # expected_lam = [torch.zeros_like(p) for p in phi_T]  # init with 0
-        # for b_que_x, b_que_y in bootstrap_query:
-            # phi_T_grad = [p.clone().detach().requires_grad_(True) for p in phi_T]
-            # q_loss, _ = get_loss_n_preds(phi_T_grad, self.learner, b_que_x, b_que_y)
-            # lam_b = autograd.grad(q_loss, phi_T_grad, retain_graph=False)
+        expected_lam = [torch.zeros_like(p) for p in phi_T]  # init with 0
+        for b_que_x, b_que_y in bootstrap_query:
+            phi_T_grad = [p.clone().detach().requires_grad_(True) for p in phi_T]
+            q_loss, _ = get_loss_n_preds(phi_T_grad, self.learner, b_que_x, b_que_y)
+            lam_b = autograd.grad(q_loss, phi_T_grad, retain_graph=False)
 
-            # expected_lam = [
-                # avg + lb.detach() / num_bootstraps
-                # for avg, lb in zip(expected_lam, lam_b)
-            # ]
-        all_que_x = torch.cat([b[0] for b in bootstrap_query], dim=0)
-        all_que_y = torch.cat([b[1] for b in bootstrap_query], dim=0)
-
-        phi_T_grad = [p.clone().detach().requires_grad_(True) for p in phi_T]
-        q_loss, _ = get_loss_n_preds(phi_T_grad, self.learner, all_que_x, all_que_y)
-        lam = autograd.grad(q_loss, phi_T_grad, retain_graph=False)
-
-        expected_lam = [l.detach() for l in lam]
+            expected_lam = [
+                avg + lb.detach() / num_bootstraps
+                for avg, lb in zip(expected_lam, lam_b)
+            ]
 
         return expected_lam
 
@@ -100,29 +92,18 @@ class FAMAExplainer:
         self, theta_0, phi_T, bootstrap_query, num_bootstraps
     ) -> float:
         """Tính ΔM = E_{Q~T_i}[L_Q(θ₀)] - E_{Q~T_i}[L_Q(φᵢ*(S))]"""
-        # pre_sum = 0.0
-        # post_sum = 0.0
-
-        # with torch.no_grad():
-            # for b_que_x, b_que_y in bootstrap_query:
-                # pre, _ = get_loss_n_preds(theta_0, self.learner, b_que_x, b_que_y)
-                # post, _ = get_loss_n_preds(phi_T, self.learner, b_que_x, b_que_y)
-                # pre_sum += pre.item()
-                # post_sum += post.item()
-
-        # pre_loss = pre_sum / num_bootstraps
-        # post_loss = post_sum / num_bootstraps
-
-        # return ((pre_loss - post_loss) / (pre_loss + 1e-8)) * 100.0
-        all_que_x = torch.cat([b[0] for b in bootstrap_query], dim=0)
-        all_que_y = torch.cat([b[1] for b in bootstrap_query], dim=0)
+        pre_sum = 0.0
+        post_sum = 0.0
 
         with torch.no_grad():
-            pre, _ = get_loss_n_preds(theta_0, self.learner, all_que_x, all_que_y)
-            post, _ = get_loss_n_preds(phi_T, self.learner, all_que_x, all_que_y)
+            for b_que_x, b_que_y in bootstrap_query:
+                pre, _ = get_loss_n_preds(theta_0, self.learner, b_que_x, b_que_y)
+                post, _ = get_loss_n_preds(phi_T, self.learner, b_que_x, b_que_y)
+                pre_sum += pre.item()
+                post_sum += post.item()
 
-        pre_loss = pre.item()
-        post_loss = post.item()
+        pre_loss = pre_sum / num_bootstraps
+        post_loss = post_sum / num_bootstraps
 
         return ((pre_loss - post_loss) / (pre_loss + 1e-8)) * 100.0
 
