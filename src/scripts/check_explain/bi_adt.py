@@ -103,6 +103,45 @@ def adt(
     auc = np.trapezoid(gains, pixel_ratios)
     return auc
 
+def adt_parallel(
+    explainer, sup_x, sup_y, que_x, que_y, T, adapt_gain_base, saliency_map,
+    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=10,
+    max_workers=4,
+):
+    __MODES = ["pos", "neg", "random"]
+    if mode not in __MODES:
+        raise ValueError(f"Invalid mode: {mode}.")
+
+    # Rank tensor + blurred baseline
+    rank_tensor = get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs, compactness)
+    blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
+
+    # Get the list of masked images (via deletion by ratio)
+    ratios = [step / num_steps for step in range(1, num_steps + 1)]
+    masked_list = [
+        apply_mask_fast(sup_x, blurred_baseline, rank_tensor, r, blur_sigma)
+        for r in ratios
+    ]
+
+    # Run explainer.interpret() on masked_list in parallel (GPU)
+    def _run(mx, stream):
+        with torch.cuda.stream(stream):
+            gain, _ = explainer.interpret(mx, sup_y, que_x, que_y, T)
+        stream.synchronize()
+        return gain
+
+    streams = [torch.cuda.Stream() for _ in ratios]
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = [
+            pool.submit(_run, mx, st) for mx, st in zip(masked_list, streams)
+        ]
+        results = [f.result() for f in futures]   # đúng thứ tự vì zip giữ nguyên order
+
+    gains = [adapt_gain_base] + results
+    pixel_ratios = [0.0] + ratios
+    auc = np.trapezoid(gains, pixel_ratios)
+    return auc
+
 
 def compute_bidirectional_faithfulness(
     explainer, test_loader, T, n_segs=150, compactness=10.0, blur_sigma=5.0, num_steps=10
@@ -125,10 +164,16 @@ def compute_bidirectional_faithfulness(
                 "que_x": que_x, "que_y": que_y, "T": T, 
                 "adapt_gain_base": adapt_gain_base, "saliency_map": saliency_map,
                 "blur_sigma": blur_sigma, "n_segs": n_segs, 
-                "compactness": compactness, "num_steps": num_steps
+                "compactness": compactness, "num_steps": num_steps,
+                "workers": 4,
             }
 
+            torch.manual_seed(42)
             auc_pos = adt(mode="pos", **kwargs)
+            torch.manual_seed(42)
+            auc_posp = adt_parallel(mode="pos", **kwargs)
+            print(abs(auc_pos - auc_posp))
+
             auc_neg = adt(mode="neg", **kwargs)
             auc_random = adt(mode="random", **kwargs)
 
