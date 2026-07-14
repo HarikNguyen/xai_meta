@@ -5,6 +5,7 @@ import shutil
 import numpy as np
 import scipy.stats as stats
 import torchvision.transforms.functional as vF
+from collections import Counter
 
 from interpreters import FAMAExplainer
 
