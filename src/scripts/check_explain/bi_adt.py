@@ -137,7 +137,7 @@ def adt_parallel(
         futures = [
             pool.submit(_run, mx, st) for mx, st in zip(masked_list, streams)
         ]
-        results = [f.result() for f in futures]   # đúng thứ tự vì zip giữ nguyên order
+        results = [f.result() for f in futures]
 
     gains = [adapt_gain_base] + results
     pixel_ratios = [0.0] + ratios

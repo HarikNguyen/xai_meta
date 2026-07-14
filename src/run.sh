@@ -19,6 +19,10 @@ echo "Check n Explain - Tiered"
 python main.py --config ./configs/tiered.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered --mode test --use_last
 python main.py --config ./configs/tiered.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered --mode explain --use_last
 
+echo "Check n Explain - Tiered 2 Stroke Omniglot"
+python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig --mode test --use_last
+python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig --mode explain --use_last
+
 # Check Explain Method (biADT + sanity check params + sanity support - hard/noise/ood)
 echo "Check Explain Method"
 python main.py --config ./configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method biADT
