@@ -75,7 +75,7 @@ def warm_up(config):
 
     # Define model conf
     if algo_cfg.get("criterion") == "sm_loss":
-        criterion = SmoothMarginLoss(m=algo_cfg["margin"])
+        criterion = SmoothMarginLoss()
     else: # include "ce_loss"
         criterion = nn.CrossEntropyLoss()
     baselearner_args = {
