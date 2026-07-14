@@ -19,15 +19,14 @@ class SmoothMarginLoss(nn.Module):
         self.reduction = reduction
 
     def forward(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        # logits: [B, C], y: [B]
+        # logits: [B, C], y: [B, C] - one-hot vector
         B, C = logits.shape
-
+        
+        mask = y.bool() # [B] 
         # Get z_y
-        z_y = logits.gather(1, y.unsqueeze(1)).squeeze(1)  # [B]
+        z_y = (logits * y).sum(dim=1)  # [B]
 
         # Remove the correct class from logits (the competition) by setting it to -inf
-        mask = torch.zeros_like(logits, dtype=torch.bool)
-        mask.scatter_(1, y.unsqueeze(1), True)
         logits_masked = logits.masked_fill(mask, float("-inf"))  # [B, C]
 
         # Calc soft max of the other classes (logsumexp with tau - heat rate)
