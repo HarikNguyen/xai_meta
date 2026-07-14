@@ -72,39 +72,6 @@ def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0)
     return sup_x * (1 - mask) + blurred_baseline * mask
 
 
-def adt(
-    explainer, sup_x, sup_y, que_x, que_y, T, adapt_gain_base, saliency_map,
-    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=10
-):
-    __MODES = ["pos", "neg", "random"]
-    if mode not in __MODES:
-        raise ValueError(f"Invalid mode: {mode}.")
-
-    # 1. Get the rank tensor, computed independently for each image
-    rank_tensor = get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs, compactness)
-
-    # 2. Build the blurred baseline once on the GPU
-    blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
-
-    gains = [adapt_gain_base]
-    pixel_ratios = [0.0]
-
-    # 3. Progressive removal loop (fast, since the mask is just tensor thresholding)
-    for step in range(1, num_steps + 1):
-        ratio = step / num_steps
-
-        # Remove ratio% of the area simultaneously across ALL images
-        sup_x_masked = apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma)
-
-        # Re-evaluate the MAML model
-        adapt_gain, _ = explainer.interpret(sup_x_masked, sup_y, que_x, que_y, T)
-        
-        gains.append(adapt_gain)
-        pixel_ratios.append(ratio)
-
-    auc = np.trapezoid(gains, pixel_ratios)
-    return auc
-
 def adt_parallel(
     explainer, sup_x, sup_y, que_x, que_y, T, adapt_gain_base, saliency_map,
     mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=10,
@@ -169,14 +136,9 @@ def compute_bidirectional_faithfulness(
                 "compactness": compactness, "num_steps": num_steps,
             }
 
-            torch.manual_seed(42)
-            auc_pos = adt(mode="pos", **kwargs)
-            torch.manual_seed(42)
-            auc_posp = adt_parallel(mode="pos", **kwargs)
-            print(abs(auc_pos - auc_posp))
-
-            auc_neg = adt(mode="neg", **kwargs)
-            auc_random = adt(mode="random", **kwargs)
+            auc_pos = adt_parallel(mode="pos", **kwargs)
+            auc_neg = adt_parallel(mode="neg", **kwargs)
+            auc_random = adt_parallel(mode="random", **kwargs)
 
             pda = auc_random - auc_pos
             nda = auc_neg - auc_random
