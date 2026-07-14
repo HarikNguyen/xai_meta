@@ -165,7 +165,6 @@ def compute_bidirectional_faithfulness(
                 "adapt_gain_base": adapt_gain_base, "saliency_map": saliency_map,
                 "blur_sigma": blur_sigma, "n_segs": n_segs, 
                 "compactness": compactness, "num_steps": num_steps,
-                "workers": 4,
             }
 
             torch.manual_seed(42)
