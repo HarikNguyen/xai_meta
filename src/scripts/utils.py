@@ -2,6 +2,7 @@ import csv
 import os
 import shutil
 
+import torch
 import numpy as np
 import scipy.stats as stats
 import torchvision.transforms.functional as vF
