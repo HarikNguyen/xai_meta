@@ -81,7 +81,7 @@ def parse_args():
         help="Flip ratio for the noisy label. Default: None\n(no noise + No use for explaination)",
     )
 
-    parset.add_argument(
+    parser.add_argument(
         "--blur",
         action="store_true",
         help="Blur the sup_x while explaining. Default: False",
