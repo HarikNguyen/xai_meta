@@ -3,8 +3,6 @@ import torchvision.transforms.functional as TF
 import numpy as np
 from tqdm import tqdm
 from skimage.segmentation import slic
-from concurrent.futures import ThreadPoolExecutor
-
 
 def get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs=150, compactness=10.0):
     """
@@ -72,42 +70,36 @@ def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0)
     return sup_x * (1 - mask) + blurred_baseline * mask
 
 
-def adt_parallel(
+def adt(
     explainer, sup_x, sup_y, que_x, que_y, T, adapt_gain_base, saliency_map,
-    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=10,
-    max_workers=4,
+    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=10
 ):
     __MODES = ["pos", "neg", "random"]
     if mode not in __MODES:
         raise ValueError(f"Invalid mode: {mode}.")
 
-    # Rank tensor + blurred baseline
+    # 1. Get the rank tensor, computed independently for each image
     rank_tensor = get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs, compactness)
+
+    # 2. Build the blurred baseline once on the GPU
     blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
 
-    # Get the list of masked images (via deletion by ratio)
-    ratios = [step / num_steps for step in range(1, num_steps + 1)]
-    masked_list = [
-        apply_mask_fast(sup_x, blurred_baseline, rank_tensor, r, blur_sigma)
-        for r in ratios
-    ]
+    gains = [adapt_gain_base]
+    pixel_ratios = [0.0]
 
-    # Run explainer.interpret() on masked_list in parallel (GPU)
-    def _run(mx, stream):
-        with torch.cuda.stream(stream):
-            gain, _ = explainer.interpret(mx, sup_y, que_x, que_y, T)
-        stream.synchronize()
-        return gain
+    # 3. Progressive removal loop (fast, since the mask is just tensor thresholding)
+    for step in range(1, num_steps + 1):
+        ratio = step / num_steps
 
-    streams = [torch.cuda.Stream() for _ in ratios]
-    with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = [
-            pool.submit(_run, mx, st) for mx, st in zip(masked_list, streams)
-        ]
-        results = [f.result() for f in futures]   # đúng thứ tự vì zip giữ nguyên order
+        # Remove ratio% of the area simultaneously across ALL images
+        sup_x_masked = apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma)
 
-    gains = [adapt_gain_base] + results
-    pixel_ratios = [0.0] + ratios
+        # Re-evaluate the MAML model
+        adapt_gain, _ = explainer.interpret(sup_x_masked, sup_y, que_x, que_y, T)
+        
+        gains.append(adapt_gain)
+        pixel_ratios.append(ratio)
+
     auc = np.trapezoid(gains, pixel_ratios)
     return auc
 
@@ -133,12 +125,12 @@ def compute_bidirectional_faithfulness(
                 "que_x": que_x, "que_y": que_y, "T": T, 
                 "adapt_gain_base": adapt_gain_base, "saliency_map": saliency_map,
                 "blur_sigma": blur_sigma, "n_segs": n_segs, 
-                "compactness": compactness, "num_steps": num_steps,
+                "compactness": compactness, "num_steps": num_steps
             }
 
-            auc_pos = adt_parallel(mode="pos", **kwargs)
-            auc_neg = adt_parallel(mode="neg", **kwargs)
-            auc_random = adt_parallel(mode="random", **kwargs)
+            auc_pos = adt(mode="pos", **kwargs)
+            auc_neg = adt(mode="neg", **kwargs)
+            auc_random = adt(mode="random", **kwargs)
 
             pda = auc_random - auc_pos
             nda = auc_neg - auc_random
