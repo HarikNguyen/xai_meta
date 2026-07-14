@@ -1,3 +1,4 @@
+import random
 import torch
 from PIL import Image
 import torchvision.transforms.functional as vF
@@ -41,8 +42,13 @@ class Rotate(object):
 
     def __call__(self, img):
         # Note: img must be tensor
-        # Random rotation
-        return vF.rotate(img, self.degrees)
+        # Random rotation with k*deg
+        if self.degrees == 0:
+            return img
+        max_k = 360 // self.degrees
+        k = random.randint(0, max_k - 1)
+        deg = k * self.degrees
+        return vF.rotate(img, deg)
 
 
 class Compose(object):
