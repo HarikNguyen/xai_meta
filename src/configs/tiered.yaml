@@ -13,7 +13,7 @@ dataloader:
   metatest_iterations: 600
   val_after: 1000
   meta_batch_size: 4
-  metatest_batch_size: 4
+  metatest_batch_size: 1
   n_way: 5
   k_shot: 1
   k_query: 15
