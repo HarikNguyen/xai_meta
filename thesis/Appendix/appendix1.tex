@@ -1,6 +1,39 @@
 \appendix
 
-\chapter{Ngữ pháp tiếng Việt}
-\label{Appendix1}
+\chapter{Chứng minh Mệnh đề~\ref{prop:decomposition}}
+\label{appendix:taylor_proof}
 
-Đây là phụ lục.
+\section{Khai triển Taylor}
+
+Khai triển $L(Q_i,\cdot)$ bậc hai quanh $\theta_0=(b_0,h_0)$:
+\begin{align}
+    L(Q_i,\phi_T) &\approx L(Q_i,\theta_0) + g_b^\top \Delta b_T + g_h^\top \Delta h_T \nonumber\\
+    &\quad + \tfrac{1}{2}\Delta b_T^\top H_{bb} \Delta b_T + \tfrac{1}{2}\Delta h_T^\top H_{hh} \Delta h_T + \Delta b_T^\top H_{bh} \Delta h_T, \label{eq:taylor_full}\\[4pt]
+    L(Q_i,\phi_T^f) &\approx L(Q_i,\theta_0) + g_h^\top \Delta h_T^f + \tfrac{1}{2}{\Delta h_T^f}^\top H_{hh} \Delta h_T^f, \label{eq:taylor_frozen}
+\end{align}
+với $\Delta b_T = \phi_T^b - b_0$, $\Delta h_T = \phi_T^h - h_0$, $\Delta h_T^f = \phi_T^{f,h}-h_0$ (nhánh can thiệp có $\Delta b = 0$). Lấy~\eqref{eq:taylor_frozen} trừ~\eqref{eq:taylor_full} và nhóm số hạng, ta thu được đúng Phương trình~\eqref{eq:decomposition}.
+
+\subsection{Trường hợp $T=1$: $R_h = 0$ chính xác}
+
+Cả hai nhánh xuất phát từ $\phi_0 = \phi_0^f = \theta_0$. Theo quy tắc inner-loop~\eqref{eq:inner_loop},
+\[
+\Delta h_1 = \alpha \nabla_h \mathcal{L}_{S_i}(b_0, h_0) = \Delta h_1^f,
+\]
+vì cả hai đều tính gradient trên $S_i$ tại đúng cùng điểm $(b_0,h_0)$. Do đó $\Delta h_T - \Delta h_T^f = 0$ tại $T=1$, kéo theo $R_h \equiv 0$ và $\Delta M = -C_b$ \textbf{đúng tuyệt đối}, không cần xấp xỉ.
+
+\subsection{Trường hợp $T>1$: cận $R_h = O((T\alpha)^2)$}
+
+Đặt $\delta_j := \Delta h_j - \Delta h_j^f$ ($\delta_0=0$). Từ quy tắc inner-loop áp dụng riêng cho từng nhánh,
+\[
+\delta_j = \delta_{j-1} - \alpha\Big[\nabla_h \mathcal{L}_{S_i}(b_0+\Delta b_{j-1}, h_0+\Delta h_{j-1}) - \nabla_h \mathcal{L}_{S_i}(b_0, h_0+\Delta h_{j-1}^f)\Big].
+\]
+Khai triển gradient bậc nhất quanh $(b_0, h_0+\Delta h_{j-1}^f)$ và ký hiệu $H^S_{bh}, H^S_{hh}$ là các khối Hessian của $\mathcal{L}_{S_i}$ tại điểm này,
+\[
+\delta_j \approx (I - \alpha H^S_{hh})\,\delta_{j-1} - \alpha H^S_{bh}\, \Delta b_{j-1}.
+\]
+Đây là một hệ đệ quy tuyến tính với $\delta_0 = 0$, được điều khiển bởi $\Delta b_{j-1}$. Vì backbone chỉ tích lũy ở nhánh đầy đủ theo quy tắc tương tự, $\|\Delta b_j\| = O(j\alpha)$. Giải đệ quy trên (xem là tổng chập/telescoping của các số hạng điều khiển), ta có
+\[
+\|\delta_T\| = O\Big(\alpha \|H^S_{bh}\| \sum_{j=0}^{T-1}\|\Delta b_j\|\Big) = O\big(\alpha \|H^S_{bh}\| \cdot T \cdot T\alpha\big) = O\big((T\alpha)^2\big).
+\]
+Vì $R_h$ trong~\eqref{eq:decomposition} là hàm tuyến tính và bậc hai của $\delta_T = \Delta h_T - \Delta h_T^f$, ta có $R_h = O(\|\delta_T\|) = O\big((T\alpha)^2\big)$. Trong khi đó, số hạng chủ đạo của $C_b$ là $g_b^\top \Delta b_T = O(T\alpha)$ (bậc nhất). Dưới Giả thuyết~\ref{asm:fast_adaptation} ($T\alpha \ll 1$), ta có $O((T\alpha)^2) \ll O(T\alpha)$, suy ra $R_h$ là vô cùng bé bậc cao so với $C_b$, hoàn tất chứng minh Mệnh đề~\ref{prop:decomposition}. $\blacksquare$
+

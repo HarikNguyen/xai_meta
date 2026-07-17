@@ -1,6 +1,235 @@
 \chapter{Phương pháp đề xuất}
 \label{Chapter3}
 
+\section{Phát biểu bài toán}
+\label{sec:problem_statement}
+
+Như đã đề cập tại Mục~\ref{sec:research_urgency} và được hệ thống hóa qua các phân tích ở Chương~\ref{Chapter2}, việc trả lời hai câu hỏi nghiên cứu đặt ra ở Chương~\ref{Chapter1} đòi hỏi phải giải quyết đồng thời hai bài toán. Thứ nhất, xây dựng một độ đo định lượng có sự nhảy cảm với hiện tượng chuyển giao tiêu cực, và có thể cho thấy mức độ đóng góp tích cực hay tiêu cực của quá trình thích ứng của các tri thức tiền nghiệm ẩn trong tham số khởi tạo chung $\theta_0$ trên tập hỗ trợ $S_i$. Thứ hai, dựa trên giá trị độ lợi chuyển giao, cần phải có một cơ chế hậu diễn giải có khả năng tổng hợp thông tin qua nhiều trạng thái tham số của quá trình thích ứng, điều mà chưa phương pháp nào hiện thời có thể đáp ứng cả ba tiêu chí đã nêu trong mục \ref{subsec:relatedwork_synthesis}.
+
+Trước khi xây dựng độ đo định lượng hay một cơ chế cụ thể, ta xét bài toán diễn giải trên một mô hình dựa trên \acrshort{maml} đã hoàn tất giai đoạn meta-training, với bộ tham số khởi tạo chung $\theta_0$ có được từ việc tối ưu hai cấp (bi-level optimization) theo phương trình~\eqref{eq:outer_loop} và \eqref{eq:inner_loop}. Với một tác vụ đích $\mathcal{T}_i$ bất kỳ tại thời điểm meta-testing, bao gồm một tập hỗ trợ $S_i = \{(x_k^S, y_k^S)\}_{k=1}^{NK}$ và tập truy vấn $Q_i = \{(x_k^Q, y_k^Q)\}_{k=1}^{M}$, thì quá trình thích ứng nhanh sinh ra một quỹ đạo tham số gồm $T+1$ trạng thái liên tiếp sau theo đúng quy tắc cập nhật inner-loop~\eqref{eq:inner_loop}.
+
+\begin{equation}
+    \phi_{0} = \theta_0 \;\longrightarrow\; \phi_{1} \;\longrightarrow\; \cdots \;\longrightarrow\; \phi_{T} = \phi_i^*,
+    \label{eq:trajectory}
+\end{equation}
+
+Với $F$ là không gian đặc trưng chung mà $\phi_i^*$ và $\theta_0$ cùng chia sẻ sau quá trình thích ứng nhanh, ta có thể phân rã mỗi trạng thái tham số $\phi_j$ trong quỹ đạo~\eqref{eq:trajectory} thành hai thành phần chức năng $\phi_j = (\phi_j^{b}, \phi_j^{h})$, tương ứng với phần thân trích xuất đặc trưng (backbone) $\phi_j^{b}$ và phần đầu phân lớp (head) $\phi_j^{h}$, kế thừa theo đúng cách phân tách đã được Raghu và các cộng sự~\cite{raghu2019rapid} cũng như Oh và các cộng sự~\cite{oh2020boil} sử dụng. Theo đó, hàm trích xuất đặc trưng $f_{\phi_j^{b}}: \mathcal{X} \rightarrow F$ ánh xạ một mẫu đầu vào $x$ về không gian đặc trưng chung $F$, trong khi hàm phân lớp $g_{\phi_j^{h}}: F \rightarrow \mathcal{Y}$ đưa ra quyết định cuối cùng dựa trên biểu diễn đã được trích xuất, sao cho $h_{\phi_j}(x) = g_{\phi_j^{h}} \circ f_{\phi_j^{b}}(x)$. Đặc biệt, tại trạng thái khởi đầu $\phi_0 = \theta_0$, không gian $F$ chính là không gian đặc trưng tiền nghiệm được hình thành từ giai đoạn meta-training; còn tại trạng thái cuối $\phi_T = \phi_i^*$, cùng một không gian $F$ này đã ít nhiều bị điều biến bởi $T$ bước cập nhật gradient chịu tác động trực tiếp từ tập hỗ trợ $S_i$. Chính vì $\phi_i^*$ và $\theta_0$ cùng chia sẻ trên một không gian $F$ duy nhất, mọi sự dịch chuyển giữa hai trạng thái này, dù là tái sử dụng đặc trưng (feature reuse) hay tái cấu trúc biểu diễn (representation change), đều có thể được quan sát và đối chiếu trực tiếp mà không cần một phép biến đổi trung gian nào khác.
+
+Dựa trên sự phân rã này, bài toán diễn giải mà chúng tôi đặt ra không nhằm vào một trạng thái tham số đơn lẻ, như cách các phương pháp Grad-CAM cục bộ~\cite{selvaraju2020grad, uddin2025expert} chỉ trích xuất tại $\phi_T$, mà mục tiêu chính là \textbf{sự đóng góp thực sự của việc thích ứng phần thân trích xuất đặc trưng (backbone)} vào hiệu năng trên tác vụ đích. Để cô lập đóng góp này, bên cạnh quỹ đạo thích ứng đầy đủ (full adaptation)~\eqref{eq:trajectory}, ta xét thêm một quỹ đạo can thiệp (intervention) $\{\phi_0^{f}, \phi_1^{f}, \dots, \phi_T^{f}\}$, được sinh ra bằng cách chủ động đóng băng phần thân tại $\theta_0^{b}$ trong suốt $T$ bước, chỉ cho phép phần đầu phân lớp cập nhật theo quy tắc inner-loop~\eqref{eq:inner_loop}, tức $\phi_j^{f} = (\theta_0^{b}, \phi_j^{f,h})$ với mọi $j = 0, \dots, T$. Việc can thiệp này chính là sự hiện thực hóa giả thuyết \emph{tái sử dụng đặc trưng} (feature reuse) của Raghu và các cộng sự~\cite{raghu2019rapid}, đóng vai trò như một đường cơ sở (baseline) phản ánh phần hiệu năng mà mô hình đạt được \emph{mà không cần} backbone rời khỏi $\theta_0^{b}$. Trong khi đó, quỹ đạo đầy đủ $\{\phi_0, \dots, \phi_T\}$, nơi cả backbone lẫn head cùng thích ứng tự do, phản ánh khả năng \emph{tái cấu trúc biểu diễn} (representation change) như quan sát của Oh và các cộng sự~\cite{oh2020boil}.
+
+Cụ thể hơn, với $h(\phi, Q_i)$ là hành vi dự đoán của mô hình trên tập truy vấn $Q_i$ khi được tham số hóa bởi $\phi$, hai câu hỏi nghiên cứu đặt ra ở Mục~\ref{sec:research_urgency} có thể được thu gọn về hai bài toán con có quan hệ nhân quả với nhau. Bài toán con thứ nhất đòi hỏi định lượng khoảng cách hiệu năng giữa $h(\phi_T^{f}, Q_i)$ (nhánh can thiệp, backbone đóng băng) và $h(\phi_T, Q_i) = h(\phi_i^*, Q_i)$ (nhánh thích ứng toàn bộ, không can thiệp) theo một cách nhạy cảm với $S_i$, thay vì chỉ dừng ở độ chính xác thô trên từng nhánh riêng lẻ. Nói cách khác, đại lượng cần đo không phải là hiệu năng tuyệt đối sau thích ứng, mà là \emph{phần chênh lệch do chính backbone rời khỏi $\theta_0^{b}$ mang lại}: nếu $h(\phi_T, Q_i) \approx h(\phi_T^{f}, Q_i)$, việc thích ứng backbone gần như không tạo thêm giá trị so với khi bị can thiệp đóng băng; nếu $h(\phi_T, Q_i)$ vượt trội hơn $h(\phi_T^{f}, Q_i)$, sự tái cấu trúc biểu diễn mang lại chuyển giao tích cực; ngược lại, nếu $h(\phi_T, Q_i)$ kém hơn $h(\phi_T^{f}, Q_i)$, chính việc thích ứng backbone dưới áp lực của $S_i$ là nguyên nhân gây ra chuyển giao tiêu cực. Bài toán con thứ hai, với giả thiết rằng độ lợi đo được ở bài toán con thứ nhất là một đại lượng có thể quy kết được, đòi hỏi truy vết ngược đại lượng đó về từng mẫu $(x_k^S, y_k^S) \in S_i$ và định vị chúng trên không gian đặc trưng $F$ tại từng trạng thái $\phi_j$ của quỹ đạo, chứ không chỉ tại $\phi_T$.
+
+Việc phát biểu bài toán theo hướng này cho phép chúng tôi tránh được hạn chế cố hữu của các phương pháp diễn giải tĩnh (Mục~\ref{subsec:background_post_hoc}) vốn chỉ quan sát một lát cắt duy nhất của mô hình, đồng thời không đòi hỏi quyền truy cập vào dữ liệu meta-training như TL-XML~\cite{mitsuka2025tlxml}, do toàn bộ thông tin cần thiết, gồm cặp quỹ đạo $\{\phi_0, \dots, \phi_T\}$ và $\{\phi_0^{f}, \dots, \phi_T^{f}\}$, tập hỗ trợ $S_i$ và tập truy vấn $Q_i$, đều đã sẵn có ngay tại thời điểm meta-testing. Trên cơ sở phát biểu bài toán này, Mục~\ref{sec:adaptation_gain} tiếp theo sẽ trình bày chi tiết cách xây dựng độ lợi thích ứng $\Delta M$ nhằm giải quyết bài toán con thứ nhất, trước khi Mục~\ref{sec:fama} trình bày cơ chế \acrshort{fama} nhằm giải quyết bài toán con thứ hai.
+
+\section{Độ lợi thích ứng}
+\label{sec:adaptation_gain}
+
+Như đã trình bày ở Mục~\ref{sec:problem_statement}, bài toán con thứ nhất đòi hỏi một đại lượng có khả năng định lượng phần chênh lệch hiệu năng sinh ra bởi chính việc backbone rời khỏi $\theta_0^{b}$, thay vì đo hiệu năng tuyệt đối trên từng nhánh riêng lẻ. Để đại lượng này phục vụ được cả hai mục tiêu nghiên cứu đã nêu, chúng tôi đặt ra ba tiêu chí thiết kế bắt buộc.
+
+\textbf{Thứ nhất, tính khả vi (differentiability).} Vì \acrshort{fama} (Mục~\ref{sec:fama}) cần truy vết ngược đóng góp của đại lượng này về từng mẫu trong $S_i$ thông qua lan truyền ngược qua quỹ đạo thích ứng, độ đo không thể là một đại lượng rời rạc như accuracy, mà phải liên tục và khả vi theo $\phi$.
+
+\textbf{Thứ hai, tính nhạy cảm với chuyển giao tiêu cực (sensitivity to negative transfer).} Độ đo phải phản ánh được \emph{chiều hướng} của đóng góp, tức phân biệt rõ ràng giữa trường hợp việc thích ứng backbone mang lại lợi ích (positive transfer), gây hại (negative transfer), hay không tạo thêm giá trị so với việc chỉ tái sử dụng đặc trưng sẵn có (feature reuse). Điều này loại trừ các độ đo chỉ đo độ lớn tuyệt đối của sự thay đổi (như khoảng cách biểu diễn CCA/CKA) mà không cho biết thay đổi đó tốt hay xấu cho tác vụ đích.
+
+\textbf{Thứ ba, tính tổng quát (generality).} Độ đo không được ràng buộc vào một tác vụ $\mathcal{T}_i$, một kiến trúc, hay một tập dữ liệu cụ thể, mà phải được biểu diễn dưới dạng kỳ vọng trên toàn bộ phân phối tác vụ $p(\mathcal{T})$ tại thời điểm meta-testing, nhất quán với cách \acrshort{maml} được đánh giá (Phương trình~\eqref{eq:outer_loop}).
+
+\subsection{Định nghĩa}
+\label{sec:definition_AG}
+
+Dựa trên cơ sở của ba tiêu chí được đặt ra, với 
+\begin{equation}
+    \mathcal{L}(Q_i, \phi) := \frac{1}{M}\sum_{k=1}^{M} \ell\big(h_\phi(x_k^Q), y_k^Q\big)
+    \label{eq:loss}
+\end{equation}
+
+là hàm mất mát trung bình (chẵng hạn như cross-entropy) được tính từ hành vi dự đoán $h(\phi, Q_i)$ đã định nghĩa ở Mục~\ref{sec:problem_statement} đối chiếu với nhãn thật trên tập truy vấn, chúng tôi định nghĩa \textbf{độ lợi thích ứng} (Adaptation Gain) như sau.
+
+\begin{equation}
+    \centering
+    \Delta M := \mathbb{E}_{Q_i \sim p(\mathcal{T})} \Big[ \mathcal{L}(Q_i, \phi_T^{f}) - \mathcal{L}(Q_i, \phi_T) \Big],
+    \label{eq:adaptation_gain}
+\end{equation}
+
+trong đó $\phi_T = \phi_i^*$ là trạng thái cuối của quỹ đạo thích ứng đầy đủ, còn $\phi_T^{f} = (\theta_0^{b}, \phi_T^{f,h})$ là trạng thái cuối của quỹ đạo can thiệp với backbone bị đóng băng tại $\theta_0^{b}$, cả hai đều được sinh ra từ cùng một tập hỗ trợ $S_i$ theo quy tắc inner-loop~\eqref{eq:inner_loop}.
+
+Định nghĩa~\eqref{eq:adaptation_gain} ngầm giả định rằng toàn bộ chênh lệch $\mathcal{L}(Q_i,\phi_T^f) - \mathcal{L}(Q_i,\phi_T)$ đến từ việc backbone dịch chuyển khỏi $\theta_0^b$. Tuy nhiên, vì head ở hai nhánh cũng được cập nhật trên các quỹ đạo khác nhau ($\phi_j^h$ so với $\phi_j^{f,h}$), một câu hỏi cần được trả lời trước khi diễn giải $\Delta M$: \emph{liệu phần chênh lệch do bản thân head thích ứng khác nhau giữa hai nhánh có làm nhiễu tín hiệu backbone hay không?} Bằng khai triển Taylor bậc hai của $L(Q_i,\cdot)$ quanh $\theta_0$ (chi tiết tại Phụ lục~\ref{appendix:taylor_proof}), $\Delta M$ có thể được phân rã thành
+
+\begin{equation}
+    \begin{split}
+        \Delta M = & -\,\underbrace{\Big[g_b^\top \Delta b_T + \tfrac{1}{2}\Delta b_T^\top H_{bb} \Delta b_T + \Delta b_T^\top H_{bh} \Delta h_T\Big]}_{C_b \;-\; \text{đóng góp thuần của backbone}} \\
+    &+ \underbrace{\Big[g_h^\top(\Delta h_T^f - \Delta h_T) + \tfrac{1}{2}\big({\Delta h_T^f}^\top H_{hh} \Delta h_T^f - \Delta h_T^\top H_{hh} \Delta h_T\big)\Big]}_{R_h \;-\; \text{dư sai lệch từ head}},
+    \end{split}
+    \label{eq:decomposition}
+\end{equation}
+
+với $g_b, g_h$ và $H_{bb}, H_{bh}, H_{hh}$ lần lượt là gradient và các khối Hessian của $L(Q_i,\cdot)$ tại $\theta_0$, còn $\Delta b_T, \Delta h_T, \Delta h_T^f$ là độ dịch chuyển tích lũy sau $T$ bước của mỗi nhánh. Số hạng $R_h$ chỉ triệt tiêu tuyệt đối khi $\Delta h_T = \Delta h_T^f$, tức khi hai nhánh cho ra cùng một quỹ đạo head — điều chỉ đúng chính xác khi $T=1$ (hai nhánh khởi đầu từ cùng $\theta_0$ nên bước gradient head đầu tiên trùng nhau). Với $T>1$, hai nhánh dần tách khỏi nhau do backbone chỉ dịch chuyển ở nhánh đầy đủ, kéo theo $\Delta h_T \neq \Delta h_T^f$ và $R_h \neq 0$.
+
+\begin{assumption}[Chế độ thích ứng nhanh]
+\label{asm:fast_adaptation}
+Quá trình thích ứng nhanh của \acrshort{maml} vận hành với số bước $T$ nhỏ và tốc độ học $\alpha$ nhỏ, sao cho $T\alpha \ll 1$. Đây không phải một điều kiện ngoại lai, mà chính là tiền đề cấu thành nên khái niệm \emph{fast-adaptation} của \acrshort{maml}~\cite{finn2017model}: khác với huấn luyện tiêu chuẩn chạy hàng nghìn bước gradient, \acrshort{maml} được thiết kế để hội tụ tại meta-testing chỉ sau một vài bước cập nhật trên tập hỗ trợ nhỏ $S_i$.
+\end{assumption}
+
+\begin{proposition}[Tính chủ đạo của đóng góp backbone]
+\label{prop:decomposition}
+Dưới Giả thuyết~\ref{asm:fast_adaptation}, $C_b = O(T\alpha)$ trong khi $R_h = O\big((T\alpha)^2\big)$. Do đó,
+\begin{equation}
+    \Delta M = -C_b + O\big((T\alpha)^2\big),
+    \label{eq:leading_order}
+\end{equation}
+tức trong chế độ thích ứng nhanh, $\Delta M$ xấp xỉ tuyến tính đóng góp thuần của backbone, còn phần dư do head bị lệch quỹ đạo là vô cùng bé bậc cao và không làm sai lệch chiều hướng (dấu) của $\Delta M$.
+\end{proposition}
+
+Chứng minh chi tiết của Mệnh đề~\ref{prop:decomposition}, bao gồm khai triển Taylor đầy đủ, trường hợp $T=1$ (đẳng thức chính xác $R_h=0$), và lập luận quy nạp cho $T>1$ dẫn tới cận $R_h = O((T\alpha)^2)$, được trình bày tại Phụ lục~\ref{appendix:taylor_proof}.
+
+Nhờ Mệnh đề~\ref{prop:decomposition}, dấu và độ lớn của $\Delta M$ có thể được diễn giải trực tiếp qua $C_b$ — đại lượng chỉ phụ thuộc vào độ dịch chuyển của backbone. Nếu $\Delta M > 0$ (tương đương $C_b < 0$), việc để backbone thích ứng tự do giúp giảm mất mát trên $Q_i$ — quá trình tái cấu trúc biểu diễn (representation change) mang lại \textbf{chuyển giao tích cực}. Nếu $\Delta M < 0$ (tương đương $C_b > 0$), chính việc thích ứng backbone dưới áp lực của $S_i$ làm tăng mất mát trên $Q_i$ so với khi bị đóng băng — nguyên nhân trực tiếp của \textbf{chuyển giao tiêu cực}, dù $\theta_0^b$ vẫn đủ tốt nếu được giữ nguyên. Nếu $\Delta M \approx 0$ ($C_b \approx 0$), giả thuyết \textbf{tái sử dụng đặc trưng} (feature reuse) của Raghu và các cộng sự~\cite{raghu2019rapid} là đủ để giải thích hiệu năng đạt được.
+
+Trong thực nghiệm, kỳ vọng $\mathbb{E}_{Q_i \sim p(\mathcal{T})}[\cdot]$ ở Phương trình~\eqref{eq:adaptation_gain} được xấp xỉ Monte Carlo bằng trung bình $\Delta M$ trên một tập hợp lớn tác vụ lấy mẫu từ $p(\mathcal{T})$ tại thời điểm meta-testing, theo đúng giao thức đánh giá chuẩn của \acrshort{maml}.
+
+\section{Phương pháp \acrfull{fama}}
+\label{sec:fama}
+Mục này xây dựng lời giải cho bài toán con thứ hai đã phát biểu ở công thức~\eqref{eq:problem2_formal}: lan truyền ngược $\Delta$ — đại lượng đã xây dựng ở Mục~\ref{sec:adaptation_gain} — qua toàn bộ quỹ đạo thích ứng~\eqref{eq:trajectory} để quy về từng vị trí không gian trong biểu diễn đặc trưng $f_k$ của từng mẫu hỗ trợ. Phần~\ref{subsec:fama_idea} trình bày ý tưởng cốt lõi; Phần~\ref{subsec:fama_adjoint} xây dựng trạng thái đối ngẫu (adjoint state) và phép đệ quy ngược qua quỹ đạo; Phần~\ref{subsec:fama_feature} chuyển đạo hàm từ không gian dữ liệu thô sang không gian đặc trưng $F$; Phần~\ref{subsec:fama_def} phát biểu định nghĩa chính thức; Phần~\ref{subsec:fama_algo} trình bày thuật toán và phân tích độ phức tạp.
+
+\subsection{Ý tưởng cốt lõi}
+\label{subsec:fama_idea}
+
+Bài toán tính $\partial \Delta M / \partial S_i$ về bản chất là một bài toán đạo hàm qua một quá trình tối ưu hóa lồng (unrolled optimization), tương tự lớp bài toán hypergradient đã được nghiên cứu trong các công trình về gradient bậc hai của MAML~\cite{finn2017maml} và iMAML~\cite{rajeswaran2019imaml}: $S_i$ không chỉ ảnh hưởng đến $\Delta M$ qua một đường duy nhất, mà ảnh hưởng tại \emph{mọi} bước $j = 1, \ldots, K$ của quỹ đạo~\eqref{eq:trajectory}, vì mỗi bước cập nhật inner-loop đều tính gradient của hàm mất mát trên chính $S_i$. Do đó, đạo hàm cần tìm là một \emph{tổng} các đóng góp cục bộ tại từng bước, được kết nối với nhau qua một tín hiệu lan truyền ngược duy nhất — đây chính là cơ sở để FAMA thỏa mãn yêu cầu tổng hợp đa trạng thái đã đặt ra ở Mục~\ref{subsec:problem_attribution}, khác với Grad-CAM cục bộ~\cite{uddin2025expert} vốn chỉ sử dụng gradient tại $\theta_{i,K}$.
+
+\subsection{Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}
+\label{subsec:fama_adjoint}
+
+\textbf{Định nghĩa trạng thái đối ngẫu.} Với mỗi bước $j = 0, \ldots, K$ trên quỹ đạo~\eqref{eq:trajectory}, định nghĩa trạng thái đối ngẫu
+
+$$
+\lambda_{i,j} \;:=\; \frac{d\, \mathbb{E}_{Q}[\mathcal{L}(Q, \theta_{i,K})]}{d\, \theta_{i,j}} \;\in\; \mathbb{R}^{|\theta|},
+\label{eq:adjoint_def}
+$$
+
+tức đạo hàm \emph{toàn phần} của hàm mất mát tại trạng thái cuối theo trạng thái trung gian $\theta_{i,j}$, tính bằng cách lan truyền qua các bước $j+1, \ldots, K$ còn lại của quỹ đạo. Điều kiện biên tại $j=K$ chính là gradient meta-học tiêu chuẩn:
+
+$$
+\lambda_{i,K} = \nabla_{\theta_{i,K}} \mathbb{E}_{Q}[\mathcal{L}(Q, \theta_{i,K})].
+\label{eq:adjoint_base}
+$$
+
+\textbf{Đệ quy ngược.} Từ quy tắc cập nhật inner-loop $\theta_{i,j} = \theta_{i,j-1} - \alpha \nabla_{\theta_{i,j-1}} \mathcal{L}_{S_i}(\theta_{i,j-1})$, đạo hàm Jacobian của bước cập nhật là
+
+$$
+\frac{\partial \theta_{i,j}}{\partial \theta_{i,j-1}} = I - \alpha H_{i,j-1}, \qquad H_{i,j-1} := \nabla^2_{\theta_{i,j-1}} \mathcal{L}_{S_i}(\theta_{i,j-1}),
+$$
+
+trong đó $H_{i,j-1}$ là ma trận Hessian của hàm mất mát trên $S_i$ tại $\theta_{i,j-1}$. Áp dụng quy tắc dây chuyền vào~\eqref{eq:adjoint_def}, ta thu được phép đệ quy ngược (chạy từ $j=K$ về $j=1$):
+
+$$
+\lambda_{i,j-1} = \lambda_{i,j}\big(I - \alpha H_{i,j-1}\big) = \lambda_{i,j} - \alpha\, \lambda_{i,j} H_{i,j-1}.
+\label{eq:adjoint_recursion}
+$$
+
+Đây chính xác là phép đệ quy bạn đã suy ra; điểm cần chuẩn hóa là chỉ số: $\lambda_{i,j}$ là đạo hàm \emph{toàn phần} tại trạng thái $j$ (đã "gộp" toàn bộ ảnh hưởng của các bước sau nó), trong khi phần đóng góp trực tiếp của $S_i$ tại từng bước — trình bày ngay sau đây — chỉ là đạo hàm \emph{riêng} (cục bộ). Sự phân biệt này giải quyết đúng điểm bạn còn phân vân.
+
+\textbf{Tránh tính Hessian tường minh.} Vì $H_{i,j-1}$ có kích thước $|\theta|\times|\theta|$, việc lưu tường minh là không khả thi. Tuy nhiên tích $\lambda_{i,j} H_{i,j-1}$ (một vector-Hessian product) có thể tính hiệu quả bằng đẳng thức đạo hàm kép chuẩn trong tối ưu hóa lồng:
+
+$$
+\lambda_{i,j} H_{i,j-1} = \lambda_{i,j}\, \nabla^2_{\theta_{i,j-1}} \mathcal{L}_{S_i}(\theta_{i,j-1}) = \nabla_{\theta_{i,j-1}} \Big( \lambda_{i,j}^\top \nabla_{\theta_{i,j-1}} \mathcal{L}_{S_i}(\theta_{i,j-1}) \Big),
+\label{eq:hvp_trick}
+$$
+
+tức: tính đại lượng vô hướng $s_j := \lambda_{i,j}^\top \nabla_{\theta_{i,j-1}} \mathcal{L}_{S_i}(\theta_{i,j-1})$ bằng một lượt lan truyền xuôi–ngược thông thường, sau đó lấy đạo hàm của $s_j$ theo $\theta_{i,j-1}$ bằng một lượt lan truyền ngược thứ hai (double backward). Đây đúng là cơ chế mà MAML bậc hai và iMAML~\cite{rajeswaran2019imaml} đã dùng để tính meta-gradient — FAMA không cần thêm cơ chế đạo hàm mới, chỉ tái sử dụng đúng phép tính này.
+
+\subsection{Từ đạo hàm theo $S_i$ sang bản đồ phân bổ trên $F$}
+\label{subsec:fama_feature}
+
+\textbf{Tổng hợp đạo hàm theo $S_i$ qua các bước.} Vì $\theta_0$ không phụ thuộc $S_i$ (Mục~\ref{subsec:gain_derivation}), $\partial \Delta M/\partial S_i = -\partial \mathbb{E}_Q[\mathcal{L}(Q,\theta_{i,K})]/\partial S_i$. Do $S_i$ xuất hiện tường minh tại **mọi** bước cập nhật, đạo hàm toàn phần này phân rã thành tổng các đóng góp cục bộ tại từng bước, mỗi đóng góp được "cân" bởi trạng thái đối ngẫu $\lambda_{i,j}$ tương ứng:
+
+$$
+\frac{\partial \Delta M}{\partial S_i} = -\sum_{j=1}^{K} \lambda_{i,j} \cdot \left(\frac{\partial \theta_{i,j}}{\partial S_i}\right)_{\!\text{trực tiếp}},
+\label{eq:total_derivative_sum}
+$$
+
+trong đó ký hiệu "trực tiếp" nhấn mạnh đây là đạo hàm \emph{riêng} của phương trình cập nhật tại bước $j$ theo $S_i$, giữ $\theta_{i,j-1}$ cố định — phần ảnh hưởng gián tiếp qua các bước trước đã được $\lambda_{i,j}$ gộp sẵn thông qua đệ quy~\eqref{eq:adjoint_recursion}. Đây chính là cách giải quyết điểm mơ hồ toàn phần/riêng: \textbf{mỗi số hạng trong tổng là đạo hàm riêng, còn bản thân tổng là đạo hàm toàn phần.}
+
+Từ $\theta_{i,j} = \theta_{i,j-1} - \alpha \nabla_{\theta_{i,j-1}}\mathcal{L}_{S_i}(\theta_{i,j-1})$:
+
+$$
+\left(\frac{\partial \theta_{i,j}}{\partial S_i}\right)_{\text{trực tiếp}} = -\alpha\, \nabla^2_{\theta_{i,j-1}, S_i} \mathcal{L}_{S_i}(\theta_{i,j-1}),
+$$
+
+thay vào~\eqref{eq:total_derivative_sum}, hai dấu trừ triệt tiêu:
+
+$$
+\frac{\partial \Delta M}{\partial S_i} = \alpha \sum_{j=1}^{K} \lambda_{i,j}\, \nabla^2_{\theta_{i,j-1}, S_i}\, \mathcal{L}_{S_i}(\theta_{i,j-1}).
+\label{eq:dm_ds_final}
+$$
+
+\textbf{Chuyển sang không gian đặc trưng $F$.} Trực tiếp lấy $\partial \Delta M/\partial S_i$ cho một bản đồ trên không gian ảnh thô (pixel), không phải trên $F$ như yêu cầu ở~\eqref{eq:problem2_formal}. Theo giả thuyết feature reuse~\cite{raghu2019rapid} đã dùng làm nền tảng ở Mục~\ref{sec:problem_statement}, backbone $\Phi$ gần như không đổi qua các bước $j$, nên có thể tách hàm mất mát trên mẫu $k$ thành một hàm của biểu diễn đặc trưng $f_k = \Phi(x_k^S)$ thay vì của $x_k^S$ trực tiếp:
+
+$$
+\mathcal{L}_{S_i}(\theta_{i,j-1}) = \frac{1}{NK}\sum_{k=1}^{NK} \ell\big(y_k^S,\, f_{\theta_{i,j-1}}(x_k^S)\big) \;\approx\; \frac{1}{NK}\sum_{k=1}^{NK} \ell_k(\theta_{i,j-1};\, f_k),
+$$
+
+với $\ell_k(\cdot\,;f_k)$ là hàm mất mát của mẫu $k$ xem như hàm của phần đầu phân loại (head) tại đầu vào $f_k$ cố định. Thay $S_i$ bằng $f_k$ trong~\eqref{eq:dm_ds_final} và áp dụng đẳng thức đạo hàm kép~\eqref{eq:hvp_trick} (nay lấy đạo hàm theo $f_k$ thay vì $\theta_{i,j-1}$), ta thu được \textbf{tensor gradient tích lũy} cho từng mẫu hỗ trợ $k$:
+
+$$
+g_k := \frac{\partial \Delta M}{\partial f_k} = \alpha \sum_{j=1}^{K} \nabla_{f_k}\Big(\lambda_{i,j}^\top \nabla_{\theta_{i,j-1}} \ell_k(\theta_{i,j-1}; f_k)\Big) \;\in\; \mathbb{R}^{C\times H\times W}.
+\label{eq:gk_def}
+$$
+
+Mỗi số hạng trong tổng chỉ cần một cặp lượt lan truyền xuôi–ngược, tái sử dụng đúng cơ chế đạo hàm kép đã dùng cho $\lambda_{i,j}$ — không cần thêm giả định hay cơ chế mới.
+
+\subsection{Định nghĩa chính thức FAMA}
+\label{subsec:fama_def}
+
+Từ $g_k$ tính theo~\eqref{eq:gk_def}, FAMA quy về bản đồ phân bổ $a_k \in \mathbb{R}^{H\times W}$ theo đúng dạng thức~\eqref{eq:problem2_formal} bằng phép rút gọn theo kênh kiểu Grad-CAM: trọng số mỗi kênh $c$ được lấy bằng trung bình không gian của $g_k$,
+
+$$
+w_k^c = \frac{1}{HW}\sum_{h=1}^{H}\sum_{w=1}^{W} g_k[c,h,w],
+\label{eq:channel_weight}
+$$
+
+và bản đồ phân bổ cuối cùng là tổ hợp tuyến tính có trọng số của các kênh đặc trưng thực tế:
+
+$$
+\boxed{\; a_k[h,w] = \sum_{c=1}^{C} w_k^c \cdot f_k[c,h,w] \;}
+\label{eq:fama_final}
+$$
+
+\textbf{Khác biệt có chủ đích so với Grad-CAM gốc.} Grad-CAM nguyên bản áp dụng $\mathrm{ReLU}(\cdot)$ sau bước tổ hợp tuyến tính, vì mục tiêu của nó là chỉ giữ lại bằng chứng \emph{ủng hộ} một lớp cụ thể. FAMA không áp dụng ReLU: vì mục tiêu của FAMA — theo đúng phát biểu ở~\eqref{eq:problem2_formal} và câu hỏi nghiên cứu thứ hai — là xác định *cả* vùng đặc trưng góp phần tích cực ($a_k[h,w] > 0$, tương thích với chiều dương của $\Delta M$) lẫn vùng gây hại ($a_k[h,w] < 0$, nguyên nhân của negative transfer). Cắt bỏ phần âm bằng ReLU sẽ xóa đi chính thông tin cần thiết để trả lời câu hỏi nghiên cứu thứ hai — đây là điều chỉnh có chủ đích, không phải sai sót khi so với các phương pháp CAM nền tảng đã điểm ở Mục~\ref{subsec:posthoc_general}.
+
+\textbf{Kiểm tra lại hai yêu cầu đặt ra ở Mục~\ref{subsec:problem_attribution}.} (i) \textit{Tổng hợp đa trạng thái}: $a_k$ được tính từ tổng theo $j=1,\ldots,K$ trong~\eqref{eq:gk_def}, sử dụng gradient tại toàn bộ $K$ bước, không chỉ tại $\theta_{i,K}$. (ii) \textit{Không cần dữ liệu meta-training}: toàn bộ phép tính từ~\eqref{eq:adjoint_base} đến~\eqref{eq:fama_final} chỉ dùng $\theta_0$ (để khởi tạo quỹ đạo), $S_i$ (sinh quỹ đạo và các $H_{i,j}$), và $Q_i$ (để tính $\lambda_{i,K}$) — không truy cập tập dữ liệu đã dùng ở giai đoạn meta-training, khắc phục đúng hạn chế đã nêu đối với TLXML~\cite{mitsuka2025tlxml}.
+
+\subsection{Thuật toán và độ phức tạp}
+\label{subsec:fama_algo}
+
+%```
+%Input: θ_0, S_i = {(x_k^S, y_k^S)}, Q_i, số bước K, learning rate α
+%Output: {a_k}_{k=1}^{NK}
+
+%# --- Lượt xuôi: sinh quỹ đạo, lưu đồ thị tính toán ---
+%θ_{i,0} ← θ_0
+%for j = 1 .. K:
+    %θ_{i,j} ← θ_{i,j-1} − α ∇_{θ_{i,j-1}} L_{S_i}(θ_{i,j-1})   # giữ graph, không detach
+
+%# --- Khởi tạo đối ngẫu tại trạng thái cuối ---
+%λ_K ← ∇_{θ_{i,K}} E_Q[L(Q, θ_{i,K})]
+%g_k ← 0  với mọi k
+
+%# --- Lượt ngược: đệ quy đối ngẫu + tích lũy gradient đặc trưng ---
+%for j = K .. 1:
+    %for k = 1 .. NK:
+        %s_j,k ← λ_j^⊤ ∇_{θ_{i,j-1}} ℓ_k(θ_{i,j-1}; f_k)     # double-backward
+        %g_k ← g_k + α · ∇_{f_k} s_j,k
+    %λ_{j-1} ← λ_j − α · ∇_{θ_{i,j-1}} (λ_j^⊤ ∇_{θ_{i,j-1}} L_{S_i}(θ_{i,j-1}))
+
+%# --- Rút gọn theo kênh kiểu Grad-CAM ---
+%for k = 1 .. NK:
+    %w_k ← spatial_mean(g_k)             # theo công thức~\eqref{eq:channel_weight}
+    %a_k ← Σ_c w_k[c] · f_k[c, :, :]      # theo công thức~\eqref{eq:fama_final}
+%return {a_k}
+%```
+
+\textbf{Độ phức tạp.} Vòng lặp ngoài chạy $K$ bước, mỗi bước cần một lượt lan truyền kép (double backward) cho $\lambda_{j-1}$ và $NK$ lượt double-backward tương ứng để cập nhật $g_k$ — tổng chi phí là $O(K \cdot NK)$ lượt lan truyền ngược qua backbone. Về bản chất tính toán, chi phí cho phần $\lambda_j$ trùng khớp hoàn toàn với chi phí tính meta-gradient bậc hai mà chính MAML đã thực hiện trong giai đoạn meta-training~\cite{finn2017maml} — FAMA không đưa vào cơ chế đạo hàm mới, chỉ mở rộng đúng phép tính đã tồn tại để tích lũy thêm tín hiệu $g_k$ tại mỗi bước thay vì chỉ dùng nó để cập nhật $\theta_0$. Phần chi phí phụ trội duy nhất — hệ số $NK$ — có thể tính song song theo batch vì mỗi $g_k$ độc lập với nhau tại một bước $j$ cố định.
+
+
+\section{Cơ sở đánh giá}
+
 %\section{Trích dẫn tài liệu}
 
 %Dùng lệnh $\textbackslash cite$ để trích dẫn một hoặc nhiều tài liệu tham khảo.

@@ -1,0 +1,39 @@
+\contentsline {chapter}{Lời cảm ơn}{i}{Doc-Start}%
+\contentsline {chapter}{Đề cương chi tiết}{ii}{chapter*.1}%
+\contentsline {chapter}{Mục lục}{xx}{chapter*.1}%
+\contentsline {chapter}{Danh mục các từ viết tắt}{xx}{section*.2}%
+\contentsline {chapter}{Tóm tắt}{xxiv}{chapter*.6}%
+\contentsline {chapter}{\numberline {1}Phần mở đầu}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Tính cấp thiết của đề tài}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Mục tiêu nghiên cứu}{4}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Phương pháp tiếp cận}{5}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Đóng góp của đề tài}{6}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Bố cục luận văn}{7}{section.1.5}%
+\contentsline {chapter}{\numberline {2}Tổng quan nghiên cứu}{9}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Cơ sở lý thuyết}{9}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Bài toán \acrfull {fsl} và Meta-Learning}{9}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}\acrfull {maml}}{10}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}\acrfull {xai}}{13}{subsection.2.1.3}%
+\contentsline {subsection}{\numberline {2.1.4}Correctness và trustworthiness của một phương pháp XAI}{16}{subsection.2.1.4}%
+\contentsline {section}{\numberline {2.2}Các nghiên cứu liên quan}{17}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Tác vụ không đồng nhất (heterogeneous task) và hiện tượng Negative Transfer}{18}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Các phương pháp giải thích hậu nghiệm dựa trên gradients và nhiễu loạn}{20}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Các phương pháp XAI cho Meta-Learning và Few-Shot Learning}{21}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}Attribution dựa trên quỹ đạo huấn luyện}{22}{subsection.2.2.4}%
+\contentsline {subsection}{\numberline {2.2.5}Tổng hợp và định vị nghiên cứu}{23}{subsection.2.2.5}%
+\contentsline {chapter}{\numberline {3}Phương pháp đề xuất}{25}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Phát biểu bài toán}{25}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Độ lợi thích ứng}{27}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Định nghĩa}{28}{subsection.3.2.1}%
+\contentsline {section}{\numberline {3.3}Phương pháp \acrfull {fama}}{30}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Ý tưởng cốt lõi}{30}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}{31}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Từ đạo hàm theo $S_i$ sang bản đồ phân bổ trên $F$}{32}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Định nghĩa chính thức FAMA}{34}{subsection.3.3.4}%
+\contentsline {subsection}{\numberline {3.3.5}Thuật toán và độ phức tạp}{35}{subsection.3.3.5}%
+\contentsline {section}{\numberline {3.4}Cơ sở đánh giá}{35}{section.3.4}%
+\contentsline {chapter}{Tài liệu tham khảo}{36}{section.3.4}%
+\contentsline {chapter}{\numberline {A}Chứng minh Mệnh đề\nobreakspace {}\ref {prop:decomposition}}{41}{appendix.A}%
+\contentsline {section}{\numberline {A.1}Khai triển Taylor}{41}{section.A.1}%
+\contentsline {subsection}{\numberline {A.1.1}Trường hợp $T=1$: $R_h = 0$ chính xác}{41}{subsection.A.1.1}%
+\contentsline {subsection}{\numberline {A.1.2}Trường hợp $T>1$: cận $R_h = O((T\alpha )^2)$}{41}{subsection.A.1.2}%

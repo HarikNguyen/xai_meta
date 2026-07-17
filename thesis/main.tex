@@ -58,6 +58,12 @@
 \def\BState{\State\hskip-\ALG@thistlm}
 \makeatother
 
+\newtheorem{assumption}{Giả định}
+\newtheorem{proposition}{Mệnh đề}
+\newtheorem{theorem}{Định lý}
+\newtheorem{lemma}{Bổ đề}
+\newtheorem{definition}{Định nghĩa}
+
 % Bảng biểu
 \usepackage{multirow}
 \usepackage{array}
@@ -107,7 +113,10 @@
   right=20mm,
   footskip = 15mm,
   includefoot]{geometry}
-  
+
+% Quản lý pdf
+\usepackage{pdfpages}
+
 % Trang bìa
 \usepackage{tikz}
 \usetikzlibrary{calc}
@@ -122,6 +131,7 @@
 \newcommand{\tenGVHD}{GS.TS~Lê~Hoài~Bắc}
 \newcommand{\tenBM}{Khoa~học~máy~tính}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
 \input{Title/title.tex}
@@ -136,7 +146,7 @@
 \include{Appendix/thanks}
 
 \addcontentsline{toc}{chapter}{Đề cương chi tiết}
-\include{Appendix/decuong}
+\includepdf[pages=-]{25D2-KL-KHMT03_DeCuong_16032026.pdf}
 
 % Mục lục, danh sách hình, danh sách bảng
 \addcontentsline{toc}{chapter}{Mục lục}
@@ -156,8 +166,8 @@
 \include{Chapter1/chapter1}
 \include{Chapter2/chapter2}
 \include{Chapter3/chapter3}
-\include{Chapter4/chapter4}
-\include{Chapter5/chapter5}
+%\include{Chapter4/chapter4}
+%\include{Chapter5/chapter5}
 
 % Công trình của tác giả (nếu không có thì comment 02 dòng dưới)
 %\addcontentsline{toc}{chapter}{Danh mục công trình của tác giả}
@@ -169,16 +179,17 @@
 
 \printbibliography[heading=subbibliography, title={Tiếng Việt}, keyword=Viet, resetnumbers=true]
 
-\DeclareNameAlias{sortname}{last-first}
-\DeclareNameAlias{default}{last-first}
+\DeclareNameAlias{sortname}{family-given}
+\DeclareNameAlias{default}{family-given}
 
-\printbibliography[heading=subbibliography, title={Tiếng Anh}, notkeyword=Viet, resetnumbers=true] 
+\printbibliography[heading=subbibliography, title={Tiếng Anh}, notkeyword=Viet, resetnumbers=true]
 % ===================================================================== %
 % CHÚ Ý: phải gán lại resetnumbers=số tài liệu tham khảo tiếng Việt + 1 %
 % ===================================================================== %
 
 % Phần phụ lục
-%\include{Appendix/appendix1}
+% Chứng minh mệnh đề với khai triển Taylor cho phần 3.1
+\include{Appendix/appendix1}
 %\include{Appendix/appendix2}
 
 \end{document} 

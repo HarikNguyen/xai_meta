@@ -1,6 +1,104 @@
-\chapter{Phương pháp đề xuất}
-\label{Chapter3}
+\chapter{Kết quả thực nghiệm}
+\label{Chapter4}
 
+Chương này trình bày các thực nghiệm được thực hiện nhằm đánh giá độ tin cậy (\textit{faithfulness}) và tính đúng đắn (\textit{sanity}) của bản đồ độ nổi bật (\textit{saliency map}) sinh ra bởi mô hình giải thích (\textit{explainer}) trong bối cảnh meta-learning. Ba nhóm thực nghiệm được tiến hành, tương ứng với ba mục tiêu đánh giá khác nhau:
+
+\begin{itemize}
+    \item \textbf{Đánh giá độ tin cậy hai chiều (Bi-directional Faithfulness – biADT):} kiểm tra xem vùng ảnh mà saliency map cho là quan trọng có thực sự ảnh hưởng đến khả năng thích nghi (\textit{adaptation}) của mô hình hay không.
+    \item \textbf{Kiểm tra sanity bằng ngẫu nhiên hóa tham số mô hình (Model Parameter Randomization):} kiểm tra xem saliency map có thực sự phụ thuộc vào tham số đã học của mạng hay không, tránh trường hợp giải thích chỉ là một bộ dò biên (\textit{edge detector}) không liên quan đến mô hình.
+    \item \textbf{Kiểm tra sanity với support set dựa trên tính không đồng nhất của tác vụ (HetroM):} kiểm tra độ nhạy của saliency map trước các biến động của tập hỗ trợ (\textit{support set}) — nhãn nhiễu, ảnh khó (mờ), và mẫu ngoài phân phối (OOD) — nhằm phản ánh tính chất không đồng nhất giữa các tác vụ vốn là đặc trưng của HetroM.
+\end{itemize}
+
+Tất cả các thực nghiệm được thực hiện trên tập kiểm tra (\textit{test set}) với mô hình đã huấn luyện, sử dụng số bước thích nghi $T = T_{test}$.
+
+\section{Đánh giá độ tin cậy hai chiều (Bi-directional Faithfulness – biADT)}
+
+\subsection{Mục tiêu}
+Mục tiêu của thực nghiệm này là kiểm chứng tính faithfulness của saliency map: liệu các vùng ảnh được gán độ quan trọng dương và độ quan trọng âm có thực sự phản ánh đúng vai trò của chúng đối với quá trình thích nghi (\textit{inner-loop adaptation}) của mô hình hay không.
+
+\subsection{Phương pháp}
+Với mỗi tác vụ, quy trình đánh giá bao gồm:
+\begin{enumerate}
+    \item \textbf{Phân hạng theo siêu điểm ảnh:} Ảnh hỗ trợ được phân đoạn bằng SLIC. Các siêu điểm ảnh được xếp hạng theo ba chế độ:
+    \begin{itemize}
+        \item \textit{pos}: Loại bỏ dần vùng có độ nổi bật dương cao nhất.
+        \item \textit{neg}: Loại bỏ dần vùng có độ nổi bật âm thấp nhất.
+        \item \textit{random}: Loại bỏ ngẫu nhiên (baseline).
+    \end{itemize}
+    \item \textbf{Xóa dần thông tin ảnh:} Thay thế vùng ảnh bằng ảnh nền đã làm mờ Gaussian.
+    \item \textbf{Đo độ lợi thích nghi:} Tính diện tích dưới đường cong (AUC) cho từng chế độ: $AUC_{pos}, AUC_{neg}, AUC_{random}$.
+    \item \textbf{Tính chỉ số:}
+    \begin{itemize}
+        \item $PDA = AUC_{random} - AUC_{pos}$
+        \item $NDA = AUC_{neg} - AUC_{random}$
+        \item $Combined = PDA + NDA$
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Kết quả}
+\begin{table}[h]
+\centering
+\caption{Kết quả đánh giá độ tin cậy hai chiều (biADT)}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Chỉ số} & \textbf{Giá trị trung bình} \\ \hline
+PDA (Positive Deletion Advantage) & 0.1861 \\ \hline
+NDA (Negative Deletion Advantage) & 0.2892 \\ \hline
+\textbf{Combined (PDA + NDA)} & \textbf{0.4752} \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhận xét}
+Kết quả cho thấy cả PDA và NDA đều dương, khẳng định saliency map có ý nghĩa nhân quả thực sự. NDA lớn hơn PDA cho thấy mô hình rất nhạy trong việc xác định các vùng "gây nhiễu" (\textit{distractor}).
+
+\section{Kiểm tra sanity bằng ngẫu nhiên hóa tham số mô hình}
+
+\subsection{Phương pháp}
+Các tham số của mạng được khởi tạo lại ngẫu nhiên theo từng lớp (cascading) từ lớp cuối về lớp đầu. Saliency map mới được so sánh với saliency map gốc bằng hệ số tương quan Pearson và Spearman.
+
+\subsection{Kết quả}
+\begin{table}[h]
+\centering
+\caption{Kết quả kiểm tra sanity theo ngẫu nhiên hóa tham số}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Thứ tự} & \textbf{Lớp bị phá hủy} & \textbf{Pearson} & \textbf{Spearman} \\ \hline
+0 & Lớp cuối (gần đầu ra) & 0.0871 & 0.0846 \\ \hline
+1-7 & Các lớp trung gian & $\approx 0$ & $\approx 0$ \\ \hline
+8 & Lớp đầu (gần đầu vào) & -0.0050 & -0.0064 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhận xét}
+Hệ số tương quan xấp xỉ 0 cho thấy saliency map phụ thuộc mạnh mẽ vào các tham số đã học của toàn bộ mạng, vượt qua phép kiểm tra sanity kinh điển.
+
+\section{Kiểm tra sanity với support set dựa trên tính không đồng nhất của tác vụ}
+
+\subsection{Kịch bản thực nghiệm}
+\begin{itemize}
+    \item \textbf{Noisy check:} Hoán vị nhãn (flip ratio = 0.8).
+    \item \textbf{Hard check:} Làm mờ ảnh bằng bộ lọc Gaussian ($\sigma = 3.0$).
+    \item \textbf{OOD check:} Trộn 2 lớp từ tác vụ khác vào support set.
+\end{itemize}
+
+\subsection{Kết quả}
+\begin{table}[h]
+\centering
+\caption{Kết quả kiểm tra sanity với support set nhiễu loạn}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Kịch bản} & \textbf{Pearson} & \textbf{Spearman} \\ \hline
+Noisy & 0.2578 & 0.2499 \\ \hline
+Hard & 0.2664 & 0.2576 \\ \hline
+OOD & 0.3398 & 0.3305 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Nhận xét}
+Saliency map có sự thay đổi hợp lý trước các biến động của dữ liệu, không bị "trơ" nhưng vẫn giữ được tính cấu trúc không gian nhất định.
+
+\section{Tổng kết}
+Các thực nghiệm khẳng định phương pháp giải thích đề xuất vừa đảm bảo tính tin cậy nhân quả (faithfulness), vừa đạt chuẩn về tính đúng đắn (sanity) và phản ánh tốt đặc trưng không đồng nhất của dữ liệu trong HetroM.
 %\section{Trích dẫn tài liệu}
 
 %Dùng lệnh $\textbackslash cite$ để trích dẫn một hoặc nhiều tài liệu tham khảo.
