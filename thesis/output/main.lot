@@ -2,3 +2,11 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Siêu tham số huấn luyện \acrshort {maml} trên backbone Conv4 (theo cấu hình chuẩn của Finn và cộng sự\nobreakspace {}\blx@tocontentsinit {0}\cite {finn2017model})}}{46}{table.4.1}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Kết quả \acrshort {biadt}: $\mathrm {ABC}_\downarrow $ và $\mathrm {ABC}_\uparrow $ trên bộ dữ liệu \emph {TieredImagenet}}}{48}{table.4.2}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Hệ số tương quan giữa $\Phi _{\text {FAMA}}$ gốc và $\Phi _{\text {FAMA}}^{(\ell )}$ theo mức độ phá hủy các tầng của $\theta _0^b$ và $\theta _0^h$}}{49}{table.4.3}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces Hệ số tương quan giữa $\Phi _{\text {FAMA}}$ gốc và $\Phi _{\text {FAMA}}^{(\ell )}$ theo mức độ phá hủy các tầng của $\theta _0^b$ và $\theta _0^h$ trong giả định $\Delta M := \Delta M'$}}{50}{table.4.4}%
+\contentsline {table}{\numberline {4.5}{\ignorespaces Hệ số tương quan Spearman và Pearson (Mean $\pm $ MoE) dưới các kịch bản can thiệp tập hỗ trợ}}{51}{table.4.5}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }

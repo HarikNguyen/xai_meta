@@ -14,35 +14,53 @@
 \newlabel{eq:loss}{{3.2}{28}{Định nghĩa}{equation.3.2.2}{}}
 \newlabel{eq:adaptation_gain}{{3.3}{28}{Định nghĩa}{equation.3.2.3}{}}
 \newlabel{eq:decomposition}{{3.4}{29}{Định nghĩa}{equation.3.2.4}{}}
-\newlabel{asm:fast_adaptation}{{1}{29}{Chế độ thích ứng nhanh}{assumption.1}{}}
+\newlabel{asm:fast_adaptation}{{1}{29}{Cơ chế thích ứng nhanh}{assumption.1}{}}
 \newlabel{prop:decomposition}{{1}{29}{Tính chủ đạo của đóng góp backbone}{proposition.1}{}}
-\newlabel{eq:leading_order}{{3.5}{29}{Tính chủ đạo của đóng góp backbone}{equation.3.2.5}{}}
+\newlabel{eq:leading_order}{{3.5}{30}{Tính chủ đạo của đóng góp backbone}{equation.3.2.5}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3.3}Phương pháp \acrfull {fama}}{30}{section.3.3}\protected@file@percent }
 \newlabel{sec:fama}{{3.3}{30}{Phương pháp \acrfull {fama}}{section.3.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.1}Ý tưởng cốt lõi}{30}{subsection.3.3.1}\protected@file@percent }
-\newlabel{subsec:fama_idea}{{3.3.1}{30}{Ý tưởng cốt lõi}{subsection.3.3.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.2}Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}{31}{subsection.3.3.2}\protected@file@percent }
-\newlabel{subsec:fama_adjoint}{{3.3.2}{31}{Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}{subsection.3.3.2}{}}
-\newlabel{eq:adjoint_def}{{3.3.2}{31}{Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}{subsection.3.3.2}{}}
-\newlabel{eq:adjoint_base}{{3.3.2}{31}{Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}{subsection.3.3.2}{}}
-\newlabel{eq:adjoint_recursion}{{3.3.2}{31}{Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}{subsection.3.3.2}{}}
-\newlabel{eq:hvp_trick}{{3.3.2}{32}{Trạng thái đối ngẫu và đệ quy ngược qua quỹ đạo}{subsection.3.3.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.3}Từ đạo hàm theo $S_i$ sang bản đồ phân bổ trên $F$}{32}{subsection.3.3.3}\protected@file@percent }
-\newlabel{subsec:fama_feature}{{3.3.3}{32}{Từ đạo hàm theo $S_i$ sang bản đồ phân bổ trên $F$}{subsection.3.3.3}{}}
-\newlabel{eq:total_derivative_sum}{{3.3.3}{32}{Từ đạo hàm theo $S_i$ sang bản đồ phân bổ trên $F$}{subsection.3.3.3}{}}
-\newlabel{eq:dm_ds_final}{{3.3.3}{33}{Từ đạo hàm theo $S_i$ sang bản đồ phân bổ trên $F$}{subsection.3.3.3}{}}
-\newlabel{eq:gk_def}{{3.3.3}{33}{Từ đạo hàm theo $S_i$ sang bản đồ phân bổ trên $F$}{subsection.3.3.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.4}Định nghĩa chính thức FAMA}{34}{subsection.3.3.4}\protected@file@percent }
-\newlabel{subsec:fama_def}{{3.3.4}{34}{Định nghĩa chính thức FAMA}{subsection.3.3.4}{}}
-\newlabel{eq:channel_weight}{{3.3.4}{34}{Định nghĩa chính thức FAMA}{subsection.3.3.4}{}}
-\newlabel{eq:fama_final}{{3.3.4}{34}{Định nghĩa chính thức FAMA}{subsection.3.3.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.5}Thuật toán và độ phức tạp}{35}{subsection.3.3.5}\protected@file@percent }
-\newlabel{subsec:fama_algo}{{3.3.5}{35}{Thuật toán và độ phức tạp}{subsection.3.3.5}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3.4}Cơ sở đánh giá}{35}{section.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.1}Ý tưởng tổng quan}{30}{subsection.3.3.1}\protected@file@percent }
+\newlabel{subsec:fama_overview}{{3.3.1}{30}{Ý tưởng tổng quan}{subsection.3.3.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.1}{\ignorespaces Pipeline tổng quan của \acrshort {fama}. Hai quỹ đạo (thích ứng toàn phần và can thiệp đóng băng) được sinh song song từ $S_i$; một lượt lan truyền ngược liên hợp duy nhất tính chuỗi $\{\lambda _t\}$ cho mỗi quỹ đạo; tại mỗi bước $t$, tín hiệu $\lambda _t$ được chiếu cục bộ lên bản đồ đặc trưng $A_{t-1}$; các bản đồ cục bộ được tích lũy theo $t$ rồi lấy hiệu giữa hai nhánh để ra bản đồ quy kết cuối cùng.}}{32}{figure.3.1}\protected@file@percent }
+\newlabel{fig:fama_pipeline}{{3.1}{32}{Pipeline tổng quan của \acrshort {fama}. Hai quỹ đạo (thích ứng toàn phần và can thiệp đóng băng) được sinh song song từ $S_i$; một lượt lan truyền ngược liên hợp duy nhất tính chuỗi $\{\lambda _t\}$ cho mỗi quỹ đạo; tại mỗi bước $t$, tín hiệu $\lambda _t$ được chiếu cục bộ lên bản đồ đặc trưng $A_{t-1}$; các bản đồ cục bộ được tích lũy theo $t$ rồi lấy hiệu giữa hai nhánh để ra bản đồ quy kết cuối cùng}{figure.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.2}Khai triển đạo hàm qua quỹ đạo}{32}{subsection.3.3.2}\protected@file@percent }
+\newlabel{subsec:derivative_expansion}{{3.3.2}{32}{Khai triển đạo hàm qua quỹ đạo}{subsection.3.3.2}{}}
+\newlabel{eq:step_jacobian}{{3.6}{32}{Khai triển đạo hàm qua quỹ đạo}{equation.3.3.6}{}}
+\newlabel{eq:jacobian_product}{{3.7}{33}{Khai triển đạo hàm qua quỹ đạo}{equation.3.3.7}{}}
+\newlabel{eq:trajectory_expansion}{{3.8}{33}{Khai triển đạo hàm qua quỹ đạo}{equation.3.3.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.3}Phương pháp liên hợp}{33}{subsection.3.3.3}\protected@file@percent }
+\newlabel{subsec:adjoint}{{3.3.3}{33}{Phương pháp liên hợp}{subsection.3.3.3}{}}
+\newlabel{eq:pontryagin_continuous_component}{{3.9}{34}{Phương pháp liên hợp}{equation.3.3.9}{}}
+\newlabel{eq:pontryagin_continuous}{{3.10}{34}{Phương pháp liên hợp}{equation.3.3.10}{}}
+\newlabel{eq:adjoint_init}{{3.11}{34}{Phương pháp liên hợp}{equation.3.3.11}{}}
+\newlabel{eq:adjoint_recursion}{{3.12}{34}{Phương pháp liên hợp}{equation.3.3.12}{}}
+\newlabel{prop:adjoint_equivalence}{{2}{34}{Tính tương đương của phép liên hợp}{proposition.2}{}}
+\newlabel{asm:adjoint_stability}{{2}{35}{Tính trơn và ổn định của phép liên hợp}{assumption.2}{}}
+\newlabel{eq:hvp_trick}{{3.13}{35}{Phương pháp liên hợp}{equation.3.3.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.4}Đại lượng quy kết}{36}{subsection.3.3.4}\protected@file@percent }
+\newlabel{subsec:attribution_target}{{3.3.4}{36}{Đại lượng quy kết}{subsection.3.3.4}{}}
+\newlabel{eq:local_factorization}{{3.14}{36}{Đại lượng quy kết}{equation.3.3.14}{}}
+\newlabel{eq:local_attr}{{3.15}{36}{Đại lượng quy kết}{equation.3.3.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.5}Phép chiếu về không gian đầu vào và bản đồ quy kết}{37}{subsection.3.3.5}\protected@file@percent }
+\newlabel{subsec:projection}{{3.3.5}{37}{Phép chiếu về không gian đầu vào và bản đồ quy kết}{subsection.3.3.5}{}}
+\newlabel{eq:gap}{{3.16}{37}{Phép chiếu về không gian đầu vào và bản đồ quy kết}{equation.3.3.16}{}}
+\newlabel{eq:cam_combine}{{3.17}{37}{Phép chiếu về không gian đầu vào và bản đồ quy kết}{equation.3.3.17}{}}
+\newlabel{eq:cam_upsample}{{3.18}{37}{Phép chiếu về không gian đầu vào và bản đồ quy kết}{equation.3.3.18}{}}
+\newlabel{eq:branch_saliency}{{3.19}{37}{Phép chiếu về không gian đầu vào và bản đồ quy kết}{equation.3.3.19}{}}
+\newlabel{eq:fama_final_map}{{3.20}{38}{Phép chiếu về không gian đầu vào và bản đồ quy kết}{equation.3.3.20}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.4}Cơ sở đánh giá}{38}{section.3.4}\protected@file@percent }
+\newlabel{sec:metrics}{{3.4}{38}{Cơ sở đánh giá}{section.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.1}Bài kiểm chứng dựa trên xóa và đo hai chiều (\acrfull {biadt})}{39}{subsection.3.4.1}\protected@file@percent }
+\newlabel{subsec:biadt}{{3.4.1}{39}{Bài kiểm chứng dựa trên xóa và đo hai chiều (\acrfull {biadt})}{subsection.3.4.1}{}}
+\newlabel{eq:abc_metric}{{3.21}{41}{Bài kiểm chứng dựa trên xóa và đo hai chiều (\acrfull {biadt})}{equation.3.4.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.2}Bài kiểm chứng độ tỉnh táo thông qua việc phá hủy tri thức tiên nghiệm $\theta _0$}{41}{subsection.3.4.2}\protected@file@percent }
+\newlabel{subsec:sanity_theta0}{{3.4.2}{41}{Bài kiểm chứng độ tỉnh táo thông qua việc phá hủy tri thức tiên nghiệm $\theta _0$}{subsection.3.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.3}Bài kiểm chứng độ tỉnh táo thông qua việc can thiệp vào tập hỗ trợ $S_i$}{42}{subsection.3.4.3}\protected@file@percent }
+\newlabel{subsec:sanity_support}{{3.4.3}{42}{Bài kiểm chứng độ tỉnh táo thông qua việc can thiệp vào tập hỗ trợ $S_i$}{subsection.3.4.3}{}}
 \@setckpt{Chapter3/chapter3}{
-\setcounter{page}{36}
-\setcounter{equation}{5}
-\setcounter{enumi}{0}
+\setcounter{page}{45}
+\setcounter{equation}{21}
+\setcounter{enumi}{3}
 \setcounter{enumii}{0}
 \setcounter{enumiii}{0}
 \setcounter{enumiv}{0}
@@ -51,11 +69,11 @@
 \setcounter{part}{0}
 \setcounter{chapter}{3}
 \setcounter{section}{4}
-\setcounter{subsection}{0}
+\setcounter{subsection}{3}
 \setcounter{subsubsection}{0}
 \setcounter{paragraph}{0}
 \setcounter{subparagraph}{0}
-\setcounter{figure}{0}
+\setcounter{figure}{1}
 \setcounter{table}{0}
 \setcounter{tabx@nest}{0}
 \setcounter{listtotal}{0}
@@ -66,7 +84,7 @@
 \setcounter{citetotal}{0}
 \setcounter{multicitecount}{0}
 \setcounter{multicitetotal}{0}
-\setcounter{instcount}{69}
+\setcounter{instcount}{78}
 \setcounter{maxnames}{3}
 \setcounter{minnames}{3}
 \setcounter{maxitems}{3}
@@ -172,16 +190,16 @@
 \setcounter{bbx:relatedcount}{0}
 \setcounter{bbx:relatedtotal}{0}
 \setcounter{cbx@tempcnta}{0}
-\setcounter{cbx@tempcntb}{15}
+\setcounter{cbx@tempcntb}{34}
 \setcounter{cbx@tempcntc}{0}
 \setcounter{cbx@tempcntd}{-1}
 \setcounter{section@level}{0}
-\setcounter{Item}{0}
+\setcounter{Item}{3}
 \setcounter{Hfootnote}{0}
-\setcounter{bookmark@seq@number}{34}
+\setcounter{bookmark@seq@number}{37}
+\setcounter{float@type}{16}
 \setcounter{lstnumber}{1}
 \setcounter{parentequation}{0}
-\setcounter{float@type}{16}
 \setcounter{algorithm}{0}
 \setcounter{ALG@line}{0}
 \setcounter{ALG@rem}{0}
@@ -190,8 +208,8 @@
 \setcounter{ALG@blocknr}{10}
 \setcounter{ALG@storecount}{0}
 \setcounter{ALG@tmpcounter}{0}
-\setcounter{assumption}{1}
-\setcounter{proposition}{1}
+\setcounter{assumption}{2}
+\setcounter{proposition}{2}
 \setcounter{theorem}{0}
 \setcounter{lemma}{0}
 \setcounter{definition}{0}

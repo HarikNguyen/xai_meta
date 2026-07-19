@@ -1,218 +1,213 @@
 \chapter{Kết quả thực nghiệm}
 \label{Chapter4}
 
-Chương này trình bày các thực nghiệm được thực hiện nhằm đánh giá độ tin cậy (\textit{faithfulness}) và tính đúng đắn (\textit{sanity}) của bản đồ độ nổi bật (\textit{saliency map}) sinh ra bởi mô hình giải thích (\textit{explainer}) trong bối cảnh meta-learning. Ba nhóm thực nghiệm được tiến hành, tương ứng với ba mục tiêu đánh giá khác nhau:
+Chương này trình bày các thực nghiệm nhằm kiểm định phương pháp giải thích thông qua độ lợi thích ứng $\Delta M$ và \acrshort{fama} đã được giới thiệu ở Chương~\ref{Chapter3}. Đồng thời, toàn bộ thực nghiệm đều được tiến hành trên thuật toán \acrshort{maml} với kiến trúc backbone Conv4, một kiến trúc tích chập có độ sâu nông và nhẹ, cũng là tiêu chuẩn thực nghiệm trong các nghiên cứu về các phương pháp dựa trên \acrshort{maml} nói riêng và few-shot learning nói chung. Do đó, để bảo đảm kết quả kiểm định không bị nhiễu bởi các kiến trúc khác nhau và bảo đảm mang tính khách quan, các tham số/siêu tham số trong thực nghiệm này đều có chung cấu hình với các siêu tham số huấn luyện mà Finn và cộng sự~\cite{finn2017model} đã thiết lập.
 
-\begin{itemize}
-    \item \textbf{Đánh giá độ tin cậy hai chiều (Bi-directional Faithfulness – biADT):} kiểm tra xem vùng ảnh mà saliency map cho là quan trọng có thực sự ảnh hưởng đến khả năng thích nghi (\textit{adaptation}) của mô hình hay không.
-    \item \textbf{Kiểm tra sanity bằng ngẫu nhiên hóa tham số mô hình (Model Parameter Randomization):} kiểm tra xem saliency map có thực sự phụ thuộc vào tham số đã học của mạng hay không, tránh trường hợp giải thích chỉ là một bộ dò biên (\textit{edge detector}) không liên quan đến mô hình.
-    \item \textbf{Kiểm tra sanity với support set dựa trên tính không đồng nhất của tác vụ (HetroM):} kiểm tra độ nhạy của saliency map trước các biến động của tập hỗ trợ (\textit{support set}) — nhãn nhiễu, ảnh khó (mờ), và mẫu ngoài phân phối (OOD) — nhằm phản ánh tính chất không đồng nhất giữa các tác vụ vốn là đặc trưng của HetroM.
-\end{itemize}
+\section{Thiết lập thực nghiệm}
+\label{sec:exp_setup}
 
-Tất cả các thực nghiệm được thực hiện trên tập kiểm tra (\textit{test set}) với mô hình đã huấn luyện, sử dụng số bước thích nghi $T = T_{test}$.
+Theo như thiết lập của \acrshort{maml}~\cite{finn2017model}, chúng tôi huấn luyện mô hình với backbone Conv4, kiến trúc mạng gồm 4 khối tích chập giống hệt nhau, mỗi khối gồm một lớp tích chập $3\times3$, chuẩn hóa theo lô (batch normalization), hàm kích hoạt ReLU, và một lớp gộp cực đại (max-pooling) $2\times2$ theo đúng cấu hình đã được đề xuất trong công trình gốc của Finn và cộng sự. Bảng~\ref{tab:hyperparams} liệt kê các siêu tham số huấn luyện được sử dụng.
 
-\section{Đánh giá độ tin cậy hai chiều (Bi-directional Faithfulness – biADT)}
-
-\subsection{Mục tiêu}
-Mục tiêu của thực nghiệm này là kiểm chứng tính faithfulness của saliency map: liệu các vùng ảnh được gán độ quan trọng dương và độ quan trọng âm có thực sự phản ánh đúng vai trò của chúng đối với quá trình thích nghi (\textit{inner-loop adaptation}) của mô hình hay không.
-
-\subsection{Phương pháp}
-Với mỗi tác vụ, quy trình đánh giá bao gồm:
-\begin{enumerate}
-    \item \textbf{Phân hạng theo siêu điểm ảnh:} Ảnh hỗ trợ được phân đoạn bằng SLIC. Các siêu điểm ảnh được xếp hạng theo ba chế độ:
-    \begin{itemize}
-        \item \textit{pos}: Loại bỏ dần vùng có độ nổi bật dương cao nhất.
-        \item \textit{neg}: Loại bỏ dần vùng có độ nổi bật âm thấp nhất.
-        \item \textit{random}: Loại bỏ ngẫu nhiên (baseline).
-    \end{itemize}
-    \item \textbf{Xóa dần thông tin ảnh:} Thay thế vùng ảnh bằng ảnh nền đã làm mờ Gaussian.
-    \item \textbf{Đo độ lợi thích nghi:} Tính diện tích dưới đường cong (AUC) cho từng chế độ: $AUC_{pos}, AUC_{neg}, AUC_{random}$.
-    \item \textbf{Tính chỉ số:}
-    \begin{itemize}
-        \item $PDA = AUC_{random} - AUC_{pos}$
-        \item $NDA = AUC_{neg} - AUC_{random}$
-        \item $Combined = PDA + NDA$
-    \end{itemize}
-\end{enumerate}
-
-\subsection{Kết quả}
 \begin{table}[h]
 \centering
-\caption{Kết quả đánh giá độ tin cậy hai chiều (biADT)}
-\begin{tabular}{|l|c|}
+\caption{Siêu tham số huấn luyện \acrshort{maml} trên backbone Conv4 (theo cấu hình chuẩn của Finn và cộng sự~\cite{finn2017model})}
+\label{tab:hyperparams}
+\begin{tabularx}{\textwidth}{|l|Y|}
 \hline
-\textbf{Chỉ số} & \textbf{Giá trị trung bình} \\ \hline
-PDA (Positive Deletion Advantage) & 0.1861 \\ \hline
-NDA (Negative Deletion Advantage) & 0.2892 \\ \hline
-\textbf{Combined (PDA + NDA)} & \textbf{0.4752} \\ \hline
+\textbf{Siêu tham số} & \textbf{Giá trị} \\ \hline
+Kiến trúc backbone & Conv4 (4 khối: conv $3{\times}3$ + BN + ReLU + maxpool $2{\times}2$) \\ \hline
+Tốc độ học vòng trong $\alpha$ & 0.01 \\ \hline
+Tốc độ học vòng ngoài $\beta$ (Adam) & 0.001 \\ \hline
+Số bước thích ứng huấn luyện $T_{\text{train}}$ & 5 \\ \hline
+Số bước thích ứng kiểm tra $T_{\text{test}}$ & 10 \\ \hline
+Kích thước meta-batch & 4 \\ \hline
+Số vòng lặp meta-training & 60.000 \\ \hline
+Cấu hình $N$-way $K$-shot & 5-way 1-shot \\ \hline
+\end{tabularx}
+\end{table}
+
+Toàn bộ thực nghiệm đánh giá ở chương này được thực hiện trên tập kiểm tra (test set) với mô hình \acrshort{maml} đã huấn luyện hội tụ, sử dụng số bước thích ứng $T = T_{\text{test}}$ tại thời điểm meta-testing. Ba bài kiểm chứng định lượng — \acrshort{biadt}, kiểm tra tỉnh táo theo $\theta_0$, và kiểm tra tỉnh táo theo $S_i$ — được thực hiện đúng theo giao thức đã trình bày lần lượt tại các Mục~\ref{subsec:biadt}, \ref{subsec:sanity_theta0}, và \ref{subsec:sanity_support}.
+
+\section{Các tập dữ liệu}
+\label{sec:datasets}
+
+Để kiểm định tính tổng quát của \acrshort{fama} trên nhiều mức độ khó và đặc điểm phân phối tác vụ khác nhau, chúng tôi thực nghiệm trên ba bộ dữ liệu chuẩn của lĩnh vực few-shot learning: miniImageNet, tieredImageNet, và CUB-200-2011.
+
+\textbf{miniImageNet}~\cite{ravi2017optimization} là bộ dữ liệu phổ biến nhất trong các nghiên cứu few-shot learning nhờ kích thước vừa phải và độ khó trung bình, phù hợp làm bộ đối chứng chuẩn. Bộ dữ liệu gồm 100 lớp lấy từ tập dữ liệu lớn ImageNet, với mỗi lớp 600 ảnh có kích thước $84\times84$, được chia theo tỉ lệ chuẩn 64/16/20 lớp cho train/val/test.
+
+\textbf{tieredImageNet}~\cite{ren2018meta} là phiên bản mở rộng quy mô lớn hơn của miniImageNet, gồm 608 lớp được nhóm theo 34 danh mục cấp cao (super-category) trong hệ thống phân cấp WordNet. Việc chia train/val/test được thực hiện ở \emph{cấp danh mục} (20/6/8 danh mục, tương ứng khoảng 351/97/160 lớp) thay vì ở cấp lớp, nhằm đảm bảo các lớp tại tập test có khoảng cách ngữ nghĩa xa hơn với tập train. Qua đó kiểm tra khả năng tổng quát hoá nghiêm ngặt hơn so với miniImageNet, đồng thời tạo bối cảnh phù hợp để quan sát chuyển giao tiêu cực do dịch chuyển ngữ nghĩa giữa các tác vụ.
+
+\textbf{CUB-200-2011}~\cite{welinder2010caltech} là bộ dữ liệu phân loại chim ở mức độ tinh (fine-grained), gồm 200 loài với tổng cộng khoảng 11.788 ảnh (trung bình xấp xỉ 60 ảnh/lớp), thường được chia theo tỉ lệ 100/50/50 lớp cho train/val/test trong các nghiên cứu few-shot. Vì ranh giới giữa các lớp chỉ khác biệt ở những chi tiết cục bộ tinh vi (hình dạng mỏ, màu lông, hoa văn cánh...), CUB-200-2011 được xem là bộ dữ liệu \emph{khó} nhất trong ba bộ, một phép thử quan trọng cho giả thuyết rằng tác vụ càng khó thì nguy cơ chuyển giao tiêu cực càng cao (tương ứng phép can thiệp "tăng độ khó tác vụ" ở Mục~\ref{subsec:sanity_support}).
+
+\section{Cách thức thực nghiệm}
+\label{sec:protocol}
+
+\subsection{Đánh giá định lượng}
+\label{subsec:quant_protocol}
+
+Phần đánh giá định lượng tuân theo đúng ba bài kiểm chứng đã nêu ra ở Mục~\ref{sec:metrics}: (i) \acrshort{biadt} đo diện tích lệch $\mathrm{ABC}_\downarrow$ ($\mathrm{PDA}$ - Positive Distance from Average), $\mathrm{ABC}_\uparrow$ ($\mathrm{NDA}$ - Negative Distance from Average) giữa đường xóa-và-đo có định hướng và đường xóa-và-đo ngẫu nhiên (Phương trình~\eqref{eq:abc_metric}); (ii) kiểm tra tỉnh táo theo $\theta_-1$ đo hệ số tương quan giữa $\Phi_{\text{FAMA}}$ gốc và $\Phi_{\text{FAMA}}^{(\ell)}$ khi phá hủy backbone theo tầng; (iii) kiểm tra tỉnh táo theo $S_i$ đo hệ số tương quan giữa $\Phi_{\text{FAMA}}$ gốc và $\Phi_{\text{FAMA}}'$ dưới ba kịch bản can thiệp tập hỗ trợ. Cả ba bài kiểm chứng đều được lặp lại trên nhiều tác vụ lấy mẫu ngẫu nhiên tại thời điểm meta-testing trên từng bộ dữ liệu, kết quả báo cáo dưới dạng trung bình $\pm$ độ lệch chuẩn.
+
+Để tiến hành quy trình thực nghiệm một cách toàn diện, chúng tôi thực hiện việc đánh giá định lượng trên bộ dữ liệu \emph{TieredImagenet} cho cả ba bài kiểm chứng. Riêng bộ dữ liệu \emph{CUB-201-2011} sẽ được dùng để khai thác độc lập nhằm tạo ra các tác vụ lai nằm ngoài phân phối (OOD - Out-of-Distribution) phục vụ cho kịch bản can thiệp thứ ba của bài kiểm chứng (iii), qua đó đánh giá khả năng duy trì tính trung thực của phương pháp diễn giải khi đối mặt với sự dịch chuyển miền dữ liệu có cấu trúc ngữ nghĩa hoàn toàn khác biệt.
+
+\subsection{Đánh giá định tính}
+\label{subsec:qual_protocol}
+
+Bên cạnh các chỉ số định lượng, chúng tôi khai thác hai tình huống kiểm thử với ba nguồn dữ liệu đã thu thập trên 600 tác vụ lấy mẫu (trên mỗi bộ dữ liệu) là \emph{miniImagenet} $\to$ \emph{CUB-200-2011} (mini2cub) và \emph{tieredImagenet} $\to$ \emph{CUB-200-2011} (tiered2cub) nhằm đưa ra cái nhìn cơ sở quan về những gì mà phương pháp diễn giải thể hiện.  
+
+\section{Kết quả định lượng}
+\label{sec:quant_results}
+
+\subsection{Kết quả \acrshort{biadt}}
+\label{subsec:biadt_results}
+
+\begin{table}[H]
+\centering
+\caption{Kết quả \acrshort{biadt}: $\mathrm{ABC}_\downarrow$ và $\mathrm{ABC}_\uparrow$ trên bộ dữ liệu \emph{TieredImagenet}}
+\label{tab:biadt_results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Bộ dữ liệu} & $\mathrm{ABC}_\downarrow$ (mean $\pm$ std) & $p$-value & $\mathrm{ABC}_\uparrow$ (mean $\pm$ std) & $p$-value \\ \hline
+tieredImageNet & \texttt{0.1861 $\pm$ 0.109} & \texttt{$1.99\times10^{-4}$ (< 0.001)} & \texttt{0.289 $\pm$ 0.122} & \texttt{$7.01\time 10^{-7}$ (< 0.001)} \\ \hline
+\end{tabular}%
+}
+\end{table}
+
+\textbf{Nhận xét.} Kết quả trên tieredImageNet cho thấy cả hai chỉ số $\mathrm{ABC}_\downarrow$ và $\mathrm{ABC}_\uparrow$ đều dương và đạt ý nghĩa thống kê rõ rệt ($p<0.001$ ở cả hai chiều), chứng thực việc xóa các vùng ảnh theo thứ tự do $\Phi_{\text{FAMA}}$ chỉ định dù theo chiều dương hay âm đều làm $\Delta M$ dịch chuyển nhanh hơn đáng kể so với khi thực hiện xóa ngẫu nhiên. Với $\mathrm{ABC}_\uparrow$ ($0.289 \pm 0.122$) lớn hơn khá nhiều so với $\mathrm{ABC}_\downarrow$ ($0.186 \pm 0.109$), cho thấy tín hiệu định vị vùng gây \emph{chuyển giao tiêu cực} tách biệt rõ khỏi đường cơ sở ngẫu nhiên hơn so với tín hiệu định vị vùng chuyển giao tích cực. Mặt khác, mức sai số biên (margin of error - MoE) tương đối lớn quan sát được (nhất là với $\mathrm{ABC}_\downarrow$, xấp xỉ 59\% mean) có khả năng bắt nguồn từ đặc thù của backbone Conv4. Cụ thể, do chiều sâu kiến trúc hạn chế, nên các bản đồ đặc trưng sau cùng có độ phân giải không gian rất thô trước khi được nội suy song tuyến (Phương trình~\eqref{eq:cam_upsample}). Quá trình này vô tình làm mờ đi các ranh giới phân tách giữa các vùng ảnh, dẫn đến sự thiếu hụt độ sắc nét trong việc định vị không gian. Chính sự mờ nhòe này tạo ra sự dao động lớn trong các kết quả định lượng, song không làm mất đi tính đúng đắn tổng thể của giả thuyết về khả năng quy kết vùng của \acrshort{fama}.
+
+\subsection{Kết quả kiểm tra tỉnh táo theo tri thức tiên nghiệm $\theta_0$}
+\label{subsec:sanity_theta0_results}
+
+\begin{table}[H]
+\centering
+\caption{Hệ số tương quan giữa $\Phi_{\text{FAMA}}$ gốc và $\Phi_{\text{FAMA}}^{(\ell)}$ theo mức độ phá hủy các tầng của $\theta_0^b$ và $\theta_0^h$}
+\label{tab:sanity_theta0_results}
+\begin{tabular}{|l|l|c|c|}
+\hline
+\textbf{Khối bị phá} & \textbf{Lớp} & \textbf{Spearman} & \textbf{Pearson} \\ \hline
+- & linear & $0.085 \pm 0.016$ & $0.087 \pm 0.016$ \\ \hline
+\multirow{2}{*}{conv\_block 4} & bn4 & $-0.006 \pm 0.013$ & $-0.006 \pm 0.014$ \\ \cline{2-4} 
+ & conv4 & $-0.010 \pm 0.012$ & $-0.012 \pm 0.012$ \\ \hline
+\multirow{2}{*}{conv\_block 3} & bn3 & $-0.001 \pm 0.012$ & $-0.001 \pm 0.012$ \\ \cline{2-4} 
+ & conv3 & $-0.008 \pm 0.012$ & $-0.007 \pm 0.013$ \\ \hline
+\multirow{2}{*}{conv\_block 2} & bn2 & $0.000 \pm 0.012$ & $0.000 \pm 0.012$ \\ \cline{2-4} 
+ & conv2 & $-0.013 \pm 0.012$ & $-0.013 \pm 0.012$ \\ \hline
+\multirow{2}{*}{conv\_block 1} & bn1 & $-0.003 \pm 0.012$ & $-0.002 \pm 0.012$ \\ \cline{2-4} 
+ & conv1 & $-0.006 \pm 0.012$ & $-0.005 \pm 0.012$ \\ \hline
 \end{tabular}
 \end{table}
 
-\subsection{Nhận xét}
-Kết quả cho thấy cả PDA và NDA đều dương, khẳng định saliency map có ý nghĩa nhân quả thực sự. NDA lớn hơn PDA cho thấy mô hình rất nhạy trong việc xác định các vùng "gây nhiễu" (\textit{distractor}).
+\textbf{Nhận xét.} Kết quả thực nghiệm cho thấy, hệ số tương quan sụt giảm rất mạnh ngay từ mức phá hủy đầu tiên. Cụ thể, khi chỉ ngẫu nhiên hóa khối tích chập gần đầu ra nhất (conv\_block 4, $\ell=1$), mức tương quan đã giảm mạnh từ khoảng $0.085$--$0.087$ xuống gần như bằng 0 (từ $-0.010$ đến $-0.006$). Và nếu tiếp tục phá hủy các khối sâu hơn, tương quan chỉ dao động quanh mức nền $[-0.013, 0.000]$.
 
-\section{Kiểm tra sanity bằng ngẫu nhiên hóa tham số mô hình}
+Do đó, để xác định xem liệu hành vi này là một hạn chế của \acrshort{fama} hay là một đặc tính tất yếu của chính thiết kế, chúng tôi tiến hành đối chiếu với một đại lượng đối chứng $\Delta M' := \mathbb{E}_{Q_i}[\mathcal{L}(Q_i,\theta_0) - \mathcal{L}(Q_i,\phi_T)]$. Đồng nghĩa với việc so sánh trực tiếp trạng thái \emph{hoàn toàn chưa thích ứng} $\theta_0$ với trạng thái thích ứng đầy đủ $\phi_T$, thay cho định nghĩa gốc của \textbf{độ lợi thích nghi} được định nghĩa bởi phép toán~\eqref{eq:adaptation_gain}.
 
-\subsection{Phương pháp}
-Các tham số của mạng được khởi tạo lại ngẫu nhiên theo từng lớp (cascading) từ lớp cuối về lớp đầu. Saliency map mới được so sánh với saliency map gốc bằng hệ số tương quan Pearson và Spearman.
+Với kết quả ở bảng~\ref{tab:sanity_theta0_results_another} ta có thể thấy được qua các mức phá hủy $\ell=0,\dots,8$, hệ số tương quan dẫn xuất từ $\Delta M'$ suy giảm một cách \emph{mượt mà và đơn điệu}, hoàn toàn trái ngược với sự sụt gãy của $\Delta M$ gốc.
 
-\subsection{Kết quả}
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\caption{Kết quả kiểm tra sanity theo ngẫu nhiên hóa tham số}
-\begin{tabular}{|c|c|c|c|}
+\caption{Hệ số tương quan giữa $\Phi_{\text{FAMA}}$ gốc và $\Phi_{\text{FAMA}}^{(\ell)}$ theo mức độ phá hủy các tầng của $\theta_0^b$ và $\theta_0^h$ trong giả định $\Delta M := \Delta M'$}
+\label{tab:sanity_theta0_results_another}
+\begin{tabular}{|l|l|c|c|}
 \hline
-\textbf{Thứ tự} & \textbf{Lớp bị phá hủy} & \textbf{Pearson} & \textbf{Spearman} \\ \hline
-0 & Lớp cuối (gần đầu ra) & 0.0871 & 0.0846 \\ \hline
-1-7 & Các lớp trung gian & $\approx 0$ & $\approx 0$ \\ \hline
-8 & Lớp đầu (gần đầu vào) & -0.0050 & -0.0064 \\ \hline
+\textbf{Khối bị phá} & \textbf{Lớp} & \textbf{Spearman} & \textbf{Pearson} \\ \hline
+- & linear & $0.6502 \pm 0.013$ & $0.6331 \pm 0.0123$ \\ \hline
+\multirow{2}{*}{conv\_block 4} & bn4 & $0.2458 \pm 0.014$ & $0.2456 \pm 0.014$ \\ \cline{2-4} 
+ & conv4 & $0.1045 \pm 0.013$ & $0.1067 \pm 0.013$ \\ \hline
+\multirow{2}{*}{conv\_block 3} & bn3 & $0.0975 \pm 0.013$ & $0.0981 \pm 0.013$ \\ \cline{2-4} 
+ & conv3 & $0.0857 \pm 0.012$ & $0.0846 \pm 0.012$ \\ \hline
+\multirow{2}{*}{conv\_block 2} & bn2 & $0.0782 \pm 0.014$ & $0.0788 \pm 0.015$ \\ \cline{2-4} 
+ & conv2 & $0.0825 \pm 0.014$ & $0.0807 \pm 0.014$ \\ \hline
+\multirow{2}{*}{conv\_block 1} & bn1 & $0.0751 \pm 0.014$ & $0.074 \pm 0.014$ \\ \cline{2-4} 
+ & conv1 & $0.0761 \pm 0.014$ & $0.0748 \pm 0.013$ \\ \hline
 \end{tabular}
 \end{table}
 
-\subsection{Nhận xét}
-Hệ số tương quan xấp xỉ 0 cho thấy saliency map phụ thuộc mạnh mẽ vào các tham số đã học của toàn bộ mạng, vượt qua phép kiểm tra sanity kinh điển.
+Tuy nhiên, sự khác biệt này không phải là mâu thuẫn, mà đến từ việc hai đại lượng đo lường này phản ánh hai khía cạnh khác nhau của quá trình thích ứng nhanh. Với $\Delta M'$ đo lượng lợi ích của \emph{bất kỳ} sự thích ứng nào so với việc không làm gì cả. Và phần lớn giá trị này đến từ việc lớp phân loại (head) được hiệu chỉnh lại trên $S_i$, một đại lượng gần như luôn tồn tại và chỉ suy giảm từ từ theo mức phá hủy phần thân mạng, bởi lẽ ngay cả khi $\theta_0^b$ bị ngẫu nhiên hóa hoàn toàn, bản thân phép tích chập vẫn tạo ra các đặc trưng mang tính cấu trúc (bộ dò cạnh, kết cấu) mà phần đầu phân lớp tuyến tính vẫn có thể khai thác được để phân tách lớp ở một mức độ nhất định. Đây là hiện tượng vốn đã được ghi nhận trong các nghiên cứu về đặc trưng ngẫu nhiên/mạng chưa huấn luyện.
 
-\section{Kiểm tra sanity với support set dựa trên tính không đồng nhất của tác vụ}
+Ngược lại, $\Delta M$ theo định nghĩa gốc là một phép \emph{trừ} giữa hai nhánh cùng xuất phát từ cùng một $\theta_0^{b,(\ell)}$ (dù đã bị phá hủy hay không) và cùng cho phép phần đầu mạng thích ứng tự do nên phần "sàn" chung do các đặc trưng cấu trúc cấp thấp mang lại gần như bị triệt tiêu hoàn toàn qua phép trừ, chỉ giữ lại phần chênh lệch thực sự do \emph{phần thân mạng dịch chuyển thêm} so với $\theta_0^{b,(\ell)}$ dưới tác động của gradient trên $S_i$. Theo Mệnh đề~\ref{prop:decomposition}, $\Delta M \approx -C_b$ với $C_b$ phụ thuộc trực tiếp vào việc gradient có phản ánh đúng tri thức mà tác vụ đã học hay không. Do đó, khi khối gần đầu ra bị phá hủy, hướng gradient hữu ích đó gần như biến mất ngay lập tức chứ không suy giảm tuyến tính theo số khối bị phá, từ đó, giải thích trực tiếp cho bước sụt gần như tức thì quan sát được.
 
-\subsection{Kịch bản thực nghiệm}
-\begin{itemize}
-    \item \textbf{Noisy check:} Hoán vị nhãn (flip ratio = 0.8).
-    \item \textbf{Hard check:} Làm mờ ảnh bằng bộ lọc Gaussian ($\sigma = 3.0$).
-    \item \textbf{OOD check:} Trộn 2 lớp từ tác vụ khác vào support set.
-\end{itemize}
+Theo đúng nguyên tắc kiểm tra tính tỉnh táo (sanity check)~\cite{adebayo2018sanity}, một đường cong suy giảm \emph{từ từ} (như $\Delta M'$) thực chất là dấu hiệu \textbf{đáng lo ngại}, vì nó cho thấy bản đồ quy kết phần lớn được chi phối bởi cấu trúc kiến trúc hơn là tri thức đã học ở $\theta_0^b$. Do đó, việc $\Delta M$ và $\Phi_{\text{FAMA}}$ sụp đổ gần như ngay lập tức khi tri thức tiên nghiệm ở lớp gần đầu ra bị phá hủy chính là bằng chứng cho thấy thiết kế phép trừ hai nhánh của \acrshort{fama} đã cô lập thành công phần tín hiệu thực sự phụ thuộc vào $\theta_0^b$, loại bỏ được các nhiễu cấu trúc thuần túy. Nói cách khác, \acrshort{fama} không chỉ \textbf{vượt qua} phép kiểm chứng sự tỉnh táo mà còn thể hiện tính đúng đắng cao.
 
-\subsection{Kết quả}
-\begin{table}[h]
+Tuy nhiên, kết quả thực nghiệm cũng có thể cho thấy hạn chế ở việc thang đo $\ell=0,\dots,4$ của Conv4 quá thô (chỉ có 5 mức) để quan sát chi tiết cấu trúc suy giảm ngay tại vùng sụt giảm mạnh. Và việc sử dụng các kiến trúc sâu hơn (ví dụ ResNet-12) hoặc kỹ thuật nội suy trọng số liên tục trong tương lai sẽ giúp quan sát hành vi sụt giảm này với độ phân giải cao hơn.
+
+\subsection{Kết quả kiểm tra tỉnh táo theo can thiệp tập hỗ trợ $S_i$}
+\label{subsec:sanity_support_results}
+
+\begin{table}[H]
 \centering
-\caption{Kết quả kiểm tra sanity với support set nhiễu loạn}
+\caption{Hệ số tương quan Spearman và Pearson (Mean $\pm$ MoE) dưới các kịch bản can thiệp tập hỗ trợ}
+\label{tab:sanity_support_set}
 \begin{tabular}{|l|c|c|}
 \hline
-\textbf{Kịch bản} & \textbf{Pearson} & \textbf{Spearman} \\ \hline
-Noisy & 0.2578 & 0.2499 \\ \hline
-Hard & 0.2664 & 0.2576 \\ \hline
-OOD & 0.3398 & 0.3305 \\ \hline
+\textbf{Kịch bản can thiệp} & \textbf{Spearman} & \textbf{Pearson} \\ \hline
+(Trộn tác vụ) OOD task & $0.330 \pm 0.018$ & $0.340 \pm 0.018$ \\ \hline
+(Hoán vị lớp) Noisy task & $0.250 \pm 0.023$ & $0.258 \pm 0.024$ \\ \hline
+(Tăng độ khó tác vụ) Hard task & $0.258 \pm 0.016$ & $0.266 \pm 0.016$ \\ \hline
 \end{tabular}
 \end{table}
+% [GHI CHÚ]: nếu có sẵn, có thể bổ sung thêm một cột Delta M -> Delta M' (mean +- std) để đối chiếu trực tiếp
+% với giả thuyết "cả ba can thiệp đều đẩy Delta M về phía tiêu cực" đã nêu ở Mục~\ref{subsec:sanity_support}.
 
-\subsection{Nhận xét}
-Saliency map có sự thay đổi hợp lý trước các biến động của dữ liệu, không bị "trơ" nhưng vẫn giữ được tính cấu trúc không gian nhất định.
+\textbf{Nhận xét.} Kết quả cho thấy cả ba kịch bản can thiệp đều cho hệ số tương quan ở mức thấp--trung bình (Spearman và Pearson nằm trong khoảng $0.25$--$0.34$), thấp hơn đáng kể so với mức gần tuyệt đối mà một bản đồ "trơ" (không phụ thuộc nội dung $S_i$). Điều này nhất quán với việc kết luận ở Mục~\ref{subsec:sanity_theta0_results}, khi \acrshort{fama} có xu hướng loại bỏ tốt phần tín hiệu mang tính cấu trúc chung, và chỉ giữ lại phần thực sự phụ thuộc vào nội dung dẫn dắt quá trình thích ứng.
 
-\section{Tổng kết}
-Các thực nghiệm khẳng định phương pháp giải thích đề xuất vừa đảm bảo tính tin cậy nhân quả (faithfulness), vừa đạt chuẩn về tính đúng đắn (sanity) và phản ánh tốt đặc trưng không đồng nhất của dữ liệu trong HetroM.
-%\section{Trích dẫn tài liệu}
+Tuy nhiên, dù cả ba can thiệp đều hiệu quả, mức độ nhạy cảm của phương pháp lại đi ngược với trực giác ban đầu. Cụ thể, việc hoán vị nhãn (Noisy task, $0.250 \pm 0.023$) và tăng độ khó (Hard task, $0.258 \pm 0.016$) lại gây ra sự xáo trộn bản đồ mạnh nhất. Trong khi đó, kịch bản đưa dữ liệu hoàn toàn ngoài phân phối (OOD task), vốn được kỳ vọng là hành động phá hoại mạnh nhất, lại cho mức tương quan cao nhất ($0.330 \pm 0.018$).
 
-%Dùng lệnh $\textbackslash cite$ để trích dẫn một hoặc nhiều tài liệu tham khảo.
-%Tài liệu tham khảo có thể là trang web~\cite{Listings,HDLVThS}, bài báo khoa học~\cite{1994-Cavnar}, sách~\cite{1984-TeX-Knuth,2006-DDien,2006-NPTV}, bài tạp chí~\cite{1989-TED} hoặc các nguồn tham khảo khác. 
-%Lưu ý khi trích dẫn tài liệu tham khảo, cần viết câu sao cho bỏ phần trong cặp ngoặc vuông đi thì câu vẫn đầy đủ ý nghĩa.
-%Ví dụ, thay vì viết ``Nghiên cứu~\cite{1989-TED} chỉ ra rằng ... '' thì nên viết ``Nghiên cứu của Zhang~\cite{1989-TED} chỉ ra rằng ...''.
-%Một ví dụ khác, thay vì viết ``... như trong công trình nghiên cứu~\cite{1994-Cavnar}.'' thì nên viết ``... như trong công trình nghiên cứu của Cavnar và Trenkle~\cite{1994-Cavnar}.''
+Mà sự khác biệt này chính là bắt nguồn từ bản chất tác động của từng loại can thiệp. Khác với Mục~\ref{subsec:sanity_theta0_results}, ở đây trạng thái khởi tạo $\theta_0^b$ được giữ nguyên và thứ thay đổi chính là tín hiệu của quá trình cập nhật.
 
-%\section{Chèn mã nguồn}
+Với kịch bản Noisy và Hard, can thiệp đánh trực tiếp vào \emph{tín hiệu giám sát}. Việc tính toán gradient ở mọi bước $t$ đều dựa trên nhãn sai hoặc đặc trưng bị làm nhiễu, khiến quỹ đạo tối ưu của chuỗi $\{\lambda_t\}$ bị chệch hướng có hệ thống và liên tục. Ngược lại, kịch bản OOD chỉ thay đổi \emph{miền dữ liệu} (domain), nhưng cặp ảnh-nhãn vẫn nhất quán với nhau về mặt logic. Do đó, quá trình thích ứng cục bộ ở từng bước vẫn diễn ra "hợp lệ" về mặt toán học, khiến bản đồ không bị biến dạng quá nghiêm trọng. Đây là sự khác biệt về bản chất của phép can thiệp, chứ không phải đến từ lỗi thiết kế của phương pháp.
 
-%Để chèn mã nguồn, cần dùng package listings~\cite{Listings}:
+Ngoài ra, việc can thiệp OOD chưa tạo ra độ lệch đủ mạnh còn có thể xuất phát từ sự tương đồng về thống kê thị giác cấp thấp giữa hai bộ dữ liệu. Backbone Conv4 là một mạng nông, chủ yếu nhạy cảm với các đặc trưng cấu trúc cơ bản (bộ dò cạnh, kết cấu). Mặc dù \emph{CUB-200-2011} (ảnh chim cận cảnh) và \emph{tieredImageNet} rất khác nhau về \emph{ngữ nghĩa} lớp, chúng lại khá tương đồng về \emph{cấu trúc hình ảnh} (vật thể chính nằm giữa khung hình, tương phản rõ với nền). Sự tương đồng này vẫn đủ để kích hoạt các bộ lọc cấp thấp của Conv4 một cách tương tự nhau, khiến $\Phi_{\text{FAMA}}$ không dịch chuyển mạnh như kỳ vọng. Điều này mở ra định hướng tinh chỉnh kịch bản OOD trong tương lai: đối với các mạng nông, việc sử dụng các tập dữ liệu OOD phi-vật-thể (như Places hoặc ảnh texture) sẽ tạo ra phép thử khắc nghiệt và chính xác hơn.
 
-%\begin{lstlisting}
-%\usepackage{listings}
-%\end{lstlisting}
+\section{Kết quả định tính}
+\label{sec:qual_results}
 
-%Mã nguồn có thể được chèn trực tiếp như sau:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../images/ga_min2cub_tiered2cub.png}
+    \caption{Phân phối độ lợi thích ứng $\Delta M$ trên hai bài toán min $\to$ cub và tiered $\to$ cub.}
+    \label{fig:delta_m_distribution}
+\end{figure}
 
-%\begin{lstlisting}[language=Python]
-%print "Hello, World!"
-%\end{lstlisting}
+\textbf{Nhận xét chung.} Dựa trên Hình~\ref{fig:delta_m_distribution}, việc chuyển giao tri thức từ hai miền dữ liệu gốc khác nhau sang CUB-200-2011 cho thấy sự phân hóa rõ rệt về mặt hành vi thích ứng, được thể hiện cụ thể qua ba khía cạnh sau.
 
-%hoặc chèn thông qua tập tin chứa mã nguồn trong thư mục $SourceCode$ như sau:
+Thứ nhất, phân phối $\Delta M$ của tiered2cub trải rộng hơn đáng kể so với mini2cub. Các giá trị cực trị ở cả hai đầu đều bị đẩy ra xa nhau, đuôi âm chạm mức $\approx -25.88\%$ (so với $\approx -7.91\%$ của mini2cub) và đuôi dương vươn tới $\approx 41.24\%$ (so với $\approx 24.24\%$). Đồng thời, điểm cắt qua trục hoành có sự chênh lệch lớn, trong khi mini2cub chỉ có khoảng 11\% số tác vụ rơi vào trạng thái chuyển giao tiêu cực ($\Delta M < 0$), tỷ lệ này ở tiered2cub lên tới xấp xỉ 50\%.
 
-%\lstinputlisting[language=C++]{SourceCode/hello.cpp}
+Thứ hai, các điểm đầu mút của hai đường cong này hoàn toàn tương ứng với các trường hợp quy kết cụ thể đã được phân tích chi tiết tại Hình~\ref{fig:case_positive} và Hình~\ref{fig:case_negative}. Điều này khẳng định sự dịch chuyển hiệu năng cực đoan là hiện tượng có tính hệ thống, có thể quan sát và diễn giải được ở cấp độ hình ảnh.
 
-%Để chèn mã giả, cần dùng package algorithm~\cite{Algorithm}:
+Thứ ba, sự phân cực mạnh của tiered2cub vừa chứa nhiều tác vụ chuyển giao tiêu cực nặng, vừa có những bước nhảy vọt tích cực cực đoan. Điều này hoàn toàn nhất quán với những gì đã thiết lập của bộ dữ liệu \emph{tieredImagenet} ở Mục~\ref{sec:datasets}. Mặt khác, cách chia tách dữ liệu theo cấp độ siêu danh mục (category-level) của \emph{tieredImageNet} cũng tạo ra một tri thức tiền nghiệm mang tính khái quát cao. Tuy nhiên, tri thức này lại thiếu đi sự chuyên biệt hóa cần thiết để xử lý các đặc trưng vi mô (fine-grained) trên CUB-200-2011. Hệ quả là quá trình cập nhật phần thân mạng trở nên kém ổn định, và dễ bị kéo lệch theo cả hai hướng tích cực/tiêu cực tùy thuộc vào đặc thù nội dung của từng tác vụ.
 
-%\begin{lstlisting}
-%\usepackage{algorithm}
-%\end{lstlisting}
+\subsection{Nghiên cứu trường hợp}
+\label{subsec:case_study}
 
-%Có thể chèn mã giả vào như sau:
+Dựa trên biểu đồ~\ref{fig:delta_m_distribution}, mục này trình bày các tác vụ tiêu biểu được chọn lọc từ tập 600 tác vụ, gồm tác vụ có sự chuyển giao tích cực nhất và tiêu cực nhất.
 
-%\begin{algorithm}
-%\caption{My algorithm}\label{euclid}
-%\begin{algorithmic}[1]
-%\Procedure{MyProcedure}{}
-%\State $\textit{stringlen} \gets \text{length of }\textit{string}$
-%\State $i \gets \textit{patlen}$
-%\BState \emph{top}:
-%\If {$i > \textit{stringlen}$} \Return false
-%\EndIf
-%\State $j \gets \textit{patlen}$
-%\BState \emph{loop}:
-%\If {$\textit{string}(i) = \textit{path}(j)$}
-%\State $j \gets j-1$.
-%\State $i \gets i-1$.
-%\State \textbf{goto} \emph{loop}.
-%\State \textbf{close};
-%\EndIf
-%\State $i \gets i+\max(\textit{delta}_1(\textit{string}(i)),\textit{delta}_2(j))$.
-%\State \textbf{goto} \emph{top}.
-%\EndProcedure
-%\end{algorithmic}
-%\end{algorithm}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{../images/mini2cub_lmag.png}
+    \caption{Bản đồ quy kết trên tác vụ chuyển giao tích cực nhất (ảnh trên) và tác vụ chuyển giao tiêu cực nhất (ảnh dưới) với thử nghiệm \emph{MiniImagenet} $\to$ \emph{CUB-200-2011}}
+    \label{fig:case_positive}
+\end{figure}
 
-%\section{Hình ảnh}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{../images/tiered2cub_lmag.png}
+    \caption{Bản đồ quy kết trên tác vụ chuyển giao tích cực nhất (ảnh trên) và tác vụ chuyển giao tiêu cực nhất (ảnh dưới) với thử nghiệm \emph{TieredImagenet} $\to$ \emph{CUB-200-2011}.}
+    \label{fig:case_negative}
+\end{figure}
 
-%Để chèn hình ảnh, cần dùng package graphicx~\cite{Figures}:
+\textbf{Nhận xét.} Phân tích trực quan các bản đồ quy kết ở hai cực trị của phân phối $\Delta M$ bộc lộ những mẫu hình không gian phức tạp và đôi khi đi ngược lại trực giác. Phổ biến nhất là hiện tượng vùng màu xanh (gây hại) thường bám sát thân chim, trong khi vùng màu đỏ (hữu ích) lại tập trung vào bối cảnh (cành cây, lá), đặc biệt rõ ở các loài có bộ lông đơn điệu (như \emph{Warbling Vireo}) hoặc bị che khuất. Tuy nhiên, trên các phông nền đơn giản, tín hiệu đỏ lại nắm bắt rất gọn vào thân hình con chim (\emph{Bohemian Waxwing}) hoặc định vị chính xác vùng đặc trưng sinh học định danh (\emph{Horned Lark}).
 
-%\begin{lstlisting}
-%\usepackage{graphicx}
-%\end{lstlisting}
+Hoặc bản đồ cũng thể hiện sự phản ứng rất mạnh với các chi tiết bất thường trong ảnh, chẳng hạn như gán nhãn xanh cho nhiễu màu nhân tạo (\emph{Red-eyed Vireo}), nhiễu động do màu nguỵ trang (\emph{Crested Auklet}), hoặc bị phân tán bởi tay người (\emph{Clay-colored Sparrow}). Ngoài ra, các bức ảnh có đối tượng quá nhỏ (\emph{Scissor-tailed Flycatcher}) đều gặp hiện tượng vùng màu từ nền "tràn" sang bao trùm lấy đường viền chim. Đặc biệt, có hai trường hợp lặp loài (\emph{Yellow-breasted Chat} ở mini2cub và \emph{California Gull} ở tiered2cub) xuất hiện ở cả hai nhóm tích cực và tiêu cực nhưng lại cho ra các bản đồ có cấu trúc phân bổ hoàn toàn trái ngược nhau.
 
-%Hình \ref{fig:vd1}, hình \ref{fig:vd2} là một số ví dụ về chèn hình ảnh.
+Từ các quan sát trên, có thể rút ra ba kết luận quan trọng về bản chất của quá trình thích ứng và phương pháp giải thích. Thứ nhất, mạng nơ-ron chịu ảnh hưởng nặng nề bởi "thiên lệch ngữ cảnh" (contextual bias); khi đối tượng chính thiếu đặc trưng phân tách mạnh, mô hình sẽ tự động học vẹt các chi tiết môi trường xung quanh để bù đắp, dẫn đến chuyển giao tiêu cực. Thứ hai, sự thay đổi bản đồ trên cùng một nhãn loài, cũng như khả năng định vị chính xác các nhiễu ảnh/ngoại lai, là minh chứng thuyết phục cho thấy $\Phi_{\text{FAMA}}$ cực kỳ nhạy cảm với \emph{nội dung của từng bức ảnh cụ thể} (độ che khuất, ánh sáng, bố cục) chứ không bị suy biến thành một bộ lọc cố định theo nhãn lớp. Cuối cùng, hiện tượng tràn màu ở các đối tượng nhỏ tiếp tục khẳng định giới hạn kiến trúc của mạng Conv4, lưới đặc trưng quá thô ở các khối chập cuối đã làm suy giảm đáng kể độ phân giải không gian, khiến việc định vị ranh giới vật thể ở cấp độ điểm ảnh không thể đạt độ chính xác tuyệt đối.
 
-%\begin{figure}[htp]
-%\centering
-%\includegraphics[width=6 cm]{images/logo-khtn.png}
-%\caption{Hình ví dụ 1}
-%\label{fig:vd1}
-%\end{figure}
+\section{Tổng kết chương}
+\label{sec:chapter4_summary}
 
-%\begin{figure*}[htp]
-%\centering
-%\includegraphics[width=40 mm]{images/logo-khtn.png}
-%\caption{Hình ví dụ 2}
-%\label{fig:vd2}
-%\end{figure*}
+Thông qua quá trình đối chiếu và phân tích phương pháp diễn giải trên nền thuật toán MAML (với kiến trúc Conv4) xuyên suốt qua ba miền dữ liệu (miniImageNet, tieredImageNet và CUB-200-2011), sự kết hợp giữa các kết quả định lượng và định tính đã minh chứng rõ nét tính đúng đắn của phương pháp qua ba khía cạnh cốt lõi sau đây.
 
-%\section{Bảng biểu}
+\textbf{Thứ nhất}, về tính trung thực và chính xác, kết quả của \acrshort{biadt} cùng hai bài kiểm tra tỉnh táo (sanity checks) đã xác nhận việc \acrshort{fama} định vị chính xác các vùng ảnh chi phối độ lợi thích ứng là hoàn toàn trung thực và đáng tin cậy. Ngoài ra, bản đồ quy kết cũng đã phản ánh đúng tri thức thực sự mà mô hình đã học được từ dữ liệu $S_i$, triệt tiêu thành công các nhiễu do cấu trúc mạng hay việc ghi nhớ vẹt nhãn lớp.
 
-%Để tạo bảng biểu, tham khảo thêm tại sharelatex.com~\cite{Tables}.
-%Bảng~\ref{tab:vd1} là một ví dụ về bảng.
-%Ngoài ra, có một số tool online~\footnote{Như trang http://www.tablesgenerator.com/} có thể được dùng để tạo bảng biểu một cách trực quan.
+\textbf{Thứ hai}, việc hân tích định tính đã giúp trực quan hóa nguyên nhân cốt lõi gây ra chuyển giao tiêu cực. \acrshort{fama} phơi bày rõ hiện tượng "thiên lệch ngữ cảnh" (contextual bias), cho thấy mô hình thường xuyên học vẹt phông nền để bù đắp khi đối tượng chính thiếu đặc trưng phân tách.
 
-%\begin{table}[ht]
-%\caption{Bảng ví dụ 1}
-
-%\label{tab:vd1}%
-%\begin{center}
-%\begin{tabular}{ |p{3cm}||p{3cm}|p{3cm}|p{3cm}|  }
- %\hline
- %\multicolumn{4}{|c|}{Country List} \\
- %\hline
- %Country Name     or Area Name& ISO ALPHA 2 Code &ISO ALPHA 3 Code&ISO numeric Code\\
- %\hline
- %Afghanistan   & AF    &AFG&   004\\
- %Aland Islands&   AX  & ALA   &248\\
- %Albania &AL & ALB&  008\\
- %Algeria    &DZ & DZA&  012\\
- %American Samoa&   AS  & ASM&016\\
- %Andorra& AD  & AND   &020\\
- %Angola& AO  & AGO&024\\
- %\hline
-%\end{tabular}
-%\end{center}
-%\end{table}
-
-%\section{Công thức}
-
-%Công thức có thể chèn vào trong cùng một dòng như $ \sqrt{a^2+b^2} $ hoặc nằm trên dòng riêng như công thức~\ref{eu_eqn}.
-
-%\begin{equation} \label{eu_eqn}
-%x = a_0 + \frac{1}{a_1 + \frac{1}{a_2 + \frac{1}{a_3 + a_4}}}
-%\end{equation}
+\textbf{Cuối cùng}, hiện tượng "tràn màu" (spatial bleeding) ở các đối tượng nhỏ chỉ ra hạn chế của kiến trúc Conv4 do lưới đặc trưng quá thô. Dù không làm mất đi tính đúng đắn của phương pháp, điều này mở ra định hướng ứng dụng \acrshort{fama} trên các mạng sâu hơn (như ResNet) để tối ưu hóa độ phân giải không gian trong tương lai.

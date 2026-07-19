@@ -3,37 +3,75 @@
 \chapter{Chứng minh Mệnh đề~\ref{prop:decomposition}}
 \label{appendix:taylor_proof}
 
-\section{Khai triển Taylor}
+Chương này chứng minh chi tiết Mệnh đề~\ref{prop:decomposition} (Mục~\ref{sec:definition_AG}): dưới chế độ thích ứng nhanh (Giả thuyết~\ref{asm:fast_adaptation}), $\Delta M = -C_b + O\big((T\alpha)^2\big)$.
 
-Khai triển $L(Q_i,\cdot)$ bậc hai quanh $\theta_0=(b_0,h_0)$:
+\section{Thiết lập và khai triển bậc hai}
+
+Ký hiệu $\theta_0 = (\theta_0^b, \theta_0^h)$. Xét hàm mất mát kỳ vọng trên tập truy vấn $L(\phi) := \mathbb{E}_{Q_i\sim\mathcal{T}_i}[\mathcal{L}(Q_i,\phi)]$, giả sử khả vi liên tục hai lần trong một lân cận mở chứa $\theta_0$ và toàn bộ quỹ đạo. Đặt $_b := \nabla_b L(\theta_0)$, $g_h := \nabla_h L(\theta_0)$, $H_{bb} := \nabla^2_{bb} L(\theta_0)$, $H_{bh} := \nabla^2_{bh} L(\theta_0)$, $H_{hh} := \nabla^2_{hh} L(\theta_0)$.
+
+Gọi $\Delta b_T := \phi_T^b - \theta_0^b$, $\Delta h_T := \phi_T^h - \theta_0^h$ (nhánh thích ứng toàn phần) và $\Delta h_T^f := \phi_T^{f,h} - \theta_0^h$ (nhánh can thiệp). Vì backbone bị đóng băng ở nhánh can thiệp, $\Delta b_T^f = 0$.
+
+Khai triển Taylor bậc hai của $L$ quanh $\theta_0$ cho mỗi nhánh:
 \begin{align}
-    L(Q_i,\phi_T) &\approx L(Q_i,\theta_0) + g_b^\top \Delta b_T + g_h^\top \Delta h_T \nonumber\\
-    &\quad + \tfrac{1}{2}\Delta b_T^\top H_{bb} \Delta b_T + \tfrac{1}{2}\Delta h_T^\top H_{hh} \Delta h_T + \Delta b_T^\top H_{bh} \Delta h_T, \label{eq:taylor_full}\\[4pt]
-    L(Q_i,\phi_T^f) &\approx L(Q_i,\theta_0) + g_h^\top \Delta h_T^f + \tfrac{1}{2}{\Delta h_T^f}^\top H_{hh} \Delta h_T^f, \label{eq:taylor_frozen}
+    L(\phi_T) &= L(\theta_0) + g_b^\top \Delta b_T + g_h^\top \Delta h_T \nonumber\\
+    &\quad + \tfrac{1}{2}\Delta b_T^\top H_{bb} \Delta b_T + \Delta b_T^\top H_{bh} \Delta h_T + \tfrac{1}{2}\Delta h_T^\top H_{hh} \Delta h_T + o(\|\Delta\|^2), \label{eq:taylor_full}\\[4pt]
+    L(\phi_T^f) &= L(\theta_0) + g_h^\top \Delta h_T^f + \tfrac{1}{2}{\Delta h_T^f}^\top H_{hh} \Delta h_T^f + o(\|\Delta h_T^f\|^2). \label{eq:taylor_frozen}
 \end{align}
-với $\Delta b_T = \phi_T^b - b_0$, $\Delta h_T = \phi_T^h - h_0$, $\Delta h_T^f = \phi_T^{f,h}-h_0$ (nhánh can thiệp có $\Delta b = 0$). Lấy~\eqref{eq:taylor_frozen} trừ~\eqref{eq:taylor_full} và nhóm số hạng, ta thu được đúng Phương trình~\eqref{eq:decomposition}.
+Trừ~\eqref{eq:taylor_frozen} cho~\eqref{eq:taylor_full} và dùng định nghĩa $\Delta M = L(\phi_T^f) - L(\phi_T)$ (Phương trình~\eqref{eq:adaptation_gain}, đã lấy kỳ vọng theo $Q_i$), số hạng $L(\theta_0)$ triệt tiêu và ta thu được chính xác Phương trình~\eqref{eq:decomposition}:
+\begin{equation}
+    \begin{split}
+        \Delta M = & -\,\underbrace{\Big[g_b^\top \Delta b_T + \tfrac{1}{2}\Delta b_T^\top H_{bb} \Delta b_T + \Delta b_T^\top H_{bh} \Delta h_T\Big]}_{C_b} \\
+    &+ \underbrace{\Big[g_h^\top(\Delta h_T^f - \Delta h_T) + \tfrac{1}{2}\big({\Delta h_T^f}^\top H_{hh} \Delta h_T^f - \Delta h_T^\top H_{hh} \Delta h_T\big)\Big]}_{R_h},
+    \end{split}
+    \label{eq:decomposition}
+\end{equation}
 
-\subsection{Trường hợp $T=1$: $R_h = 0$ chính xác}
+\section{Bậc độ lớn của các số hạng dịch chuyển}
 
-Cả hai nhánh xuất phát từ $\phi_0 = \phi_0^f = \theta_0$. Theo quy tắc inner-loop~\eqref{eq:inner_loop},
+\begin{lemma}[Dịch chuyển tích lũy $O(T\alpha)$]
+\label{lem:displacement_order}
+Giả sử $\|\nabla_\phi \mathcal{L}(\phi,S_i)\| \le G$ trong lân cận quỹ đạo. Khi đó $\|\Delta b_T\|, \|\Delta h_T\|, \|\Delta h_T^f\| = O(T\alpha)$.
+\end{lemma}
+\begin{proof}
+Mỗi bước cập nhật inner-loop~\eqref{eq:inner_loop} dịch chuyển tham số một lượng $\alpha\|\nabla_\phi\mathcal{L}\| \le \alpha G$. Sau $T$ bước, theo bất đẳng thức tam giác, tổng dịch chuyển tích lũy bị chặn bởi $T\alpha G = O(T\alpha)$, áp dụng như nhau cho cả ba đại lượng vì cả hai nhánh đều thực hiện đúng $T$ bước cập nhật dạng này (nhánh can thiệp chỉ khác ở việc phần backbone bị ghi đè về $\theta_0^b$ sau mỗi bước, không ảnh hưởng đến bậc của phần head).
+\end{proof}
+
+\begin{lemma}[Độ lệch giữa hai quỹ đạo head là $O((T\alpha)^2)$]
+\label{lem:head_divergence}
+Đặt $\delta_j := \Delta h_j - \Delta h_j^f$. Dưới điều kiện $\nabla_h\mathcal{L}(\cdot,S_i)$ Lipschitz với hằng số $L$ theo $\phi$ (hệ quả của Giả thuyết~\ref{asm:adjoint_stability}(ii)), ta có $\delta_T = O\big((T\alpha)^2\big)$. Đặc biệt, tại $T=1$, $\delta_1 = 0$ \textbf{tuyệt đối}.
+\end{lemma}
+\begin{proof}
+Tại $j=1$: cả hai nhánh cùng xuất phát từ $\phi_0 = \phi_0^f = \theta_0$, nên bước gradient đầu tiên của head trùng nhau tuyệt đối, $\delta_1 = 0$.
+
+Với $j \ge 2$, từ quy tắc cập nhật:
 \[
-\Delta h_1 = \alpha \nabla_h \mathcal{L}_{S_i}(b_0, h_0) = \Delta h_1^f,
+    \delta_j = \delta_{j-1} - \alpha\Big[\nabla_h\mathcal{L}(\phi_{j-1},S_i) - \nabla_h\mathcal{L}(\phi_{j-1}^f,S_i)\Big].
 \]
-vì cả hai đều tính gradient trên $S_i$ tại đúng cùng điểm $(b_0,h_0)$. Do đó $\Delta h_T - \Delta h_T^f = 0$ tại $T=1$, kéo theo $R_h \equiv 0$ và $\Delta M = -C_b$ \textbf{đúng tuyệt đối}, không cần xấp xỉ.
-
-\subsection{Trường hợp $T>1$: cận $R_h = O((T\alpha)^2)$}
-
-Đặt $\delta_j := \Delta h_j - \Delta h_j^f$ ($\delta_0=0$). Từ quy tắc inner-loop áp dụng riêng cho từng nhánh,
+Hai đối số $\phi_{j-1} = (\phi_{j-1}^b,\phi_{j-1}^h)$ và $\phi_{j-1}^f=(\theta_0^b,\phi_{j-1}^{f,h})$ khác nhau ở backbone một lượng $\Delta b_{j-1} = O((j-1)\alpha)$ (Bổ đề~\ref{lem:displacement_order}) và ở head một lượng $\delta_{j-1}$. Do tính Lipschitz,
+\begin{align*}
+    \big\|\nabla_h\mathcal{L}(\phi_{j-1},S_i) - \nabla_h\mathcal{L}(\phi_{j-1}^f,S_i)\big\| &\le L\big(\|\Delta b_{j-1}\| + \|\delta_{j-1}\|\big)\\
+                                                                                            &= O\big((j-1)\alpha + \|\delta_{j-1}\|\big).
+\end{align*}
+Suy ra
 \[
-\delta_j = \delta_{j-1} - \alpha\Big[\nabla_h \mathcal{L}_{S_i}(b_0+\Delta b_{j-1}, h_0+\Delta h_{j-1}) - \nabla_h \mathcal{L}_{S_i}(b_0, h_0+\Delta h_{j-1}^f)\Big].
+    \|\delta_j\| \le (1+\alpha L)\|\delta_{j-1}\| + O\big((j-1)\alpha^2\big).
 \]
-Khai triển gradient bậc nhất quanh $(b_0, h_0+\Delta h_{j-1}^f)$ và ký hiệu $H^S_{bh}, H^S_{hh}$ là các khối Hessian của $\mathcal{L}_{S_i}$ tại điểm này,
-\[
-\delta_j \approx (I - \alpha H^S_{hh})\,\delta_{j-1} - \alpha H^S_{bh}\, \Delta b_{j-1}.
-\]
-Đây là một hệ đệ quy tuyến tính với $\delta_0 = 0$, được điều khiển bởi $\Delta b_{j-1}$. Vì backbone chỉ tích lũy ở nhánh đầy đủ theo quy tắc tương tự, $\|\Delta b_j\| = O(j\alpha)$. Giải đệ quy trên (xem là tổng chập/telescoping của các số hạng điều khiển), ta có
-\[
-\|\delta_T\| = O\Big(\alpha \|H^S_{bh}\| \sum_{j=0}^{T-1}\|\Delta b_j\|\Big) = O\big(\alpha \|H^S_{bh}\| \cdot T \cdot T\alpha\big) = O\big((T\alpha)^2\big).
-\]
-Vì $R_h$ trong~\eqref{eq:decomposition} là hàm tuyến tính và bậc hai của $\delta_T = \Delta h_T - \Delta h_T^f$, ta có $R_h = O(\|\delta_T\|) = O\big((T\alpha)^2\big)$. Trong khi đó, số hạng chủ đạo của $C_b$ là $g_b^\top \Delta b_T = O(T\alpha)$ (bậc nhất). Dưới Giả thuyết~\ref{asm:fast_adaptation} ($T\alpha \ll 1$), ta có $O((T\alpha)^2) \ll O(T\alpha)$, suy ra $R_h$ là vô cùng bé bậc cao so với $C_b$, hoàn tất chứng minh Mệnh đề~\ref{prop:decomposition}. $\blacksquare$
+Với $\delta_1=0$ và khai triển đệ quy, do $T\alpha\ll1$ (Giả thuyết~\ref{asm:fast_adaptation}) nên $(1+\alpha L)^{T} = 1+O(T\alpha)$ vẫn bị chặn:
+\begin{align*}
+    \|\delta_T\| &\le \sum_{k=1}^{T-1} O(k\alpha^2)\cdot\big(1+O(\alpha)\big)^{T-1-k}\\
+    &= O(\alpha^2)\sum_{k=1}^{T-1} k \cdot\big(1+O(T\alpha)\big)\\
+    &= O(\alpha^2 T^2) = O\big((T\alpha)^2\big).
+\end{align*}
+\end{proof}
 
+\section{Bậc độ lớn của $C_b$ và $R_h$, và kết luận}
+
+Từ Bổ đề~\ref{lem:displacement_order}: số hạng tuyến tính $g_b^\top\Delta b_T = O(T\alpha)$ là bậc chủ đạo trong $C_b$; hai số hạng bậc hai còn lại của $C_b$ đều là $O((T\alpha)^2)$. Vậy $C_b = O(T\alpha)$.
+
+Từ Bổ đề~\ref{lem:head_divergence}: số hạng tuyến tính của $R_h$ là $g_h^\top(\Delta h_T^f - \Delta h_T) = -g_h^\top\delta_T = O\big((T\alpha)^2\big)$; các số hạng bậc hai còn lại của $R_h$ (hiệu hai dạng toàn phương) cũng có bậc $O\big((T\alpha)^2\big)$ vì $\delta_T$ là bậc chủ đạo của hiệu $\Delta h_T^f$ và $\Delta h_T$. Vậy $R_h = O\big((T\alpha)^2\big)$, và
+\[
+    \Delta M = -C_b + R_h = -C_b + O\big((T\alpha)^2\big),
+\]
+đúng như Phương trình~\eqref{eq:leading_order}, hoàn tất chứng minh Mệnh đề~\ref{prop:decomposition}. $\blacksquare$
+
+Đặc biệt, với $T=1$, Bổ đề~\ref{lem:head_divergence} cho $\delta_1=0$ tuyệt đối, kéo theo $R_h=0$ \emph{chính xác} (không chỉ là vô cùng bé), khớp với nhận xét tại Mục~\ref{sec:definition_AG}.

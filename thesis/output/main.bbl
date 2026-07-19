@@ -19,6 +19,60 @@
 
 \refsection{0}
   \datalist[entry]{nty/global//global/global}
+    \entry{achanta2012slic}{article}{}
+      \name{author}{6}{}{%
+        {{hash=70ab76581ec6cc5f89acbc1833d77b14}{%
+           family={Achanta},
+           familyi={A\bibinitperiod},
+           given={Radhakrishna},
+           giveni={R\bibinitperiod}}}%
+        {{hash=7478be0237abe895fdbdcfb739f986f8}{%
+           family={Shaji},
+           familyi={S\bibinitperiod},
+           given={Appu},
+           giveni={A\bibinitperiod}}}%
+        {{hash=b8a5110cb94389c999baac8bf15ef959}{%
+           family={Smith},
+           familyi={S\bibinitperiod},
+           given={Kevin},
+           giveni={K\bibinitperiod}}}%
+        {{hash=6cfede2c7c222aae3aea34dc2eda42b2}{%
+           family={Lucchi},
+           familyi={L\bibinitperiod},
+           given={Aurelien},
+           giveni={A\bibinitperiod}}}%
+        {{hash=c5304d4d3b616054451f1a8db2a3974f}{%
+           family={Fua},
+           familyi={F\bibinitperiod},
+           given={Pascal},
+           giveni={P\bibinitperiod}}}%
+        {{hash=77f28bca610b53581502d07362bdb720}{%
+           family={Süsstrunk},
+           familyi={S\bibinitperiod},
+           given={Sabine},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {IEEE}%
+      }
+      \strng{namehash}{fad135f4e38be65c288d2e42d5fb35f6}
+      \strng{fullhash}{ba5eac5511587bf6d73c4b0b18eb7c9f}
+      \strng{bibnamehash}{ba5eac5511587bf6d73c4b0b18eb7c9f}
+      \strng{authorbibnamehash}{ba5eac5511587bf6d73c4b0b18eb7c9f}
+      \strng{authornamehash}{fad135f4e38be65c288d2e42d5fb35f6}
+      \strng{authorfullhash}{ba5eac5511587bf6d73c4b0b18eb7c9f}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE transactions on pattern analysis and machine intelligence}
+      \field{number}{11}
+      \field{title}{SLIC superpixels compared to state-of-the-art superpixel methods}
+      \field{volume}{34}
+      \field{year}{2012}
+      \field{pages}{2274\bibrangedash 2282}
+      \range{pages}{9}
+    \endentry
     \entry{adebayo2018sanity}{article}{}
       \name{author}{6}{}{%
         {{hash=13c8415286093e947788ee180780fd7a}{%
@@ -430,6 +484,48 @@
       \field{pages}{1\bibrangedash 41}
       \range{pages}{41}
     \endentry
+    \entry{grant2018recasting}{article}{}
+      \name{author}{5}{}{%
+        {{hash=1ff7c28ba0cef32a7a3c9ead42460199}{%
+           family={Grant},
+           familyi={G\bibinitperiod},
+           given={Erin},
+           giveni={E\bibinitperiod}}}%
+        {{hash=058e82495825ae376c6a96a12169e6ee}{%
+           family={Finn},
+           familyi={F\bibinitperiod},
+           given={Chelsea},
+           giveni={C\bibinitperiod}}}%
+        {{hash=c9545da54b33744da25943cdf66eadac}{%
+           family={Levine},
+           familyi={L\bibinitperiod},
+           given={Sergey},
+           giveni={S\bibinitperiod}}}%
+        {{hash=90180e1a30742e0d15328bfe637c2ef4}{%
+           family={Darrell},
+           familyi={D\bibinitperiod},
+           given={Trevor},
+           giveni={T\bibinitperiod}}}%
+        {{hash=fd3b66b2b5eef2d1be0b8b540fecd15d}{%
+           family={Griffiths},
+           familyi={G\bibinitperiod},
+           given={Thomas},
+           giveni={T\bibinitperiod}}}%
+      }
+      \strng{namehash}{f90a7809db1d61cbe21de629548772f2}
+      \strng{fullhash}{874460b56c62ff762d79b2a64ebab8a3}
+      \strng{bibnamehash}{874460b56c62ff762d79b2a64ebab8a3}
+      \strng{authorbibnamehash}{874460b56c62ff762d79b2a64ebab8a3}
+      \strng{authornamehash}{f90a7809db1d61cbe21de629548772f2}
+      \strng{authorfullhash}{874460b56c62ff762d79b2a64ebab8a3}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:1801.08930}
+      \field{title}{Recasting gradient-based meta-learning as hierarchical bayes}
+      \field{year}{2018}
+    \endentry
     \entry{eu2019trustworthy}{report}{}
       \name{author}{1}{}{%
         {{hash=426d1441f93c6bb499504235fe868667}{%
@@ -775,6 +871,35 @@
       \field{volume}{32}
       \field{year}{2019}
     \endentry
+    \entry{pearlmutter1994fast}{article}{}
+      \name{author}{1}{}{%
+        {{hash=6724042a399c2e67a6f3a2ec5612519e}{%
+           family={Pearlmutter},
+           familyi={P\bibinitperiod},
+           given={Barak\bibnamedelima A},
+           giveni={B\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {MIT Press}%
+      }
+      \strng{namehash}{6724042a399c2e67a6f3a2ec5612519e}
+      \strng{fullhash}{6724042a399c2e67a6f3a2ec5612519e}
+      \strng{bibnamehash}{6724042a399c2e67a6f3a2ec5612519e}
+      \strng{authorbibnamehash}{6724042a399c2e67a6f3a2ec5612519e}
+      \strng{authornamehash}{6724042a399c2e67a6f3a2ec5612519e}
+      \strng{authorfullhash}{6724042a399c2e67a6f3a2ec5612519e}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Neural computation}
+      \field{number}{1}
+      \field{title}{Fast exact multiplication by the Hessian}
+      \field{volume}{6}
+      \field{year}{1994}
+      \field{pages}{147\bibrangedash 160}
+      \range{pages}{14}
+    \endentry
     \entry{petsiuk2018rise}{article}{}
       \name{author}{3}{}{%
         {{hash=b4510a79c11487cc29e33b891a62b0a2}{%
@@ -806,6 +931,71 @@
       \field{journaltitle}{arXiv preprint arXiv:1806.07421}
       \field{title}{Rise: Randomized input sampling for explanation of black-box models}
       \field{year}{2018}
+    \endentry
+    \entry{pontryagin1962mathematical}{book}{}
+      \name{author}{4}{}{%
+        {{hash=cfd294617a57c0bfe607f696ae71f1fd}{%
+           family={Pontryagin},
+           familyi={P\bibinitperiod},
+           given={L.\bibnamedelimi S.},
+           giveni={L\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+        {{hash=1bee4479a2ad2da78acd7d16e5d2e526}{%
+           family={Boltyanskii},
+           familyi={B\bibinitperiod},
+           given={V.\bibnamedelimi G.},
+           giveni={V\bibinitperiod\bibinitdelim G\bibinitperiod}}}%
+        {{hash=89a1a493b01e8c32d8157c31d3010816}{%
+           family={Gamkrelidze},
+           familyi={G\bibinitperiod},
+           given={R.\bibnamedelimi V.},
+           giveni={R\bibinitperiod\bibinitdelim V\bibinitperiod}}}%
+        {{hash=43db83989f0cd7ed175bad5349361c13}{%
+           family={Mishchenko},
+           familyi={M\bibinitperiod},
+           given={E.\bibnamedelimi F.},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod}}}%
+      }
+      \name{editor}{1}{}{%
+        {{hash=e6b40d328fcb7864dd348f529e2b11dc}{%
+           family={Neustadt},
+           familyi={N\bibinitperiod},
+           given={L.\bibnamedelimi W.},
+           giveni={L\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+      }
+      \name{translator}{1}{}{%
+        {{hash=1d68de12bd1fe4dc7a26e554fd09ed96}{%
+           family={Trirogoff},
+           familyi={T\bibinitperiod},
+           given={K.\bibnamedelimi N.},
+           giveni={K\bibinitperiod\bibinitdelim N\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {New York, London}%
+      }
+      \list{publisher}{1}{%
+        {Interscience Publishers}%
+      }
+      \strng{namehash}{c3eafb6f2c6a94e683c99575c35c1322}
+      \strng{fullhash}{ef6d00dfc027bb636e369b435cffb23a}
+      \strng{bibnamehash}{ef6d00dfc027bb636e369b435cffb23a}
+      \strng{authorbibnamehash}{ef6d00dfc027bb636e369b435cffb23a}
+      \strng{authornamehash}{c3eafb6f2c6a94e683c99575c35c1322}
+      \strng{authorfullhash}{ef6d00dfc027bb636e369b435cffb23a}
+      \strng{editorbibnamehash}{e6b40d328fcb7864dd348f529e2b11dc}
+      \strng{editornamehash}{e6b40d328fcb7864dd348f529e2b11dc}
+      \strng{editorfullhash}{e6b40d328fcb7864dd348f529e2b11dc}
+      \strng{translatorbibnamehash}{1d68de12bd1fe4dc7a26e554fd09ed96}
+      \strng{translatornamehash}{1d68de12bd1fe4dc7a26e554fd09ed96}
+      \strng{translatorfullhash}{1d68de12bd1fe4dc7a26e554fd09ed96}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{note}{A division of John Wiley \& Sons, Inc.}
+      \field{title}{The Mathematical Theory of Optimal Processes}
+      \field{year}{1962}
+      \field{pages}{83\bibrangedash 86}
+      \range{pages}{4}
     \endentry
     \entry{raghu2019rapid}{article}{}
       \name{author}{4}{}{%
@@ -881,6 +1071,90 @@
       \field{title}{Meta-learning with implicit gradients}
       \field{volume}{32}
       \field{year}{2019}
+    \endentry
+    \entry{ravi2017optimization}{inproceedings}{}
+      \name{author}{2}{}{%
+        {{hash=1f7fc2e2d5d5696ce6c9b43afc486dc3}{%
+           family={Ravi},
+           familyi={R\bibinitperiod},
+           given={Sachin},
+           giveni={S\bibinitperiod}}}%
+        {{hash=42a970b0a0f1ed24b23064370cc9392f}{%
+           family={Larochelle},
+           familyi={L\bibinitperiod},
+           given={Hugo},
+           giveni={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{ed82c19346f6c9d34bf0d66b18b29b94}
+      \strng{fullhash}{ed82c19346f6c9d34bf0d66b18b29b94}
+      \strng{bibnamehash}{ed82c19346f6c9d34bf0d66b18b29b94}
+      \strng{authorbibnamehash}{ed82c19346f6c9d34bf0d66b18b29b94}
+      \strng{authornamehash}{ed82c19346f6c9d34bf0d66b18b29b94}
+      \strng{authorfullhash}{ed82c19346f6c9d34bf0d66b18b29b94}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{International conference on learning representations}
+      \field{title}{Optimization as a model for few-shot learning}
+      \field{year}{2017}
+    \endentry
+    \entry{ren2018meta}{article}{}
+      \name{author}{8}{}{%
+        {{hash=5b971b9b36c941b019dfbb5fb1bb3274}{%
+           family={Ren},
+           familyi={R\bibinitperiod},
+           given={Mengye},
+           giveni={M\bibinitperiod}}}%
+        {{hash=49a5ddd9292920012bfe90ed5b058bdd}{%
+           family={Triantafillou},
+           familyi={T\bibinitperiod},
+           given={Eleni},
+           giveni={E\bibinitperiod}}}%
+        {{hash=1f7fc2e2d5d5696ce6c9b43afc486dc3}{%
+           family={Ravi},
+           familyi={R\bibinitperiod},
+           given={Sachin},
+           giveni={S\bibinitperiod}}}%
+        {{hash=6e4faf0ec15f439e8189ae61eb405d69}{%
+           family={Snell},
+           familyi={S\bibinitperiod},
+           given={Jake},
+           giveni={J\bibinitperiod}}}%
+        {{hash=fe49ec9b6f902b79d166c1f25405c088}{%
+           family={Swersky},
+           familyi={S\bibinitperiod},
+           given={Kevin},
+           giveni={K\bibinitperiod}}}%
+        {{hash=5c7ff02e1f8b4c4aa7bfddece14f23d2}{%
+           family={Tenenbaum},
+           familyi={T\bibinitperiod},
+           given={Joshua\bibnamedelima B},
+           giveni={J\bibinitperiod\bibinitdelim B\bibinitperiod}}}%
+        {{hash=42a970b0a0f1ed24b23064370cc9392f}{%
+           family={Larochelle},
+           familyi={L\bibinitperiod},
+           given={Hugo},
+           giveni={H\bibinitperiod}}}%
+        {{hash=936deb796814f7b18da88b71fa5ae940}{%
+           family={Zemel},
+           familyi={Z\bibinitperiod},
+           given={Richard\bibnamedelima S},
+           giveni={R\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+      }
+      \strng{namehash}{334bddaceb8861ee8d36e777cb8ff0b7}
+      \strng{fullhash}{2567b4f61536e7ab6f407096fddb6b1d}
+      \strng{bibnamehash}{334bddaceb8861ee8d36e777cb8ff0b7}
+      \strng{authorbibnamehash}{334bddaceb8861ee8d36e777cb8ff0b7}
+      \strng{authornamehash}{334bddaceb8861ee8d36e777cb8ff0b7}
+      \strng{authorfullhash}{2567b4f61536e7ab6f407096fddb6b1d}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:1803.00676}
+      \field{title}{Meta-learning for semi-supervised few-shot classification}
+      \field{year}{2018}
     \endentry
     \entry{samek2016evaluating}{article}{}
       \name{author}{5}{}{%
@@ -1461,6 +1735,57 @@
       \field{pages}{1\bibrangedash 34}
       \range{pages}{34}
     \endentry
+    \entry{welinder2010caltech}{article}{}
+      \name{author}{7}{}{%
+        {{hash=462853f8544f0acfb7014fe747f84922}{%
+           family={Welinder},
+           familyi={W\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+        {{hash=7b0c6ffa378b0f94568e016f37a93cde}{%
+           family={Branson},
+           familyi={B\bibinitperiod},
+           given={Steve},
+           giveni={S\bibinitperiod}}}%
+        {{hash=f17b505759a031481a01336e928b51b9}{%
+           family={Mita},
+           familyi={M\bibinitperiod},
+           given={Takeshi},
+           giveni={T\bibinitperiod}}}%
+        {{hash=9939ff80b8d4fc76cf09250f66308d86}{%
+           family={Wah},
+           familyi={W\bibinitperiod},
+           given={Catherine},
+           giveni={C\bibinitperiod}}}%
+        {{hash=c62e96f68033a3d3cd4639e35a2de4da}{%
+           family={Schroff},
+           familyi={S\bibinitperiod},
+           given={Florian},
+           giveni={F\bibinitperiod}}}%
+        {{hash=044d1db5259b74e4975282f599d8e767}{%
+           family={Belongie},
+           familyi={B\bibinitperiod},
+           given={Serge},
+           giveni={S\bibinitperiod}}}%
+        {{hash=e52876f830a8a20786ff3e4d7dd6f083}{%
+           family={Perona},
+           familyi={P\bibinitperiod},
+           given={Pietro},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{796cedc5562025601d219f65e570828e}
+      \strng{fullhash}{d5b10aa214c7fc7fb5987ff9731acbb3}
+      \strng{bibnamehash}{796cedc5562025601d219f65e570828e}
+      \strng{authorbibnamehash}{796cedc5562025601d219f65e570828e}
+      \strng{authornamehash}{796cedc5562025601d219f65e570828e}
+      \strng{authorfullhash}{d5b10aa214c7fc7fb5987ff9731acbb3}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Caltech-UCSD birds 200}
+      \field{year}{2010}
+    \endentry
     \entry{yeh2018representer}{article}{}
       \name{author}{4}{}{%
         {{hash=d6b56204d005c40ba2d43fae6c74c9ea}{%
@@ -1586,9 +1911,7 @@
   \enddatalist
   \missing{chen2021hetmaml}
   \missing{deleu2018negative}
-  \missing{finn2017maml}
   \missing{pruthi2020estimating}
-  \missing{rajeswaran2019imaml}
   \missing{ribeiro2016lime}
   \missing{smilkov2017smoothgrad}
   \missing{yao2019hierarchically}

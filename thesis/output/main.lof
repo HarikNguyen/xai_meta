@@ -5,4 +5,11 @@
 \contentsline {figure}{\numberline {2.2}{\ignorespaces Quá trình \acrshort {maml} tìm kiếm vị trí khởi tạo thuận lợi cho tham số $\theta _0$ trong giai đoạn meta-training.}}{12}{figure.2.2}%
 \contentsline {figure}{\numberline {2.3}{\ignorespaces Minh họa sự thay đổi của không gian biểu diễn $F$ sau thích ứng nhanh.}}{14}{figure.2.3}%
 \addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Pipeline tổng quan của \acrshort {fama}. Hai quỹ đạo (thích ứng toàn phần và can thiệp đóng băng) được sinh song song từ $S_i$; một lượt lan truyền ngược liên hợp duy nhất tính chuỗi $\{\lambda _t\}$ cho mỗi quỹ đạo; tại mỗi bước $t$, tín hiệu $\lambda _t$ được chiếu cục bộ lên bản đồ đặc trưng $A_{t-1}$; các bản đồ cục bộ được tích lũy theo $t$ rồi lấy hiệu giữa hai nhánh để ra bản đồ quy kết cuối cùng.}}{32}{figure.3.1}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Phân phối độ lợi thích ứng $\Delta M$ trên hai bài toán min $\to $ cub và tiered $\to $ cub.}}{53}{figure.4.1}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Bản đồ quy kết trên tác vụ chuyển giao tích cực nhất (ảnh trên) và tác vụ chuyển giao tiêu cực nhất (ảnh dưới) với thử nghiệm \emph {MiniImagenet} $\to $ \emph {CUB-200-2011}}}{55}{figure.4.2}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Bản đồ quy kết trên tác vụ chuyển giao tích cực nhất (ảnh trên) và tác vụ chuyển giao tiêu cực nhất (ảnh dưới) với thử nghiệm \emph {TieredImagenet} $\to $ \emph {CUB-200-2011}.}}{56}{figure.4.3}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
 \addvspace {10\p@ }

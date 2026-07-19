@@ -1,4 +1,85 @@
-\chapter{Ngữ pháp tiếng Nôm}
-\label{Appendix2}
+\chapter{Chứng minh phương pháp liên hợp và cận sai số}
+\label{appendix:adjoint_proof}
 
-Đây là phụ lục 2.
+Chương này chứng minh Mệnh đề~\ref{prop:adjoint_equivalence} (tính tương đương của $\lambda^{(t)}$), suy ra công thức khai triển~\eqref{eq:trajectory_expansion}, và thiết lập cận ổn định/sai số dưới Giả thuyết~\ref{asm:adjoint_stability}.
+
+\section{Tính tương đương của biến liên hợp (chứng minh Mệnh đề~\ref{prop:adjoint_equivalence})}
+
+Xét một nhánh quỹ đạo bất kỳ (lập luận đối xứng cho nhánh còn lại), viết gọn $\bar{L}(\phi) := \mathbb{E}_{Q_i}[\mathcal{L}(Q_i,\phi)]$. Ta chứng minh bằng quy nạp lùi rằng
+\[
+    \lambda^{(t)} = \frac{\partial \bar{L}(\phi^{(T)})}{\partial \phi^{(t)}}, \qquad t = T, T-1, \dots, 0.
+\]
+
+\textbf{Cơ sở quy nạp ($t=T$).} Vì $\phi^{(T)}$ là đối số trực tiếp của $\bar{L}$, ta có:
+\[
+    \partial\bar{L}(\phi^{(T)})/\partial\phi^{(T)} = \nabla_\phi\bar{L}(\phi^{(T)}) = \lambda^{(T)}
+\]
+theo đúng định nghĩa~\eqref{eq:adjoint_init}.
+
+\textbf{Bước quy nạp.} Giả sử mệnh đề đúng tại $t$, ta chứng minh đúng tại $t-1$. Vì $\phi^{(T)}$ phụ thuộc vào $\phi^{(t-1)}$ duy nhất thông qua trung gian $\phi^{(t)}$ (quy tắc cập nhật~\eqref{eq:inner_loop} là một chuỗi Markov tham số), quy tắc dây chuyền cho
+\[
+    \frac{\partial \bar L(\phi^{(T)})}{\partial \phi^{(t-1)}} = \left(\frac{\partial \phi^{(t)}}{\partial \phi^{(t-1)}}\right)^{\!\top} \frac{\partial \bar L(\phi^{(T)})}{\partial \phi^{(t)}} \overset{\text{gt quy nạp}}{=} \big(I-\alpha H_{t-1}\big)^{\top}\lambda^{(t)},
+\]
+sử dụng Jacobian một bước đã tính ở Phương trình~\eqref{eq:step_jacobian}. Vì $H_{t-1} = \nabla^2_\phi\mathcal{L}(\phi^{(t-1)},S_i)$ là ma trận Hessian, nó đối xứng ($H_{t-1}^\top = H_{t-1}$), nên
+\[
+    \big(I-\alpha H_{t-1}\big)^{\top}\lambda^{(t)} = \lambda^{(t)} - \alpha H_{t-1}\lambda^{(t)} = \lambda^{(t-1)}
+\]
+đúng theo định nghĩa đệ quy~\eqref{eq:adjoint_recursion}. Vậy $\partial\bar L(\phi^{(T)})/\partial\phi^{(t-1)} = \lambda^{(t-1)}$, hoàn tất bước quy nạp. $\blacksquare$
+
+\textbf{Nhận xét quan trọng.} Chứng minh trên không dùng bất kỳ phép xấp xỉ nào — Jacobian~\eqref{eq:step_jacobian} là \emph{chính xác} (đạo hàm của một bước gradient descent), nên với $H_{t-1}$ được tính đúng (không xấp xỉ), đệ quy liên hợp~\eqref{eq:adjoint_recursion} tính $\lambda^{(t)}$ một cách \emph{chính xác tuyệt đối}, không phải xấp xỉ bậc nhất. Đây là điểm khác biệt căn bản so với các phương pháp liên hợp cho hệ động lực liên tục (neural ODE) vốn phải rời rạc hóa một phương trình vi phân — ở đây hệ đã rời rạc sẵn (inner-loop là SGD hữu hạn bước), nên không phát sinh sai số rời rạc hóa.
+
+\section{Suy ra công thức khai triển~\eqref{eq:trajectory_expansion}}
+
+Xem $\phi^{(t)} = \Psi_t(\phi^{(t-1)}, S_i) := \phi^{(t-1)} - \alpha\nabla_\phi\mathcal{L}(\phi^{(t-1)},S_i)$ là một hệ động lực rời rạc trong đó $S_i$ xuất hiện lặp lại như một \emph{tham số dùng chung} tại mọi bước $t=1,\dots,T$. Theo quy tắc đạo hàm tổng (total derivative) cho tham số dùng chung qua nhiều bước của một chuỗi hàm hợp,
+\begin{align*}
+    \frac{d\bar L(\phi^{(T)})}{dS_i} &= \sum_{t=1}^{T} \left(\frac{\partial \Psi_t}{\partial S_i}\Big|_{\phi^{(t-1)}}\right)^{\!\top} \left(\frac{\partial \phi^{(T)}}{\partial \phi^{(t)}}\right)^{\!\top} \nabla_\phi \bar L(\phi^{(T)}) \\
+    &= \sum_{t=1}^{T} \left(\frac{\partial \Psi_t}{\partial S_i}\Big|_{\phi^{(t-1)}}\right)^{\!\top} \lambda^{(t)},
+\end{align*}
+Trong đó bước cuối dùng đúng kết quả vừa chứng minh ở trên vì 
+\[
+(\partial\phi^{(T)}/\partial\phi^{(t)})^\top\nabla_\phi\bar L(\phi^{(T)}) = \partial\bar L(\phi^{(T)})/\partial\phi^{(t)} = \lambda^{(t)}
+\]
+
+Mà $\Psi_t(\phi^{(t-1)},S_i) = \phi^{(t-1)} - \alpha\nabla_\phi\mathcal{L}(\phi^{(t-1)},S_i)$,
+\[
+    \frac{\partial \Psi_t}{\partial S_i}\Big|_{\phi^{(t-1)}} = -\alpha\,\frac{\partial^2 \mathcal{L}(\phi^{(t-1)},S_i)}{\partial \phi^{(t-1)}\partial S_i}.
+\]
+Thay vào, ta thu được chính xác Phương trình~\eqref{eq:trajectory_expansion}:
+\[
+    \frac{\partial \bar L(\phi^{(T)})}{\partial S_i} = -\sum_{t=1}^{T}\alpha\,\lambda^{(t)}\cdot\frac{\partial^2\mathcal{L}(\phi^{(t-1)},S_i)}{\partial\phi^{(t-1)}\partial S_i}.
+\]
+Áp dụng công thức này riêng biệt cho nhánh thích ứng toàn phần ($\phi^{(T)}=\phi_T$) và nhánh can thiệp ($\phi^{(T)}=\phi_T^f$), rồi lấy hiệu theo đúng định nghĩa $\Delta M$ ở Phương trình~\eqref{eq:adaptation_gain}, ta thu được công thức $\partial\Delta M/\partial S_i$ dùng làm điểm xuất phát của Mục~\ref{sec:fama}. $\blacksquare$
+
+\section{Ổn định của đệ quy liên hợp (chứng minh dựa trên Giả thuyết~\ref{asm:adjoint_stability})}
+
+\begin{proposition}[Không giãn nở]
+\label{prop:nonexpansive}
+Dưới Giả thuyết~\ref{asm:adjoint_stability}(iii), $\|\lambda^{(t-1)}\| \le \|\lambda^{(t)}\|$ với mọi $t$, do đó $\|\lambda^{(0)}\| \le \|\lambda^{(T)}\|$: chuỗi $\{\lambda^{(t)}\}$ không bùng nổ qua $T$ bước lùi.
+\end{proposition}
+\begin{proof}
+Vì $H_{t-1}$ đối xứng, nó chéo hóa trực giao được với các trị riêng thực $\{\mu_i\}$. Theo (iii), $\alpha \le 2/\lambda_{\max}(H_{t-1})$, nên với mọi trị riêng $\mu_i \in [\lambda_{\min}, \lambda_{\max}]$ của $H_{t-1}$, giá trị riêng tương ứng $1-\alpha\mu_i$ của toán tử $I-\alpha H_{t-1}$ thỏa $|1-\alpha\mu_i|\le 1$ (vì $0\le\alpha\mu_i\le\alpha\lambda_{\max}\le2$, nên $1-\alpha\mu_i\in[-1,1]$). Do đó $\|I-\alpha H_{t-1}\|_{\text{op}} \le 1$, và từ~\eqref{eq:adjoint_recursion}: $\|\lambda^{(t-1)}\| = \|(I-\alpha H_{t-1})\lambda^{(t)}\| \le \|\lambda^{(t)}\|$.
+\end{proof}
+
+\begin{proposition}[Cận sai số khi $H_{t-1}$ được ước lượng xấp xỉ]
+\label{prop:error_propagation}
+Trong triển khai thực tế, $\lambda^{(T)}$ ở Phương trình~\eqref{eq:adjoint_init} và các tích Hessian–vector $H_{t-1}\lambda^{(t)}$ đều được ước lượng bằng bootstrap phân tầng hữu hạn trên $Q_i$ (Mục~\ref{subsec:adjoint}), do đó chịu sai số thống kê. Giả sử tại mỗi bước $t$, sai số ước lượng của tích Hessian–vector bị chặn bởi $\|\widehat{H_{t-1}\lambda^{(t)}} - H_{t-1}\lambda^{(t)}\| \le \varepsilon$. Khi đó, dưới Giả thuyết~\ref{asm:adjoint_stability}(ii)–(iii), sai số tích lũy sau $T$ bước lùi bị chặn bởi
+\[
+    \big\|\hat\lambda^{(0)} - \lambda^{(0)}\big\| \le T\alpha\varepsilon.
+\]
+\end{proposition}
+\begin{proof}
+Đặt $e_t := \hat\lambda^{(t)} - \lambda^{(t)}$ là sai số tích lũy tại bước $t$ (với $e_T=0$ nếu bỏ qua sai số ước lượng $\lambda^{(T)}$ ban đầu, hoặc cộng thêm nếu có). Từ đệ quy xấp xỉ $\hat\lambda^{(t-1)} = \hat\lambda^{(t)} - \alpha\widehat{H_{t-1}\lambda^{(t)}}$ và đệ quy đúng~\eqref{eq:adjoint_recursion},
+\[
+    e_{t-1} = \big(I-\alpha H_{t-1}\big)e_t - \alpha\big(\widehat{H_{t-1}\lambda^{(t)}} - H_{t-1}\lambda^{(t)}\big).
+\]
+Lấy chuẩn hai vế, dùng $\|I-\alpha H_{t-1}\|_{\text{op}}\le1$ (Mệnh đề~\ref{prop:nonexpansive}) và giả thiết sai số từng bước $\le\varepsilon$:
+\[
+    \|e_{t-1}\| \le \|e_t\| + \alpha\varepsilon.
+\]
+Khai triển đệ quy từ $t=T$ (với $e_T=0$) xuống $t=0$ qua $T$ bước, mỗi bước cộng thêm tối đa $\alpha\varepsilon$:
+\[
+    \|e_0\| \le T\alpha\varepsilon.
+\]
+\end{proof}
+
+\textbf{Ý nghĩa thực nghiệm.} Mệnh đề~\ref{prop:error_propagation} cho thấy sai số của toàn bộ bản đồ quy kết $\Phi_{\text{FAMA}}$ do việc xấp xỉ Monte Carlo trên $Q_i$ (thay vì lấy kỳ vọng chính xác) tăng \emph{tuyến tính} theo $T\alpha$ — đúng bậc mà chế độ thích ứng nhanh (Giả thuyết~\ref{asm:fast_adaptation}, $T\alpha\ll1$) giữ ở mức nhỏ. Đây là căn cứ lý thuyết cho việc chọn số lượng bootstrap $\texttt{num\_bootstraps}$ đủ lớn (nhằm giảm $\varepsilon$) trong cài đặt tại Mục~\ref{subsec:adjoint}, thay vì phải tăng theo cấp số nhân với $T$.

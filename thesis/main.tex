@@ -19,6 +19,7 @@
 \makeatother
 
 % Chèn hình, các hình trong luận văn được để trong thư mục Images/
+\usepackage{float}
 \usepackage{graphicx}
 \graphicspath{ {Images/} }
 
@@ -52,6 +53,7 @@
 % Chèn và định dạng mã giả
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{amsthm}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 \makeatletter
@@ -65,11 +67,13 @@
 \newtheorem{definition}{Định nghĩa}
 
 % Bảng biểu
+\usepackage{tabularx}
 \usepackage{multirow}
 \usepackage{array}
 \newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
 
 % Từ viết tắt
 \usepackage[acronym,toc,nonumberlist]{glossaries}
@@ -117,6 +121,9 @@
 % Quản lý pdf
 \usepackage{pdfpages}
 
+% Quản lý itemize
+\usepackage{enumitem}
+
 % Trang bìa
 \usepackage{tikz}
 \usetikzlibrary{calc}
@@ -140,7 +147,7 @@
 \pagenumbering{roman} % Đánh số i, ii, iii, ...
 
 %\addcontentsline{toc}{chapter}{Lời cam đoan}
-%\include{Appendix/reassurances}
+\include{Appendix/reassurances}
 
 \addcontentsline{toc}{chapter}{Lời cảm ơn}
 \include{Appendix/thanks}
@@ -156,7 +163,7 @@
 \listoftables
 
 \addcontentsline{toc}{chapter}{Tóm tắt}
-\include{Appendix/tomtat}
+\include{Appendix/abs}
 
 \clearpage
 
@@ -166,8 +173,8 @@
 \include{Chapter1/chapter1}
 \include{Chapter2/chapter2}
 \include{Chapter3/chapter3}
-%\include{Chapter4/chapter4}
-%\include{Chapter5/chapter5}
+\include{Chapter4/chapter4}
+\include{Chapter5/chapter5}
 
 % Công trình của tác giả (nếu không có thì comment 02 dòng dưới)
 %\addcontentsline{toc}{chapter}{Danh mục công trình của tác giả}
@@ -188,8 +195,8 @@
 % ===================================================================== %
 
 % Phần phụ lục
-% Chứng minh mệnh đề với khai triển Taylor cho phần 3.1
+% Chứng minh các mệnh đề
 \include{Appendix/appendix1}
-%\include{Appendix/appendix2}
+\include{Appendix/appendix2}
 
 \end{document} 
