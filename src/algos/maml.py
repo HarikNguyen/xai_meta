@@ -72,11 +72,21 @@ class MAML(BaseAlgorithm):
         que_y,
         train_mode,
         T,
+        full_trajectory=True,
     ):
         """Deploy on single task
         1. Fast adaptation on support set (sup_x, sup_y) for T steps
         2. Eval on query set (que_x, que_y) after each update step
         3. Return losses and preds at each step
+
+        full_trajectory: bool
+            If True (val/test), record support+query loss/pred/acc at every one
+            of the T+1 steps, as before. If False (train), only the LAST step's
+            query loss is ever used by the caller (see MAML.train), so every
+            intermediate query forward pass + accuracy computation is skipped.
+            The support-side forward/grad is never skipped: it feeds the next
+            _fast_weights update and is required by the inner-loop recursion
+            regardless of full_trajectory.
         """
         # init fast_weights with theta_0 (phi)
         fast_weights = [p.clone() for p in theta_0]
@@ -84,20 +94,22 @@ class MAML(BaseAlgorithm):
 
         # init results list
         sup_losses, que_losses, sup_preds_list, que_preds_list, sup_accs, que_accs = [], [], [], [], [], []
-        
+
         # get pre-update (theta_0) loss and predictions
         values_n_grad_fn = tf.grad_and_value(get_loss_n_preds, has_aux=True)
         grads, (pre_sup_loss, pre_sup_pred) = values_n_grad_fn(fast_weights, learner, sup_x, sup_y)
-        pre_que_loss, pre_que_pred = get_loss_n_preds(fast_weights, learner, que_x, que_y)
 
-        sup_losses.append(pre_sup_loss)
-        que_losses.append(pre_que_loss)
-        sup_preds_list.append(pre_sup_pred)
-        que_preds_list.append(pre_que_pred)
-        sup_accs.append(calc_accuracy(pre_sup_pred, sup_y))
-        que_accs.append(calc_accuracy(pre_que_pred, que_y))
+        if full_trajectory:
+            pre_que_loss, pre_que_pred = get_loss_n_preds(fast_weights, learner, que_x, que_y)
 
-        for _ in range(T):
+            sup_losses.append(pre_sup_loss)
+            que_losses.append(pre_que_loss)
+            sup_preds_list.append(pre_sup_pred)
+            que_preds_list.append(pre_que_pred)
+            sup_accs.append(calc_accuracy(pre_sup_pred, sup_y))
+            que_accs.append(calc_accuracy(pre_que_pred, que_y))
+
+        for step in range(T):
             # get fast_weights
             fast_weights = self._fast_weights(
                 params=fast_weights,
@@ -106,14 +118,17 @@ class MAML(BaseAlgorithm):
             )
             # get loss and predictions
             grads, (sup_loss, sup_pred) = values_n_grad_fn(fast_weights, learner, sup_x, sup_y)
-            que_loss, que_pred = get_loss_n_preds(fast_weights, learner, que_x, que_y)
 
-            sup_losses.append(sup_loss)
-            que_losses.append(que_loss)
-            sup_preds_list.append(sup_pred)
-            que_preds_list.append(que_pred)
-            sup_accs.append(calc_accuracy(sup_pred, sup_y))
-            que_accs.append(calc_accuracy(que_pred, que_y))
+            is_last_step = step == T - 1
+            if full_trajectory or is_last_step:
+                que_loss, que_pred = get_loss_n_preds(fast_weights, learner, que_x, que_y)
+
+                sup_losses.append(sup_loss)
+                que_losses.append(que_loss)
+                sup_preds_list.append(sup_pred)
+                que_preds_list.append(que_pred)
+                sup_accs.append(calc_accuracy(sup_pred, sup_y))
+                que_accs.append(calc_accuracy(que_pred, que_y))
 
         return sup_losses, que_losses, sup_preds_list, que_preds_list, sup_accs, que_accs
 
@@ -134,6 +149,7 @@ class MAML(BaseAlgorithm):
             que_y,
             train_mode=True,
             T=self.T,
+            full_trajectory=False,
         )
 
         meta_loss = que_losses[-1].mean()
