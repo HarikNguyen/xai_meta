@@ -2,10 +2,10 @@
 dataset:
   train_root: "tiered_imagenet"
   train_name: "tiered_imagenet"
-  val_root: "cub_200"
-  val_name: "cub_200"
-  test_root: "cub_200"
-  test_name: "cub_200"
+  val_root: "cub_200_new"
+  val_name: "cub_200_new"
+  test_root: "cub_200_new"
+  test_name: "cub_200_new"
 
 dataloader:
   num_workers: 2
