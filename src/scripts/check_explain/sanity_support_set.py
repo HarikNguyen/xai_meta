@@ -1,8 +1,9 @@
-import numpy as np
+import functools
+
 import torch
 from tqdm import tqdm
 
-from ..utils import correlation_sample_wise, blur_sup, permute_label
+from ..utils import correlation_sample_wise, blur_sup, permute_label, parallel_map
 
 def mix_set(task_source, task_another, num_mixed_classes=2):
     (task_ssx, task_ssy), (task_sqx, task_sqy) = task_source
@@ -33,18 +34,39 @@ def mix_set(task_source, task_another, num_mixed_classes=2):
 
         mixed_sx[idx_tgt] = task_asx[idx_src]
         ood_indices.extend(idx_tgt.tolist())
-    
+
     ood_indices.sort()
     task_mixed = ((mixed_sx, mixed_sy), (task_sqx, task_sqy))
 
     return task_mixed
 
+def check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T, orig_saliency_map):
+    sup_y_noisy = permute_label(sup_y, flip_ratio=0.8)
+    _, noisy_saliency_map = explainer.interpret(sup_x, sup_y_noisy, que_x, que_y, T)
+    return correlation_sample_wise(orig_saliency_map, noisy_saliency_map)
+
+def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T, orig_saliency_map):
+    sup_x_hard = blur_sup(sup_x, kernel_size=7, sigma=3.0)
+    _, hard_saliency_map = explainer.interpret(sup_x_hard, sup_y, que_x, que_y, T)
+    return correlation_sample_wise(orig_saliency_map, hard_saliency_map)
+
+def check_on_mixed_task(explainer, source_task, another_task, T, orig_saliency_map):
+    (sup_x, sup_y, _), (que_x, que_y, _) = source_task
+    (a_sup_x, a_sup_y, _), (a_que_x, a_que_y, _) = another_task
+
+    (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(
+            ((sup_x, sup_y), (que_x, que_y)),
+            ((a_sup_x, a_sup_y), (a_que_x, a_que_y)),
+            num_mixed_classes=2)
+
+    _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_y, ood_que_x, ood_que_y, T)
+    return correlation_sample_wise(orig_saliency_map, mixed_saliency_map)
+
 def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
     test_loader_pbar = tqdm(
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
-    theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
-    
+
     noisy_check_results = {
         "pearson": [],
         "spearman": []
@@ -58,31 +80,43 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
         "spearman": []
     }
 
+    # Create the OOD iterator ONCE outside the loop: recreating it every
+    # metabatch (as before) always restarted it from the first batch, so the
+    # OOD check silently reused the same batch instead of advancing through
+    # ood_test_loader.
+    ood_iter = iter(ood_test_loader)
+
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(
             boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
         )
-        ood_iter = iter(ood_test_loader)
         boT_ood = next(ood_iter)
         for task_id, (support, query) in enumerate(boT_pbar):
             sup_x, sup_y, _ = support
             que_x, que_y, _ = query
-            
-            # check on noisy task
-            scores = check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T)
-            noisy_check_results["pearson"].append(scores["pearson"])
-            noisy_check_results["spearman"].append(scores["spearman"])
 
-            # check on hard task
-            scores = check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T)
-            hard_check_results["pearson"].append(scores["pearson"])
-            hard_check_results["spearman"].append(scores["spearman"])
-            
-            # check on mixed task (ood task)
+            # Computed once per task and shared by all 3 checks below (was
+            # previously recomputed independently inside each of them).
+            _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+
             boT_ood_task = boT_ood[task_id]
-            scores = check_on_mixed_task(explainer, (support, query), boT_ood_task, T)
-            ood_check_results["pearson"].append(scores["pearson"])
-            ood_check_results["spearman"].append(scores["spearman"])
+
+            # noisy / hard / mixed checks are independent of each other -> run concurrently
+            fns = [
+                functools.partial(check_on_noisy_task, explainer, sup_x, sup_y, que_x, que_y, T, orig_saliency_map),
+                functools.partial(check_on_hard_task, explainer, sup_x, sup_y, que_x, que_y, T, orig_saliency_map),
+                functools.partial(check_on_mixed_task, explainer, (support, query), boT_ood_task, T, orig_saliency_map),
+            ]
+            noisy_scores, hard_scores, ood_scores = parallel_map(fns, device=explainer.device)
+
+            noisy_check_results["pearson"].append(noisy_scores["pearson"])
+            noisy_check_results["spearman"].append(noisy_scores["spearman"])
+
+            hard_check_results["pearson"].append(hard_scores["pearson"])
+            hard_check_results["spearman"].append(hard_scores["spearman"])
+
+            ood_check_results["pearson"].append(ood_scores["pearson"])
+            ood_check_results["spearman"].append(ood_scores["spearman"])
 
     results = {
         "noisy_check": noisy_check_results,
@@ -91,35 +125,3 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
     }
 
     return results
-
-def check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T):
-    sup_y_noisy = permute_label(sup_y, flip_ratio=0.8)
-
-    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
-    _, noisy_saliency_map = explainer.interpret(sup_x, sup_y_noisy, que_x, que_y, T)
-
-    scores = correlation_sample_wise(orig_saliency_map, noisy_saliency_map)
-    return scores
-
-def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T):
-    sup_x_hard = blur_sup(sup_x, kernel_size=7, sigma=3.0)
-    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
-    _, hard_saliency_map = explainer.interpret(sup_x_hard, sup_y, que_x, que_y, T)
-
-    scores = correlation_sample_wise(orig_saliency_map, hard_saliency_map)
-    return scores
-
-def check_on_mixed_task(explainer, source_task, another_task, T):
-    (sup_x, sup_y, _), (que_x, que_y, _) = source_task
-    (a_sup_x, a_sup_y, _), (a_que_x, a_que_y, _) = another_task
-
-    (ood_sup_x, ood_sup_y), (ood_que_x, ood_que_y) = mix_set(
-            ((sup_x, sup_y), (que_x, que_y)),
-            ((a_sup_x, a_sup_y), (a_que_x, a_que_y)),
-            num_mixed_classes=2)
-    
-    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
-    _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_y, ood_que_x, ood_que_y, T)
-
-    scores = correlation_sample_wise(orig_saliency_map, mixed_saliency_map)
-    return scores

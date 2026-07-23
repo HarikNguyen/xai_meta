@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from ..utils import load_checkpoint, prepare_plots_dir, build_explainer
+from ..utils import load_checkpoint, prepare_plots_dir, build_explainer, shutdown_executors
 from .bi_adt import compute_bidirectional_faithfulness
 from .sanity_params import sanity_check_params
 from .sanity_support_set import sanity_check_support_set
@@ -48,7 +48,7 @@ def check_explain(
         _save_results_to_csv(res_df, "biADT", log_dir)
 
     elif method == "sanity_params":
-        results = sanity_check_params(explainer, test_loader, T=T)
+        results = sanity_check_params(explainer, test_loader, T=T, log_dir=log_dir)
         res_df = pd.DataFrame(results)
         mean_res_df = pd.DataFrame(res_df.apply(lambda col: np.mean(col.to_list(), axis=0)))
 
@@ -68,6 +68,10 @@ def check_explain(
 
     else:
         raise NotImplementedError(f"Method {method} not implemented.")
+
+    # Wait for any pending background plot-saving jobs (sanity_params) to
+    # finish writing to disk before the process exits.
+    shutdown_executors()
 
 def _save_results_to_csv(res_df, name, log_dir, mean_df=None):
     res_df.to_csv(os.path.join(log_dir, f"{name}_results.csv"), index=False)

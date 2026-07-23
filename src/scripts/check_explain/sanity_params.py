@@ -1,25 +1,28 @@
 import copy
+import functools
 import math
+import os
 
+import matplotlib
+matplotlib.use("Agg")  # plot saving runs on a background thread; GUI backends need the main thread
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 
-from ..utils import correlation_sample_wise
+from ..utils import correlation_sample_wise, parallel_map, submit_plot_task
 from models.utils import get_layer_parameters_map
 
 
 def randomize_layer(weight):
     # apply Kaiming Uniform for weight.dim >= 2
-    if weight is not None and weight.dim() >= 2:
+    if weight is None:
+        return
+    if weight.dim() >= 2:
         nn.init.kaiming_uniform_(weight, a=math.sqrt(5))
-
     # if weight is the bias layer or weight.dim == 1
-    elif weight is not None:
+    else:
         nn.init.uniform_(weight, -0.1, 0.1)
-
-    return weight
 
 def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path, alpha=0.5):
     """
@@ -87,65 +90,79 @@ def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path
             ax_corr.axis('off')  # fully hide axes on inner cells
 
     # 4. Final touches and save
-    # plt.tight_layout(pad=0.5)  # reduce spacing between cells
     fig.subplots_adjust(wspace=0.05, hspace=0.05)  # or adjust manually for tighter spacing
     plt.savefig(save_path, bbox_inches='tight', dpi=150)  # higher dpi for a sharper image
-    plt.close()
+    plt.close(fig)
 
-def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T):
+def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T, log_dir, metabatch_id, task_id):
+    # Each concurrent task gets its own shallow copy of the explainer so its
+    # theta_0 override doesn't clash with other tasks running at the same time
+    # (interpret() reads self.theta_0, and this check works by mutating it).
+    local_explainer = copy.copy(explainer)
+    local_explainer.theta_0 = [p.clone().detach() for p in theta_0]
+
     task_pearson = []
     task_spearman = []
 
-    explainer.theta_0 = [p.clone().detach() for p in theta_0]
-    _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+    _, orig_saliency_map = local_explainer.interpret(sup_x, sup_y, que_x, que_y, T)
 
     corrupted_saliencies = []
     corrupted_theta_grouped = copy.deepcopy(net_layers)
+    # Cascading randomization: each step corrupts one more layer on top of the
+    # previous steps' corruption, so this inner loop must stay sequential.
     for layer_idx in range(len(corrupted_theta_grouped) - 1, -1, -1):
         layer = corrupted_theta_grouped[layer_idx]
         # destroy layer
         for param_tensor in layer["params"]:
-            param_tensor = randomize_layer(param_tensor)
+            randomize_layer(param_tensor)
         corrupted_theta = []
         for l in corrupted_theta_grouped:
             corrupted_theta.extend(l["params"])
-        explainer.theta_0 = [p.clone().detach() for p in corrupted_theta]
-        _, new_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+        local_explainer.theta_0 = [p.clone().detach() for p in corrupted_theta]
+        _, new_saliency_map = local_explainer.interpret(sup_x, sup_y, que_x, que_y, T)
 
         scores = correlation_sample_wise(orig_saliency_map, new_saliency_map)
         task_pearson.append(scores["pearson"])
         task_spearman.append(scores["spearman"])
 
         corrupted_saliencies.append((layer_idx, new_saliency_map))
-        
-    save_full_nxm_grid(
-        images_tensor=sup_x,              # (N, C, H, W)
-        orig_saliencies=orig_saliency_map, # (N, H, W)
-        corrupted_data=corrupted_saliencies,     # List of (layer_idx, (N, H, W))
-        save_path=f"task_{sup_x.shape[0]}_saliency_grid.png", 
-        alpha=0.5
+
+    save_path = os.path.join(log_dir, "plots", f"sanity_params_task{metabatch_id}-{task_id}_grid.png")
+    submit_plot_task(
+        save_full_nxm_grid,
+        sup_x,                # (N, C, H, W)
+        orig_saliency_map,     # (N, H, W)
+        corrupted_saliencies,  # List of (layer_idx, (N, H, W))
+        save_path,
+        0.5,
     )
     return task_pearson, task_spearman
 
-def sanity_check_params(explainer, test_loader, T):
+def sanity_check_params(explainer, test_loader, T, log_dir="logs"):
     test_loader_pbar = tqdm(
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
     theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
-    net_layers = get_layer_parameters_map(explainer.algo_mgr.baselearner, theta_0) 
+    net_layers = get_layer_parameters_map(explainer.algo_mgr.baselearner, theta_0)
     results = {
         "pearson": [],
         "spearman": []
     }
     for metabatch_id, boT in enumerate(test_loader_pbar):
-        boT_pbar = tqdm(
-            boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
-        )
-        for task_id, (support, query) in enumerate(boT_pbar):
-            sup_x, sup_y, _ = support
-            que_x, que_y, _ = query
+        # Tasks within a metabatch are independent of each other -> run them
+        # concurrently instead of one at a time (only the per-task cascading
+        # corruption loop above has to stay sequential).
+        fns = [
+            functools.partial(
+                check_on_task, explainer, theta_0, net_layers,
+                support[0], support[1], query[0], query[1], T,
+                log_dir, metabatch_id, task_id,
+            )
+            for task_id, (support, query) in enumerate(boT)
+        ]
+        task_results = parallel_map(fns, device=explainer.device)
 
-            task_pearson, task_spearman = check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T)
+        for task_pearson, task_spearman in task_results:
             results["pearson"].append(task_pearson)
             results["spearman"].append(task_spearman)
 

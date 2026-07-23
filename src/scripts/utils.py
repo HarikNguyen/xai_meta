@@ -1,6 +1,7 @@
 import csv
 import os
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 
 import torch
 import numpy as np
@@ -9,6 +10,24 @@ import torchvision.transforms.functional as vF
 from collections import Counter
 
 from interpreters import FAMAExplainer
+
+# Bounded, shared thread pools reused across explain.py / check_explain/*.py so
+# concurrency stays capped regardless of how many call sites use it (avoids a
+# "pool of pools" explosion). Sized for a single RTX 4080S (16GB VRAM, so GPU
+# work is capped at a handful of concurrent interpret() calls) + 12 CPU cores
+# (IO/CPU-bound work like SLIC segmentation and matplotlib rendering can use more).
+_GPU_WORKERS = 4
+_IO_WORKERS = 8
+# matplotlib's pyplot keeps global figure-manager state (Gcf) that is not
+# thread-safe across concurrent calls, and GUI backends additionally require
+# the main thread -- so plot-saving gets its own single dedicated worker
+# instead of sharing the general IO pool. This still keeps the main loop
+# (GPU inference for the next task) from blocking on rendering/disk I/O.
+_PLOT_WORKERS = 1
+
+_gpu_executor = None
+_io_executor = None
+_plot_executor = None
 
 def _write_csv(filename, header, rows, log_dir="logs"):
     """Helper function to make writing CSV files easier."""
@@ -115,6 +134,73 @@ def blur_sup(sup_x, kernel_size=7, sigma=3.0):
         sigma=[sigma, sigma]
     )
     return sup_x_blurred
+
+def get_gpu_executor():
+    """Shared thread pool for GPU-bound work (explainer.interpret calls)."""
+    global _gpu_executor
+    if _gpu_executor is None:
+        _gpu_executor = ThreadPoolExecutor(max_workers=_GPU_WORKERS)
+    return _gpu_executor
+
+def get_io_executor():
+    """Shared thread pool for CPU/IO-bound work (SLIC segmentation, plot saving)."""
+    global _io_executor
+    if _io_executor is None:
+        _io_executor = ThreadPoolExecutor(max_workers=_IO_WORKERS)
+    return _io_executor
+
+def get_plot_executor():
+    """Single dedicated background thread for matplotlib plot-saving jobs."""
+    global _plot_executor
+    if _plot_executor is None:
+        _plot_executor = ThreadPoolExecutor(max_workers=_PLOT_WORKERS)
+    return _plot_executor
+
+def shutdown_executors(wait=True):
+    """Release the shared thread pools. Call once a top-level mode (explain /
+    check_explain) has finished all its work."""
+    global _gpu_executor, _io_executor, _plot_executor
+    if _gpu_executor is not None:
+        _gpu_executor.shutdown(wait=wait)
+        _gpu_executor = None
+    if _io_executor is not None:
+        _io_executor.shutdown(wait=wait)
+        _io_executor = None
+    if _plot_executor is not None:
+        _plot_executor.shutdown(wait=wait)
+        _plot_executor = None
+
+def _run_with_stream(fn, device):
+    """Run fn() on its own CUDA stream so independent calls can overlap on the
+    GPU instead of serializing; no-op passthrough on CPU."""
+    is_cuda = (isinstance(device, torch.device) and device.type == "cuda") or (
+        isinstance(device, str) and device.startswith("cuda")
+    )
+    if not is_cuda:
+        return fn()
+    stream = torch.cuda.Stream()
+    with torch.cuda.stream(stream):
+        result = fn()
+    stream.synchronize()
+    return result
+
+def parallel_map(fns, device):
+    """Run a list of zero-arg callables concurrently on the shared GPU executor,
+    each on its own CUDA stream, and return their results in submission order."""
+    executor = get_gpu_executor()
+    futures = [executor.submit(_run_with_stream, fn, device) for fn in fns]
+    return [f.result() for f in futures]
+
+def submit_io_task(fn, *args, **kwargs):
+    """Fire off a CPU/IO-bound job (e.g. SLIC segmentation) on the shared IO
+    thread pool without blocking the caller; returns a Future the caller can
+    wait on. Do NOT use this for matplotlib work -- see submit_plot_task."""
+    return get_io_executor().submit(fn, *args, **kwargs)
+
+def submit_plot_task(fn, *args, **kwargs):
+    """Fire off a matplotlib plot-saving job on the single dedicated plot
+    thread, without blocking the caller."""
+    return get_plot_executor().submit(fn, *args, **kwargs)
 
 def permute_label(sup_y, flip_ratio=0.6):
     """Randomly permute (flip) the labels in the support set."""

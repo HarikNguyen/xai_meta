@@ -1,9 +1,31 @@
+import functools
 import os
+
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # plot saving runs on a background thread; GUI backends need the main thread
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from .utils import load_checkpoint, prepare_plots_dir, build_explainer, _write_csv, permute_label, blur_sup
+from .utils import (
+    load_checkpoint, prepare_plots_dir, build_explainer, _write_csv,
+    permute_label, blur_sup, parallel_map, submit_plot_task, shutdown_executors,
+)
+
+
+def _run_task(explainer, T, flip_ratio, is_blur, task_id, support, query):
+    sup_x, sup_y, sup_outpath = support
+    que_x, que_y, que_outpath = query
+
+    # Random flip label in the support set if flip_ratio is not None
+    if flip_ratio is not None:
+        sup_y = permute_label(sup_y, flip_ratio=flip_ratio)
+
+    if is_blur:
+        sup_x = blur_sup(sup_x)
+
+    adaptation_gain, saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T=T)
+    return task_id, sup_x, saliency_map, adaptation_gain, sup_outpath, que_outpath
 
 
 def explain(
@@ -39,30 +61,26 @@ def explain(
     ad_gains = []
     sup_paths = []
     que_paths = []
+    plot_futures = []
+
     for metabatch_id, boT in enumerate(test_loader_pbar):
-        boT_pbar = tqdm(
-            boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task"
-        )
-        for task_id, (support, query) in enumerate(boT_pbar):
-            sup_x, sup_y, sup_outpath = support
-            que_x, que_y, que_outpath = query
+        # Tasks within a metabatch are independent -> run their interpret()
+        # calls concurrently instead of one at a time.
+        fns = [
+            functools.partial(_run_task, explainer, T, flip_ratio, is_blur, task_id, support, query)
+            for task_id, (support, query) in enumerate(boT)
+        ]
+        task_results = parallel_map(fns, device=device)
 
-            # Random flip label in the support set if flip_ratio is not None
-            if flip_ratio is not None:
-                sup_y = permute_label(sup_y, flip_ratio=flip_ratio)
-
-            if is_blur:
-                sup_x = blur_sup(sup_x)
-
-            adaptation_gain, saliency_map = explainer.interpret(
-                sup_x, sup_y, que_x, que_y, T=T
-            )
-
+        for task_id, sup_x, saliency_map, adaptation_gain, sup_outpath, que_outpath in task_results:
             ad_gains.append((metabatch_id, task_id, adaptation_gain))
             sup_paths.append((metabatch_id, task_id, sup_outpath))
             que_paths.append((metabatch_id, task_id, que_outpath))
 
-            show_explaination(
+            # Plot rendering + PNG encoding is CPU/IO-bound: offload it so the
+            # next metabatch's GPU work doesn't wait on it.
+            plot_futures.append(submit_plot_task(
+                show_explaination,
                 sup_x,
                 saliency_map,
                 adaptation_gain,
@@ -70,15 +88,19 @@ def explain(
                 log_dir,
                 metabatch_id,
                 task_id,
-                T,
-            )
+            ))
+
+    # Make sure every plot has actually been written before returning
+    for future in plot_futures:
+        future.result()
+    shutdown_executors()
 
     _write_csv("adaptation_gain.csv", ["metabatch_id", "task_id", "adaptation_gain"], ad_gains, log_dir)
     _write_csv("S_paths.csv", ["metabatch_id", "task_id", "support_path"], sup_paths, log_dir)
     _write_csv("Q_paths.csv", ["metabatch_id", "task_id", "query_path"], que_paths, log_dir)
 
 def show_explaination(
-    sup_x, saliency_map, adaptation_gain, algo, log_dir, metabatch_id, task_id, t
+    sup_x, saliency_map, adaptation_gain, algo, log_dir, metabatch_id, task_id
 ):
     cols = 2
     rows = sup_x.shape[0]

@@ -1,56 +1,67 @@
+import functools
+
 import torch
 import torchvision.transforms.functional as TF
 import numpy as np
 from tqdm import tqdm
+from scipy import ndimage
 from skimage.segmentation import slic
-from concurrent.futures import ThreadPoolExecutor
+
+from ..utils import parallel_map, submit_io_task
 
 
-def get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs=150, compactness=10.0):
+def _segment_and_score(img_np, sal_np, n_segs, compactness):
+    """Run SLIC once for ONE image and compute the mean saliency per superpixel.
+    Mode-independent: pos/neg/random only differ in how these scores get
+    ranked, so this is computed once and reused by all three.
     """
-    Run SLIC on the CPU exactly once.
-    Return a GPU Tensor [N, 1, H, W] holding the "Rank" (0.0 -> 1.0) of each pixel.
-    - Pixels belonging to the most important superpixel get a rank close to 0.0.
-    - Pixels belonging to the least important superpixel get a rank close to 1.0.
-    """
-    N, C, H, W = sup_x.shape
-    device = sup_x.device
+    segs = slic(
+        img_np, n_segments=n_segs, compactness=compactness,
+        sigma=1.0, start_label=0, channel_axis=-1 if img_np.shape[-1] == 3 else None,
+        enforce_connectivity=True
+    )
+    unique_sps = np.unique(segs)
+    sp_scores = ndimage.mean(sal_np, labels=segs, index=unique_sps)
+    return segs, unique_sps, sp_scores
+
+
+def compute_rank_bases(sup_x, saliency_map, n_segs=150, compactness=10.0):
+    """Cache the SLIC segmentation + per-segment saliency score for every image
+    in the support set, ONCE per task (was previously recomputed from scratch
+    for each of the pos/neg/random modes)."""
     imgs_np = sup_x.detach().cpu().numpy().transpose(0, 2, 3, 1)
     sal_np = saliency_map.detach().cpu().squeeze(1).numpy()
+    # SLIC per image is pure numpy/skimage work (no shared mutable state), so
+    # it's safe to fan out across the shared CPU-bound IO pool.
+    futures = [
+        submit_io_task(_segment_and_score, imgs_np[i], sal_np[i], n_segs, compactness)
+        for i in range(sup_x.shape[0])
+    ]
+    return [f.result() for f in futures]
 
-    # Matrix holding the rank of each pixel
-    rank_maps = np.zeros((N, H, W), dtype=np.float32)
 
-    for i in range(N):
-        # 1. Split into superpixels
-        segs = slic(
-            imgs_np[i], n_segments=n_segs, compactness=compactness,
-            sigma=1.0, start_label=0, channel_axis=-1 if C == 3 else None,
-            enforce_connectivity=True
-        )
+def _rank_map_from_scores(segs, unique_sps, sp_scores, mode):
+    """Turn cached (segments, per-segment score) into a per-pixel rank map for
+    one mode, without re-running SLIC."""
+    if mode == "pos":
+        order = np.argsort(sp_scores)[::-1]   # remove the most positive (red) first
+    elif mode == "neg":
+        order = np.argsort(sp_scores)         # remove the most negative (blue) first
+    else:
+        order = np.random.permutation(len(unique_sps))  # remove in random order
 
-        # 2. Compute the average saliency for each superpixel
-        unique_sps = np.unique(segs)
-        sp_list = []
-        for sp in unique_sps:
-            avg_sal = sal_np[i][segs == sp].mean()
-            sp_list.append((sp, avg_sal))
+    num_sps = len(unique_sps)
+    sp_to_rank = np.empty(int(unique_sps.max()) + 1, dtype=np.float32)
+    sp_to_rank[unique_sps[order]] = np.arange(1, num_sps + 1) / num_sps
+    return sp_to_rank[segs]
 
-        # 3. Sort INDEPENDENTLY PER IMAGE (local ranking)
-        if mode == "pos":
-            sp_list.sort(key=lambda x: x[1], reverse=True)   # remove the most positive (red) first
-        elif mode == "neg":
-            sp_list.sort(key=lambda x: x[1], reverse=False)  # remove the most negative (blue) first
-        else:
-            np.random.shuffle(sp_list)                       # remove in random order
 
-        # 4. Assign a percentile rank (0.0 -> 1.0) to each region
-        num_sps = len(sp_list)
-        for rank_idx, (sp, _) in enumerate(sp_list):
-            percentile_rank = (rank_idx + 1) / num_sps
-            rank_maps[i][segs == sp] = percentile_rank
-
-    # Move to GPU to greatly speed up the following steps
+def rank_tensor_from_bases(rank_bases, mode, device):
+    """Build the [N, 1, H, W] GPU rank tensor for one mode from cached rank bases."""
+    rank_maps = np.stack([
+        _rank_map_from_scores(segs, unique_sps, sp_scores, mode)
+        for segs, unique_sps, sp_scores in rank_bases
+    ])
     return torch.from_numpy(rank_maps).unsqueeze(1).to(device)
 
 
@@ -59,90 +70,19 @@ def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0)
     Build the mask and apply it directly on the GPU using vectorized ops.
     (No for-loop needed at all.)
     """
-    # Build the mask for ALL images at once: pixels with rank <= ratio are masked out (set to 1)
     mask = (rank_tensor <= ratio).float()
 
-    # Blur the mask edges to avoid OOD artifacts
     if blur_sigma > 0:
         ksize = int(blur_sigma * 4) | 1
         mask = TF.gaussian_blur(mask, kernel_size=[ksize, ksize], sigma=[blur_sigma, blur_sigma])
         mask = torch.clamp(mask, 0.0, 1.0)
 
-    # Blend (lerp) the original image with the blurred baseline
     return sup_x * (1 - mask) + blurred_baseline * mask
 
 
-def adt(
-    explainer, sup_x, sup_y, que_x, que_y, T, adapt_gain_base, saliency_map,
-    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=6
-):
-    __MODES = ["pos", "neg", "random"]
-    if mode not in __MODES:
-        raise ValueError(f"Invalid mode: {mode}.")
-
-    # 1. Get the rank tensor, computed independently for each image
-    rank_tensor = get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs, compactness)
-
-    # 2. Build the blurred baseline once on the GPU
-    blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
-
-    gains = [adapt_gain_base]
-    pixel_ratios = [0.0]
-
-    # 3. Progressive removal loop (fast, since the mask is just tensor thresholding)
-    for step in range(1, num_steps + 1):
-        ratio = step / num_steps
-
-        # Remove ratio% of the area simultaneously across ALL images
-        sup_x_masked = apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma)
-
-        # Re-evaluate the MAML model
-        adapt_gain, _ = explainer.interpret(sup_x_masked, sup_y, que_x, que_y, T)
-        
-        gains.append(adapt_gain)
-        pixel_ratios.append(ratio)
-
-    auc = np.trapezoid(gains, pixel_ratios)
-    return auc
-
-def adt_parallel(
-    explainer, sup_x, sup_y, que_x, que_y, T, adapt_gain_base, saliency_map,
-    mode="pos", blur_sigma=5.0, n_segs=150, compactness=10.0, num_steps=10,
-    max_workers=4,
-):
-    __MODES = ["pos", "neg", "random"]
-    if mode not in __MODES:
-        raise ValueError(f"Invalid mode: {mode}.")
-
-    # Rank tensor + blurred baseline
-    rank_tensor = get_per_image_rank_tensor(sup_x, saliency_map, mode, n_segs, compactness)
-    blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
-
-    # Get the list of masked images (via deletion by ratio)
-    ratios = [step / num_steps for step in range(1, num_steps + 1)]
-    masked_list = [
-        apply_mask_fast(sup_x, blurred_baseline, rank_tensor, r, blur_sigma)
-        for r in ratios
-    ]
-
-    # Run explainer.interpret() on masked_list in parallel (GPU)
-    def _run(mx, stream):
-        with torch.cuda.stream(stream):
-            gain, _ = explainer.interpret(mx, sup_y, que_x, que_y, T)
-        stream.synchronize()
-        return gain
-
-    streams = [torch.cuda.Stream() for _ in ratios]
-    with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = [
-            pool.submit(_run, mx, st) for mx, st in zip(masked_list, streams)
-        ]
-        results = [f.result() for f in futures]
-
-    gains = [adapt_gain_base] + results
-    pixel_ratios = [0.0] + ratios
-    auc = np.trapezoid(gains, pixel_ratios)
-    return auc
+def _interpret_gain(explainer, sup_x_masked, sup_y, que_x, que_y, T):
+    gain, _ = explainer.interpret(sup_x_masked, sup_y, que_x, que_y, T)
+    return gain
 
 
 def compute_bidirectional_faithfulness(
@@ -150,37 +90,46 @@ def compute_bidirectional_faithfulness(
 ):
     test_loader_pbar = tqdm(test_loader, desc="BiDAT", position=0, leave=True, unit="boT")
     pdas, ndas, combines = [], [], []
+    ratios = [step / num_steps for step in range(1, num_steps + 1)]
 
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task")
-        
+
         for task_id, (support, query) in enumerate(boT_pbar):
-            sup_x, sup_y, _= support
+            sup_x, sup_y, _ = support
             que_x, que_y, _ = query
 
-            # Compute the base gain and saliency map
+            # Base gain + saliency map, shared by all 3 modes below
             adapt_gain_base, saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
-            
-            kwargs = {
-                "explainer": explainer, "sup_x": sup_x, "sup_y": sup_y, 
-                "que_x": que_x, "que_y": que_y, "T": T, 
-                "adapt_gain_base": adapt_gain_base, "saliency_map": saliency_map,
-                "blur_sigma": blur_sigma, "n_segs": n_segs, 
-                "compactness": compactness, "num_steps": num_steps,
-            }
 
-            # auc_pos = adt(mode="pos", **kwargs)
-            # auc_neg = adt(mode="neg", **kwargs)
-            # auc_random = adt(mode="random", **kwargs)
-            auc_pos = adt_parallel(mode="pos", **kwargs)
-            auc_neg = adt_parallel(mode="neg", **kwargs)
-            auc_random = adt_parallel(mode="random", **kwargs)
+            # Mode-independent pre-computation, done ONCE (was 3x before)
+            rank_bases = compute_rank_bases(sup_x, saliency_map, n_segs, compactness)
+            blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
 
+            # Flatten pos/neg/random x num_steps into ONE job list for the shared executor
+            jobs = []
+            for mode in ("pos", "neg", "random"):
+                rank_tensor = rank_tensor_from_bases(rank_bases, mode, sup_x.device)
+                for ratio in ratios:
+                    masked = apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma)
+                    jobs.append((mode, ratio, masked))
 
-            pda = auc_random - auc_pos
-            nda = auc_neg - auc_random
+            fns = [
+                functools.partial(_interpret_gain, explainer, masked, sup_y, que_x, que_y, T)
+                for _, _, masked in jobs
+            ]
+            gains = parallel_map(fns, device=sup_x.device)
+
+            aucs = {}
+            for mode in ("pos", "neg", "random"):
+                mode_gains = [adapt_gain_base] + [g for (m, _, _), g in zip(jobs, gains) if m == mode]
+                mode_ratios = [0.0] + ratios
+                aucs[mode] = np.trapezoid(mode_gains, mode_ratios)
+
+            pda = aucs["random"] - aucs["pos"]
+            nda = aucs["neg"] - aucs["random"]
             combined = pda + nda
-            
+
             pdas.append(pda)
             ndas.append(nda)
             combines.append(combined)
