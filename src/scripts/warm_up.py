@@ -1,8 +1,13 @@
 import torch
 import torch.nn as nn
-from models import Conv4
+from models import Conv4, Res12
 from loaders import get_dataloader
 from losses import SmoothMarginLoss
+
+BACKBONES = {
+    "conv4": Conv4,
+    "res12": Res12,
+}
 
 def warm_up(config):
     # Parse config
@@ -85,8 +90,12 @@ def warm_up(config):
     }
 
     algo_conf = algo_cfg.copy() # copy from yaml
+    backbone_name = algo_conf.pop("backbone", "conv4")
+    if backbone_name not in BACKBONES:
+        raise NotImplementedError(f"Backbone {backbone_name} not implemented.")
+
     algo_conf.update({
-        "baselearner_fn": Conv4,
+        "baselearner_fn": BACKBONES[backbone_name],
         "baselearner_args": baselearner_args,
         "optim_fn": torch.optim.Adam,
         "device": device,
