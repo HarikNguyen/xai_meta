@@ -327,6 +327,35 @@
       \field{pages}{265\bibrangedash 287}
       \range{pages}{23}
     \endentry
+    \entry{chen2021hetmaml}{inproceedings}{}
+      \name{author}{2}{}{%
+        {{hash=4d58868d0c6cf3f26d64b8d33512d744}{%
+           family={Chen},
+           familyi={C\bibinitperiod},
+           given={Jiayi},
+           giveni={J\bibinitperiod}}}%
+        {{hash=fa724c15ceb2e2648528b056220e04bd}{%
+           family={Zhang},
+           familyi={Z\bibinitperiod},
+           given={Aidong},
+           giveni={A\bibinitperiod}}}%
+      }
+      \strng{namehash}{1170081c5ba070ebb0359ca40fa3940a}
+      \strng{fullhash}{1170081c5ba070ebb0359ca40fa3940a}
+      \strng{bibnamehash}{1170081c5ba070ebb0359ca40fa3940a}
+      \strng{authorbibnamehash}{1170081c5ba070ebb0359ca40fa3940a}
+      \strng{authornamehash}{1170081c5ba070ebb0359ca40fa3940a}
+      \strng{authorfullhash}{1170081c5ba070ebb0359ca40fa3940a}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 30th ACM International Conference on Information \& Knowledge Management}
+      \field{title}{Hetmaml: Task-heterogeneous model-agnostic meta-learning for few-shot learning across modalities}
+      \field{year}{2021}
+      \field{pages}{191\bibrangedash 200}
+      \range{pages}{10}
+    \endentry
     \entry{fawakherji2026learning}{article}{}
       \name{author}{3}{}{%
         {{hash=0099c63f77d1e2168cf535b67427ade9}{%
@@ -996,6 +1025,46 @@
       \field{year}{1962}
       \field{pages}{83\bibrangedash 86}
       \range{pages}{4}
+    \endentry
+    \entry{pruthi2020estimating}{article}{}
+      \name{author}{4}{}{%
+        {{hash=2a7b6a898b9ba41d23d3321b92230121}{%
+           family={Pruthi},
+           familyi={P\bibinitperiod},
+           given={Garima},
+           giveni={G\bibinitperiod}}}%
+        {{hash=bf75bdf07d8da3a19b1de7e0d9f7977e}{%
+           family={Liu},
+           familyi={L\bibinitperiod},
+           given={Frederick},
+           giveni={F\bibinitperiod}}}%
+        {{hash=242f1e04780dc61a8b1752c18a41532d}{%
+           family={Kale},
+           familyi={K\bibinitperiod},
+           given={Satyen},
+           giveni={S\bibinitperiod}}}%
+        {{hash=3f6ba1bd9765787e3ba110f061162d7c}{%
+           family={Sundararajan},
+           familyi={S\bibinitperiod},
+           given={Mukund},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{263329f3a8e478ce4645b034b94dd467}
+      \strng{fullhash}{d80b522f440a2a379bab20fcf98b6b8e}
+      \strng{bibnamehash}{d80b522f440a2a379bab20fcf98b6b8e}
+      \strng{authorbibnamehash}{d80b522f440a2a379bab20fcf98b6b8e}
+      \strng{authornamehash}{263329f3a8e478ce4645b034b94dd467}
+      \strng{authorfullhash}{d80b522f440a2a379bab20fcf98b6b8e}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Advances in Neural Information Processing Systems}
+      \field{title}{Estimating training data influence by tracing gradient descent}
+      \field{volume}{33}
+      \field{year}{2020}
+      \field{pages}{19920\bibrangedash 19930}
+      \range{pages}{11}
     \endentry
     \entry{raghu2019rapid}{article}{}
       \name{author}{4}{}{%
@@ -1786,6 +1855,100 @@
       \field{title}{Caltech-UCSD birds 200}
       \field{year}{2010}
     \endentry
+    \entry{yao2019hierarchically}{inproceedings}{}
+      \name{author}{4}{}{%
+        {{hash=3b115344acb9ff313d507977648f7ece}{%
+           family={Yao},
+           familyi={Y\bibinitperiod},
+           given={Huaxiu},
+           giveni={H\bibinitperiod}}}%
+        {{hash=27012a40fdd9e31160098b444b1fbf1b}{%
+           family={Wei},
+           familyi={W\bibinitperiod},
+           given={Ying},
+           giveni={Y\bibinitperiod}}}%
+        {{hash=10b0bc00e8e92345a8bc3f6c1e6bb625}{%
+           family={Huang},
+           familyi={H\bibinitperiod},
+           given={Junzhou},
+           giveni={J\bibinitperiod}}}%
+        {{hash=25ebc6d8b181f6379a65892949d0ddf3}{%
+           family={Li},
+           familyi={L\bibinitperiod},
+           given={Zhenhui},
+           giveni={Z\bibinitperiod}}}%
+      }
+      \list{organization}{1}{%
+        {PMLR}%
+      }
+      \strng{namehash}{01558cf2ac396b87f94b2f6cd18f5cab}
+      \strng{fullhash}{65ae72b917a08db0310dbc45bf14c2f2}
+      \strng{bibnamehash}{65ae72b917a08db0310dbc45bf14c2f2}
+      \strng{authorbibnamehash}{65ae72b917a08db0310dbc45bf14c2f2}
+      \strng{authornamehash}{01558cf2ac396b87f94b2f6cd18f5cab}
+      \strng{authorfullhash}{65ae72b917a08db0310dbc45bf14c2f2}
+      \field{sortinit}{Y}
+      \field{sortinithash}{fd67ad5a9ef0f7456bdd9aab10fe1495}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{International conference on machine learning}
+      \field{title}{Hierarchically structured meta-learning}
+      \field{year}{2019}
+      \field{pages}{7045\bibrangedash 7054}
+      \range{pages}{10}
+    \endentry
+    \entry{yao2020automated}{article}{}
+      \name{author}{7}{}{%
+        {{hash=3b115344acb9ff313d507977648f7ece}{%
+           family={Yao},
+           familyi={Y\bibinitperiod},
+           given={Huaxiu},
+           giveni={H\bibinitperiod}}}%
+        {{hash=3a8ac5ed3d061d6fd4375a30170119c8}{%
+           family={Wu},
+           familyi={W\bibinitperiod},
+           given={Xian},
+           giveni={X\bibinitperiod}}}%
+        {{hash=ae876787ba4f645e4a2318dbda2f564e}{%
+           family={Tao},
+           familyi={T\bibinitperiod},
+           given={Zhiqiang},
+           giveni={Z\bibinitperiod}}}%
+        {{hash=c4b43451450d2631465d73b9dc65d89d}{%
+           family={Li},
+           familyi={L\bibinitperiod},
+           given={Yaliang},
+           giveni={Y\bibinitperiod}}}%
+        {{hash=a4189394f9ccf96207d091dd64e3fd2d}{%
+           family={Ding},
+           familyi={D\bibinitperiod},
+           given={Bolin},
+           giveni={B\bibinitperiod}}}%
+        {{hash=9084f089073e2e45c9fdda50e4a3a133}{%
+           family={Li},
+           familyi={L\bibinitperiod},
+           given={Ruirui},
+           giveni={R\bibinitperiod}}}%
+        {{hash=25ebc6d8b181f6379a65892949d0ddf3}{%
+           family={Li},
+           familyi={L\bibinitperiod},
+           given={Zhenhui},
+           giveni={Z\bibinitperiod}}}%
+      }
+      \strng{namehash}{7144eb29f898170bce48067b2652622f}
+      \strng{fullhash}{618e77ba2160637913b4ef226a309926}
+      \strng{bibnamehash}{7144eb29f898170bce48067b2652622f}
+      \strng{authorbibnamehash}{7144eb29f898170bce48067b2652622f}
+      \strng{authornamehash}{7144eb29f898170bce48067b2652622f}
+      \strng{authorfullhash}{618e77ba2160637913b4ef226a309926}
+      \field{sortinit}{Y}
+      \field{sortinithash}{fd67ad5a9ef0f7456bdd9aab10fe1495}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{arXiv preprint arXiv:2001.00745}
+      \field{title}{Automated relational meta-learning}
+      \field{year}{2020}
+    \endentry
     \entry{yeh2018representer}{article}{}
       \name{author}{4}{}{%
         {{hash=d6b56204d005c40ba2d43fae6c74c9ea}{%
@@ -1909,13 +2072,8 @@
       \range{pages}{9}
     \endentry
   \enddatalist
-  \missing{chen2021hetmaml}
-  \missing{deleu2018negative}
-  \missing{pruthi2020estimating}
   \missing{ribeiro2016lime}
   \missing{smilkov2017smoothgrad}
-  \missing{yao2019hierarchically}
-  \missing{yao2020automated}
 \endrefsection
 \endinput
 
