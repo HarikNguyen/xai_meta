@@ -128,11 +128,15 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T,
         corrupted_saliencies.append((layer_idx, new_saliency_map))
 
     save_path = os.path.join(log_dir, "plots", f"sanity_params_task{metabatch_id}-{task_id}_grid.png")
+    # Detach + move to CPU before queuing -- otherwise every backlogged plot
+    # job (single-worker executor, much slower than GPU inference) keeps its
+    # tensors resident in VRAM until it's actually drawn, growing VRAM usage
+    # monotonically over a long run instead of releasing it per-task.
     submit_plot_task(
         save_full_nxm_grid,
-        sup_x,                # (N, C, H, W)
-        orig_saliency_map,     # (N, H, W)
-        corrupted_saliencies,  # List of (layer_idx, (N, H, W))
+        sup_x.detach().cpu(),                # (N, C, H, W)
+        orig_saliency_map.detach().cpu(),     # (N, H, W)
+        [(layer_idx, sal.detach().cpu()) for layer_idx, sal in corrupted_saliencies],  # List of (layer_idx, (N, H, W))
         save_path,
         0.5,
     )

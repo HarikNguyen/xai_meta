@@ -77,12 +77,22 @@ def explain(
             sup_paths.append((metabatch_id, task_id, sup_outpath))
             que_paths.append((metabatch_id, task_id, que_outpath))
 
+            # Move to CPU BEFORE queuing: the single-worker plot executor
+            # renders much slower than GPU inference produces new tasks, so
+            # plot_futures backs up across all metatest_iterations. If the
+            # queued tensors were still on GPU, every backlogged job would
+            # keep its sup_x/saliency_map resident in VRAM until the plot
+            # worker finally got to it -- causing VRAM usage to grow
+            # monotonically over the run instead of staying flat per-task.
+            sup_x_cpu = sup_x.detach().cpu()
+            saliency_map_cpu = saliency_map.detach().cpu()
+
             # Plot rendering + PNG encoding is CPU/IO-bound: offload it so the
             # next metabatch's GPU work doesn't wait on it.
             plot_futures.append(submit_plot_task(
                 show_explaination,
-                sup_x,
-                saliency_map,
+                sup_x_cpu,
+                saliency_map_cpu,
                 adaptation_gain,
                 algo,
                 log_dir,
