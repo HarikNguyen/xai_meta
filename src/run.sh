@@ -3,7 +3,7 @@ set -e
 
 # Training (kept commented -- run these manually one at a time, they take
 # hours; not meant to run as part of this batch script)
-# for scenario in only_mini only_cub only_tiered mini2cub tiered2cub tiered2strokes_omnig; do
+# for scenario in only_mini only_cub only_tiered mini2cub tiered2cub cub2mini cub2tiered tiered2strokes_omnig; do
 #   for backbone in conv4 resnet10; do
 #     python main.py --config ./configs/${scenario}/${backbone}.yaml --mode train --vmap_chunk_size 4
 #   done
@@ -18,6 +18,8 @@ SCENARIOS=(
   "only_tiered:only_tiered"
   "mini2cub:mini2cub"
   "tiered2cub:tiered2cub"
+  "cub2mini:cub2mini"
+  "cub2tiered:cub2tiered"
   "tiered2strokes_omnig:tiered2strokes_omnig"
 )
 BACKBONES=("conv4" "resnet10")
