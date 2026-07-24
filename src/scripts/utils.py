@@ -159,7 +159,7 @@ def get_plot_executor():
 def shutdown_executors(wait=True):
     """Release the shared thread pools. Call once a top-level mode (explain /
     check_explain) has finished all its work."""
-    global _gpu_executor, _io_executor, _plot_executor
+    global _gpu_executor, _io_executor, _plot_executor, _cuda_stream_pool
     if _gpu_executor is not None:
         _gpu_executor.shutdown(wait=wait)
         _gpu_executor = None
@@ -169,16 +169,34 @@ def shutdown_executors(wait=True):
     if _plot_executor is not None:
         _plot_executor.shutdown(wait=wait)
         _plot_executor = None
+    _cuda_stream_pool = None
 
-def _run_with_stream(fn, device):
-    """Run fn() on its own CUDA stream so independent calls can overlap on the
-    GPU instead of serializing; no-op passthrough on CPU."""
-    is_cuda = (isinstance(device, torch.device) and device.type == "cuda") or (
+_cuda_stream_pool = None
+
+def _get_cuda_stream_pool(n):
+    """Lazily create a small, bounded, REUSED pool of CUDA streams (at most
+    _GPU_WORKERS of them, ever). Streams are cheap to reuse but each fresh
+    torch.cuda.Stream() carries its own allocator bookkeeping -- creating one
+    per task in a long-running loop (e.g. metatest_batch_size=1 -> one brand
+    new stream per metabatch, hundreds/thousands over a run) leaks/fragments
+    VRAM slowly instead of releasing it, since the caching allocator doesn't
+    always eagerly reclaim blocks cached against an abandoned stream."""
+    global _cuda_stream_pool
+    if _cuda_stream_pool is None:
+        _cuda_stream_pool = [torch.cuda.Stream() for _ in range(min(n, _GPU_WORKERS))]
+    return _cuda_stream_pool
+
+def _is_cuda_device(device):
+    return (isinstance(device, torch.device) and device.type == "cuda") or (
         isinstance(device, str) and device.startswith("cuda")
     )
-    if not is_cuda:
+
+def _run_with_stream(fn, device, stream=None):
+    """Run fn(), optionally on a given (reused) CUDA stream so independent
+    calls can overlap on the GPU instead of serializing; no-op passthrough on
+    CPU or when no stream is given (nothing to overlap with)."""
+    if stream is None or not _is_cuda_device(device):
         return fn()
-    stream = torch.cuda.Stream()
     with torch.cuda.stream(stream):
         result = fn()
     stream.synchronize()
@@ -186,9 +204,20 @@ def _run_with_stream(fn, device):
 
 def parallel_map(fns, device):
     """Run a list of zero-arg callables concurrently on the shared GPU executor,
-    each on its own CUDA stream, and return their results in submission order."""
+    each on a reused CUDA stream from a small bounded pool, and return their
+    results in submission order."""
+    if len(fns) == 1:
+        # Nothing to overlap with a single task -- run inline, skip the
+        # executor/stream machinery entirely (also avoids the per-call stream
+        # churn described above for configs with only 1 task per metabatch).
+        return [_run_with_stream(fns[0], device, stream=None)]
+
     executor = get_gpu_executor()
-    futures = [executor.submit(_run_with_stream, fn, device) for fn in fns]
+    streams = _get_cuda_stream_pool(len(fns)) if _is_cuda_device(device) else None
+    futures = [
+        executor.submit(_run_with_stream, fn, device, streams[i % len(streams)] if streams else None)
+        for i, fn in enumerate(fns)
+    ]
     return [f.result() for f in futures]
 
 def submit_io_task(fn, *args, **kwargs):
