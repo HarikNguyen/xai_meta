@@ -14,6 +14,7 @@ class MAML(BaseAlgorithm):
         grad_clip=None,
         vmap_chunk_size=None,
         grad_accum_tasks=False,
+        grad_accum_chunk_size=1,
         **kwargs,
     ):
         """Initialization of MAML
@@ -40,7 +41,16 @@ class MAML(BaseAlgorithm):
             meta_batch_size of them simultaneously. Trades some wall-clock
             speed (no longer vectorized across tasks) for peak VRAM, useful
             for backbones too large to fit meta_batch_size tasks at once
-            (e.g. Res12) without lowering meta_batch_size/k_query/T/second_order.
+            without lowering meta_batch_size/k_query/T/second_order.
+        grad_accum_chunk_size: int
+            Only used when grad_accum_tasks=True. Instead of looping one task
+            at a time, groups tasks into chunks of this size and batches each
+            group through vmap (regaining some cross-task parallelism),
+            still calling backward()/detaching once per group so at most
+            grad_accum_chunk_size tasks' graphs are resident at once instead
+            of meta_batch_size. 1 (default) is the fully-sequential, lowest
+            memory / lowest speed extreme; raising it trades VRAM back for
+            speed -- tune it up until it OOMs again, then back off by one.
         **kwargs: dict
             Keyword arguments that are ignored
         """
@@ -53,6 +63,7 @@ class MAML(BaseAlgorithm):
         self.grad_clip = grad_clip
         self.vmap_chunk_size = vmap_chunk_size
         self.grad_accum_tasks = grad_accum_tasks
+        self.grad_accum_chunk_size = grad_accum_chunk_size
 
         # get random initialization point for baselearner (theta_0)
         self.baselearner = self.baselearner_fn(**self.baselearner_args)
@@ -179,28 +190,48 @@ class MAML(BaseAlgorithm):
 
         return meta_loss.item()
 
+    def _chunk_ranges(self, num_tasks):
+        chunk_size = max(1, min(self.grad_accum_chunk_size, num_tasks))
+        return [(start, min(start + chunk_size, num_tasks)) for start in range(0, num_tasks, chunk_size)]
+
+    def _deploy_chunk(self, start, end, sup_x, sup_y, que_x, que_y, train_mode, T, full_trajectory):
+        """Run _deploy on tasks [start, end). A single task is called directly
+        (no vmap); a group of >1 tasks is batched through vmap -- this is the
+        only place grad_accum_tasks regains cross-task parallelism.
+        """
+        if end - start == 1:
+            return self._deploy(
+                self.theta_0, sup_x[start], sup_y[start], que_x[start], que_y[start],
+                train_mode=train_mode, T=T, full_trajectory=full_trajectory,
+            )
+        vmap_deploy = tf.vmap(self._deploy, in_dims=(None, 0, 0, 0, 0))
+        return vmap_deploy(
+            self.theta_0, sup_x[start:end], sup_y[start:end], que_x[start:end], que_y[start:end],
+            train_mode=train_mode, T=T, full_trajectory=full_trajectory,
+        )
+
     def _train_grad_accum(self, sup_x, sup_y, que_x, que_y):
         """Same math as train()'s vmap path (mean of per-task query losses,
-        gradient w.r.t. theta_0), but processes one task at a time so only
-        one task's second-order inner-loop graph is resident at once.
+        gradient w.r.t. theta_0), but processes tasks in groups of
+        grad_accum_chunk_size (1 = fully sequential) so at most that many
+        tasks' second-order inner-loop graphs are resident at once, instead
+        of all meta_batch_size of them.
         """
         num_tasks = sup_x.shape[0]
         meta_loss = 0.0
 
-        for i in range(num_tasks):
-            _, que_losses, _, _, _, _ = self._deploy(
-                self.theta_0,
-                sup_x[i],
-                sup_y[i],
-                que_x[i],
-                que_y[i],
-                train_mode=True,
-                T=self.T,
-                full_trajectory=False,
+        for start, end in self._chunk_ranges(num_tasks):
+            _, que_losses, _, _, _, _ = self._deploy_chunk(
+                start, end, sup_x, sup_y, que_x, que_y,
+                train_mode=True, T=self.T, full_trajectory=False,
             )
-            task_loss = que_losses[-1] / num_tasks
-            task_loss.backward()
-            meta_loss += task_loss.item()
+            # que_losses[-1] is a scalar for a size-1 chunk, shape (end-start,)
+            # for a bigger one -- .sum() handles both, dividing by the TOTAL
+            # num_tasks (not the chunk size) keeps this equal to the mean over
+            # all tasks regardless of how they're grouped into chunks.
+            chunk_loss = que_losses[-1].sum() / num_tasks
+            chunk_loss.backward()
+            meta_loss += chunk_loss.item()
 
         self.outer_optim.step()
 
@@ -252,39 +283,42 @@ class MAML(BaseAlgorithm):
 
     def _validate_looped(self, sup_x, sup_y, que_x, que_y, T):
         """Same output as _validate()'s vmap path (per-step tensors of shape
-        (num_tasks,)), but processes one task at a time so only one task's
-        inner-loop graph is resident at once -- val()/test() never call
-        backward(), but torch.func.grad_and_value still builds a
-        differentiable graph internally for every _deploy call regardless
-        (train or not), so batching num_tasks of them via vmap costs the same
-        peak memory as train() did before grad_accum_tasks. Detaching each
-        task's results immediately lets that graph be freed before the next
-        task starts.
+        (num_tasks,)), but processes tasks in groups of grad_accum_chunk_size
+        (1 = fully sequential) so at most that many tasks' inner-loop graphs
+        are resident at once -- val()/test() never call backward(), but
+        torch.func.grad_and_value still builds a differentiable graph
+        internally for every _deploy call regardless (train or not), so
+        batching num_tasks of them via vmap costs the same peak memory as
+        train() did before grad_accum_tasks. Detaching each group's results
+        immediately lets that graph be freed before the next group starts.
         """
         num_tasks = sup_x.shape[0]
-        per_task_sup_losses, per_task_que_losses = [], []
-        per_task_sup_accs, per_task_que_accs = [], []
+        chunk_sup_losses, chunk_que_losses = [], []
+        chunk_sup_accs, chunk_que_accs = [], []
 
-        for i in range(num_tasks):
-            sup_losses, que_losses, _, _, sup_accs, que_accs = self._deploy(
-                self.theta_0,
-                sup_x[i],
-                sup_y[i],
-                que_x[i],
-                que_y[i],
-                train_mode=False,
-                T=T,
+        for start, end in self._chunk_ranges(num_tasks):
+            sup_losses, que_losses, _, _, sup_accs, que_accs = self._deploy_chunk(
+                start, end, sup_x, sup_y, que_x, que_y,
+                train_mode=False, T=T, full_trajectory=True,
             )
-            per_task_sup_losses.append([t.detach() for t in sup_losses])
-            per_task_que_losses.append([t.detach() for t in que_losses])
-            per_task_sup_accs.append(sup_accs)
-            per_task_que_accs.append(que_accs)
+            is_single = end - start == 1
+            # a size-1 chunk (no vmap) returns 0-dim scalars; unsqueeze so
+            # every chunk has a leading task-dim of size (end-start), ready
+            # to torch.cat back together below regardless of chunk size.
+            to_group = lambda t: t.detach().unsqueeze(0) if is_single else t.detach()
+            to_group_acc = lambda t: t.unsqueeze(0) if is_single else t
 
-        num_steps = len(per_task_sup_losses[0])
-        sup_losses = [torch.stack([per_task_sup_losses[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
-        que_losses = [torch.stack([per_task_que_losses[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
-        sup_accs = [torch.stack([per_task_sup_accs[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
-        que_accs = [torch.stack([per_task_que_accs[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
+            chunk_sup_losses.append([to_group(t) for t in sup_losses])
+            chunk_que_losses.append([to_group(t) for t in que_losses])
+            chunk_sup_accs.append([to_group_acc(t) for t in sup_accs])
+            chunk_que_accs.append([to_group_acc(t) for t in que_accs])
+
+        num_steps = len(chunk_sup_losses[0])
+        num_chunks = len(chunk_sup_losses)
+        sup_losses = [torch.cat([chunk_sup_losses[c][s] for c in range(num_chunks)]) for s in range(num_steps)]
+        que_losses = [torch.cat([chunk_que_losses[c][s] for c in range(num_chunks)]) for s in range(num_steps)]
+        sup_accs = [torch.cat([chunk_sup_accs[c][s] for c in range(num_chunks)]) for s in range(num_steps)]
+        que_accs = [torch.cat([chunk_que_accs[c][s] for c in range(num_chunks)]) for s in range(num_steps)]
         return sup_losses, que_losses, sup_accs, que_accs
         
     def dump_state(self):

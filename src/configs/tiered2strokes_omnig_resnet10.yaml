@@ -1,11 +1,11 @@
-# tiered2cub_res12.yaml
+# tiered2strokes_omnig_resnet10.yaml
 dataset:
   train_root: "tiered_imagenet"
   train_name: "tiered_imagenet"
-  val_root: "cub_200_new"
-  val_name: "cub_200_new"
-  test_root: "cub_200_new"
-  test_name: "cub_200_new"
+  val_root: "strokes_omniglot"
+  val_name: "strokes_omniglot"
+  test_root: "strokes_omniglot"
+  test_name: "strokes_omniglot"
 
 dataloader:
   num_workers: 8
@@ -18,9 +18,10 @@ dataloader:
   k_shot: 1
   k_query: 15
   test_k_query: 1
+  test_rt_deg: 15 # rotation degree - only used for test
 
 algo:
-  backbone: "res12"
+  backbone: "resnet10"
   train_base_lr: 0.01
   base_lr: 0.01
   second_order: false
@@ -31,4 +32,4 @@ algo:
   batching_eps: false
   test_adam: false
   grad_clip: 10
-  criterion: "sm_loss"
+  criterion: "sm_loss" # smooth margin loss

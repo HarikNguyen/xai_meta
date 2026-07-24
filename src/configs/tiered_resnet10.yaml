@@ -1,11 +1,11 @@
-# tiered2strokes_omnig_res12.yaml
+# tiered_resnet10.yaml
 dataset:
   train_root: "tiered_imagenet"
   train_name: "tiered_imagenet"
-  val_root: "strokes_omniglot"
-  val_name: "strokes_omniglot"
-  test_root: "strokes_omniglot"
-  test_name: "strokes_omniglot"
+  val_root: "tiered_imagenet"
+  val_name: "tiered_imagenet"
+  test_root: "tiered_imagenet"
+  test_name: "tiered_imagenet"
 
 dataloader:
   num_workers: 8
@@ -13,15 +13,14 @@ dataloader:
   metatest_iterations: 600
   val_after: 1000
   meta_batch_size: 4
-  metatest_batch_size: 4
+  metatest_batch_size: 1
   n_way: 5
   k_shot: 1
   k_query: 15
   test_k_query: 1
-  test_rt_deg: 15 # rotation degree - only used for test
 
 algo:
-  backbone: "res12"
+  backbone: "resnet10"
   train_base_lr: 0.01
   base_lr: 0.01
   second_order: false
@@ -32,4 +31,4 @@ algo:
   batching_eps: false
   test_adam: false
   grad_clip: 10
-  criterion: "sm_loss" # smooth margin loss
+  criterion: "ce_loss"

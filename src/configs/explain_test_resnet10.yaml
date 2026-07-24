@@ -1,4 +1,4 @@
-# explain_test_res12.yaml
+# explain_test_resnet10.yaml
 dataset:
   train_root: "tiered_imagenet"
   train_name: "tiered_imagenet"
@@ -24,7 +24,7 @@ dataloader:
   test_k_query: 24
 
 algo:
-  backbone: "res12"
+  backbone: "resnet10"
   train_base_lr: 0.01
   base_lr: 0.01
   second_order: false

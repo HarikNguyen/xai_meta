@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
-from models import Conv4, Res12
+from models import Conv4, ResNet10
 from loaders import get_dataloader
 from losses import SmoothMarginLoss
 
 BACKBONES = {
     "conv4": Conv4,
-    "res12": Res12,
+    "resnet10": ResNet10,
 }
 
 def warm_up(config):

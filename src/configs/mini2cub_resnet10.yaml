@@ -1,4 +1,4 @@
-# mini2cub_res12.yaml
+# mini2cub_resnet10.yaml
 dataset:
   train_root: "miniImagenet"
   train_name: "miniImagenet"
@@ -20,8 +20,7 @@ dataloader:
   test_k_query: 1
 
 algo:
-  backbone: "res12"
-  grad_accum_tasks: true
+  backbone: "resnet10"
   train_base_lr: 0.01
   base_lr: 0.01
   second_order: false

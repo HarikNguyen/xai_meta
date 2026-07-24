@@ -1,11 +1,11 @@
-# tiered_res12.yaml
+# tiered2cub_resnet10.yaml
 dataset:
   train_root: "tiered_imagenet"
   train_name: "tiered_imagenet"
-  val_root: "tiered_imagenet"
-  val_name: "tiered_imagenet"
-  test_root: "tiered_imagenet"
-  test_name: "tiered_imagenet"
+  val_root: "cub_200_new"
+  val_name: "cub_200_new"
+  test_root: "cub_200_new"
+  test_name: "cub_200_new"
 
 dataloader:
   num_workers: 8
@@ -13,14 +13,14 @@ dataloader:
   metatest_iterations: 600
   val_after: 1000
   meta_batch_size: 4
-  metatest_batch_size: 1
+  metatest_batch_size: 4
   n_way: 5
   k_shot: 1
   k_query: 15
   test_k_query: 1
 
 algo:
-  backbone: "res12"
+  backbone: "resnet10"
   train_base_lr: 0.01
   base_lr: 0.01
   second_order: false
@@ -31,4 +31,4 @@ algo:
   batching_eps: false
   test_adam: false
   grad_clip: 10
-  criterion: "ce_loss"
+  criterion: "sm_loss"
