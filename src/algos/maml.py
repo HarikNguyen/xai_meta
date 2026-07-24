@@ -229,9 +229,13 @@ class MAML(BaseAlgorithm):
 
     def _validate(self, sup_x, sup_y, que_x, que_y, T):
         sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
+
+        if self.grad_accum_tasks:
+            return self._validate_looped(sup_x, sup_y, que_x, que_y, T)
+
         vmap_deploy = tf.vmap(
-            self._deploy, 
-            in_dims=(None, 0, 0, 0, 0), 
+            self._deploy,
+            in_dims=(None, 0, 0, 0, 0),
             chunk_size=self.vmap_chunk_size
         )
 
@@ -244,6 +248,43 @@ class MAML(BaseAlgorithm):
             train_mode=False,
             T=T,
         )
+        return sup_losses, que_losses, sup_accs, que_accs
+
+    def _validate_looped(self, sup_x, sup_y, que_x, que_y, T):
+        """Same output as _validate()'s vmap path (per-step tensors of shape
+        (num_tasks,)), but processes one task at a time so only one task's
+        inner-loop graph is resident at once -- val()/test() never call
+        backward(), but torch.func.grad_and_value still builds a
+        differentiable graph internally for every _deploy call regardless
+        (train or not), so batching num_tasks of them via vmap costs the same
+        peak memory as train() did before grad_accum_tasks. Detaching each
+        task's results immediately lets that graph be freed before the next
+        task starts.
+        """
+        num_tasks = sup_x.shape[0]
+        per_task_sup_losses, per_task_que_losses = [], []
+        per_task_sup_accs, per_task_que_accs = [], []
+
+        for i in range(num_tasks):
+            sup_losses, que_losses, _, _, sup_accs, que_accs = self._deploy(
+                self.theta_0,
+                sup_x[i],
+                sup_y[i],
+                que_x[i],
+                que_y[i],
+                train_mode=False,
+                T=T,
+            )
+            per_task_sup_losses.append([t.detach() for t in sup_losses])
+            per_task_que_losses.append([t.detach() for t in que_losses])
+            per_task_sup_accs.append(sup_accs)
+            per_task_que_accs.append(que_accs)
+
+        num_steps = len(per_task_sup_losses[0])
+        sup_losses = [torch.stack([per_task_sup_losses[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
+        que_losses = [torch.stack([per_task_que_losses[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
+        sup_accs = [torch.stack([per_task_sup_accs[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
+        que_accs = [torch.stack([per_task_que_accs[i][s] for i in range(num_tasks)]) for s in range(num_steps)]
         return sup_losses, que_losses, sup_accs, que_accs
         
     def dump_state(self):
