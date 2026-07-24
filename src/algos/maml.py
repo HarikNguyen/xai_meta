@@ -13,6 +13,7 @@ class MAML(BaseAlgorithm):
         meta_batch_size=1,
         grad_clip=None,
         vmap_chunk_size=None,
+        grad_accum_tasks=False,
         **kwargs,
     ):
         """Initialization of MAML
@@ -27,6 +28,19 @@ class MAML(BaseAlgorithm):
             Whether to use second-order gradient information
         meta_batch_size: int
             Number of tasks to compute outer-update
+        grad_accum_tasks: bool
+            If True, MAML.train() loops over the meta_batch_size tasks one at
+            a time (calling backward()+accumulating after each), instead of
+            batching all tasks through a single vmap call + one backward().
+            Mathematically identical result (mean of per-task gradients is
+            linear, so accumulating it one task at a time gives the same
+            total gradient as computing it all at once) -- the only thing
+            that changes is that at most 1 task's full second-order inner-
+            loop graph is ever resident in memory at a time instead of
+            meta_batch_size of them simultaneously. Trades some wall-clock
+            speed (no longer vectorized across tasks) for peak VRAM, useful
+            for backbones too large to fit meta_batch_size tasks at once
+            (e.g. Res12) without lowering meta_batch_size/k_query/T/second_order.
         **kwargs: dict
             Keyword arguments that are ignored
         """
@@ -38,6 +52,7 @@ class MAML(BaseAlgorithm):
         self.meta_batch_size = meta_batch_size
         self.grad_clip = grad_clip
         self.vmap_chunk_size = vmap_chunk_size
+        self.grad_accum_tasks = grad_accum_tasks
 
         # get random initialization point for baselearner (theta_0)
         self.baselearner = self.baselearner_fn(**self.baselearner_args)
@@ -135,9 +150,13 @@ class MAML(BaseAlgorithm):
     def train(self, sup_x, sup_y, que_x, que_y):
         sup_x, sup_y, que_x, que_y = put_on_device(self.device, [sup_x, sup_y, que_x, que_y])
         self.outer_optim.zero_grad()
+
+        if self.grad_accum_tasks:
+            return self._train_grad_accum(sup_x, sup_y, que_x, que_y)
+
         vmap_deploy = tf.vmap(
-            self._deploy, 
-            in_dims=(None, 0, 0, 0, 0), 
+            self._deploy,
+            in_dims=(None, 0, 0, 0, 0),
             chunk_size=self.vmap_chunk_size
         )
 
@@ -159,6 +178,33 @@ class MAML(BaseAlgorithm):
         self.outer_optim.step()
 
         return meta_loss.item()
+
+    def _train_grad_accum(self, sup_x, sup_y, que_x, que_y):
+        """Same math as train()'s vmap path (mean of per-task query losses,
+        gradient w.r.t. theta_0), but processes one task at a time so only
+        one task's second-order inner-loop graph is resident at once.
+        """
+        num_tasks = sup_x.shape[0]
+        meta_loss = 0.0
+
+        for i in range(num_tasks):
+            _, que_losses, _, _, _, _ = self._deploy(
+                self.theta_0,
+                sup_x[i],
+                sup_y[i],
+                que_x[i],
+                que_y[i],
+                train_mode=True,
+                T=self.T,
+                full_trajectory=False,
+            )
+            task_loss = que_losses[-1] / num_tasks
+            task_loss.backward()
+            meta_loss += task_loss.item()
+
+        self.outer_optim.step()
+
+        return meta_loss
 
     def val(self, sup_x, sup_y, que_x, que_y):
         sup_losses, que_losses, sup_accs, que_accs = self._validate(sup_x, sup_y, que_x, que_y, T=self.T_val)
