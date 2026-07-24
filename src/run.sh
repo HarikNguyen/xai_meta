@@ -1,38 +1,60 @@
 #!/bin/bash
+set -e
 
-# Training
-# python main.py --config ./configs/mini2cub.yaml --mode train --vmap_chunk_size 4
-# python main.py --config ./configs/tiered2cub.yaml --mode train --vmap_chunk_size 4
-# python main.py --config ./configs/tiered.yaml --mode train --vmap_chunk_size 4
+# Training (kept commented -- run these manually one at a time, they take
+# hours; not meant to run as part of this batch script)
+# for scenario in only_mini only_cub only_tiered mini2cub tiered2cub tiered2strokes_omnig; do
+#   for backbone in conv4 resnet10; do
+#     python main.py --config ./configs/${scenario}/${backbone}.yaml --mode train --vmap_chunk_size 4
+#   done
+# done
 
-# Check n Explain
+# Scenarios to sweep. Each entry is "config_folder:log_label" -- log_label is
+# used as the base name for checkpoint_dir/log_dir so results from different
+# scenarios/backbones don't collide.
+SCENARIOS=(
+  "only_mini:only_mini"
+  "only_cub:only_cub"
+  "only_tiered:only_tiered"
+  "mini2cub:mini2cub"
+  "tiered2cub:tiered2cub"
+  "tiered2strokes_omnig:tiered2strokes_omnig"
+)
+BACKBONES=("conv4" "resnet10")
 
-echo "Check n Explain - Mini 2 CUB"
-python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub --mode test --use_last
-python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub_ex --mode explain --use_last
-python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub_exwf --mode explain --use_last --flip_ratio 0.75
-python main.py --config ./configs/mini2cub.yaml --checkpoint_dir MAML_mini2cub --log_dir mini2cub_exb --mode explain --use_last --blur
+for entry in "${SCENARIOS[@]}"; do
+  folder="${entry%%:*}"
+  label="${entry##*:}"
 
-echo "Check n Explain - Tiered 2 CUB"
-python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub --mode test --use_last
-python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub_ex --mode explain --use_last
-python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub_exwf --mode explain --use_last --flip_ratio 0.75
-python main.py --config ./configs/tiered2cub.yaml --checkpoint_dir MAML_tiered2cub --log_dir tiered2cub_exb --mode explain --use_last --blur
+  for backbone in "${BACKBONES[@]}"; do
+    # conv4 keeps the plain label (matches checkpoints already trained this
+    # way, e.g. mini2cub_ckpt / mini2cub_logs); resnet10 gets an explicit
+    # suffix (mini2cub_resnet10_ckpt / mini2cub_resnet10_logs).
+    if [ "$backbone" = "conv4" ]; then
+      name="$label"
+    else
+      name="${label}_${backbone}"
+    fi
 
-echo "Check n Explain - Tiered"
-python main.py --config ./configs/tiered.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered --mode test --use_last
-python main.py --config ./configs/tiered.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered --mode explain --use_last
+    config="./configs/${folder}/${backbone}.yaml"
+    explain_config="./configs/${folder}/explain_test_${backbone}.yaml"
+    ckpt_dir="${name}_ckpt"
 
-echo "Check n Explain - Tiered 2 Stroke Omniglot"
-python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig --mode test --use_last
-python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig_ex --mode explain --use_last
-python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig_exwf --mode explain --use_last --flip_ratio 0.75
-python main.py --config ./configs/tiered2strokes_omnig.yaml --checkpoint_dir MAML_tiered2strokes_omnig --log_dir tiered2strokes_omnig_exb --mode explain --use_last --blur
+    echo "=== ${folder} / ${backbone} ==="
 
-# Check Explain Method (biADT + sanity check params + sanity support - hard/noise/ood)
-echo "Check Explain Method"
-python main.py --config ./configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method biADT
-python main.py --config ./configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method sanity_params
-python main.py --config ./configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method sanity_support_set
+    echo "-- test --"
+    python main.py --config "$config" --checkpoint_dir "$ckpt_dir" --log_dir "${name}_logs" --mode test --use_last
+
+    echo "-- explain --"
+    python main.py --config "$config" --checkpoint_dir "$ckpt_dir" --log_dir "${name}_logs" --mode explain --use_last
+    python main.py --config "$config" --checkpoint_dir "$ckpt_dir" --log_dir "${name}_logs_exwf" --mode explain --use_last --flip_ratio 0.75
+    python main.py --config "$config" --checkpoint_dir "$ckpt_dir" --log_dir "${name}_logs_exb" --mode explain --use_last --blur
+
+    echo "-- check_explain (biADT + sanity_params + sanity_support_set) --"
+    for method in biADT sanity_params sanity_support_set; do
+      python main.py --config "$explain_config" --checkpoint_dir "$ckpt_dir" --log_dir "${name}_logs_${method}" --mode check_explain --use_last --check_method "$method"
+    done
+  done
+done
 
 echo "DONE!"

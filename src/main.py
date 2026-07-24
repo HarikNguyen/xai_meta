@@ -31,9 +31,9 @@ def parse_args():
 
     parser.add_argument(
         "--config",
-        default="configs/mini2cub.yaml",
+        default="configs/mini2cub/conv4.yaml",
         type=str,
-        help="Path to configuration file. Default: configs/mini2cub.yaml",
+        help="Path to configuration file. Default: configs/mini2cub/conv4.yaml",
     )
 
     parser.add_argument(
