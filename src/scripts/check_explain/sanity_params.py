@@ -27,6 +27,11 @@ def randomize_layer(weight):
 def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path, alpha=0.5):
     """
     Draw a single figure containing an N (images) x M (corruption states) grid.
+    corrupted_data: list of (layer_idx, saliencies, pearson, spearman) -- the
+    two correlation scores (vs. the original/uncorrupted saliency, averaged
+    across the N images) are annotated in each column's title so the numbers
+    are visible right next to the corresponding image, not just in a
+    separate CSV.
     """
     num_samples = images_tensor.shape[0]        # number of rows (N)
     num_cols = 1 + len(corrupted_data)          # number of columns (M = original + L corrupted layers)
@@ -76,16 +81,19 @@ def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path
         # ax_orig.axis('off')  # using .axis('off') would also hide set_ylabel, so hide manually instead
 
         # --- Following columns: corrupted layers ---
-        for j, (layer_idx, all_new_saliencies) in enumerate(corrupted_data):
+        for j, (layer_idx, all_new_saliencies, pearson, spearman) in enumerate(corrupted_data):
             ax_corr = axes[i, j + 1]
             sal_corr = all_new_saliencies[i].squeeze().cpu().detach().numpy()
 
             ax_corr.imshow(img, cmap=cmap_img)
             ax_corr.imshow(sal_corr, cmap='jet', alpha=alpha)
 
-            # Only show the layer title on the first row
+            # Only show the layer title (+ correlation scores) on the first row
             if i == 0:
-                ax_corr.set_title(f"Corr Layer {layer_idx}", fontsize=10)
+                ax_corr.set_title(
+                    f"Corr Layer {layer_idx}\npearson={pearson:.2f} spearman={spearman:.2f}",
+                    fontsize=9,
+                )
 
             ax_corr.axis('off')  # fully hide axes on inner cells
 
@@ -94,7 +102,7 @@ def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path
     plt.savefig(save_path, bbox_inches='tight', dpi=150)  # higher dpi for a sharper image
     plt.close(fig)
 
-def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T, log_dir, metabatch_id, task_id):
+def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T, illustrate_path, metabatch_id, task_id):
     # Each concurrent task gets its own shallow copy of the explainer so its
     # theta_0 override doesn't clash with other tasks running at the same time
     # (interpret() reads self.theta_0, and this check works by mutating it).
@@ -125,24 +133,27 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T,
         task_pearson.append(scores["pearson"])
         task_spearman.append(scores["spearman"])
 
-        corrupted_saliencies.append((layer_idx, new_saliency_map))
+        corrupted_saliencies.append((layer_idx, new_saliency_map, scores["pearson"], scores["spearman"]))
 
-    save_path = os.path.join(log_dir, "plots", f"sanity_params_task{metabatch_id}-{task_id}_grid.png")
-    # Detach + move to CPU before queuing -- otherwise every backlogged plot
-    # job (single-worker executor, much slower than GPU inference) keeps its
-    # tensors resident in VRAM until it's actually drawn, growing VRAM usage
-    # monotonically over a long run instead of releasing it per-task.
-    submit_plot_task(
-        save_full_nxm_grid,
-        sup_x.detach().cpu(),                # (N, C, H, W)
-        orig_saliency_map.detach().cpu(),     # (N, H, W)
-        [(layer_idx, sal.detach().cpu()) for layer_idx, sal in corrupted_saliencies],  # List of (layer_idx, (N, H, W))
-        save_path,
-        0.5,
-    )
+    # illustrate_path is None unless this task fell within the user-requested
+    # illustration budget (see sanity_check_params) -- saving a grid for every
+    # one of e.g. 600 tasks was the problem being fixed here.
+    if illustrate_path is not None:
+        # Detach + move to CPU before queuing -- otherwise every backlogged plot
+        # job (single-worker executor, much slower than GPU inference) keeps its
+        # tensors resident in VRAM until it's actually drawn, growing VRAM usage
+        # monotonically over a long run instead of releasing it per-task.
+        submit_plot_task(
+            save_full_nxm_grid,
+            sup_x.detach().cpu(),                # (N, C, H, W)
+            orig_saliency_map.detach().cpu(),     # (N, H, W)
+            [(layer_idx, sal.detach().cpu(), p, s) for layer_idx, sal, p, s in corrupted_saliencies],
+            illustrate_path,
+            0.5,
+        )
     return task_pearson, task_spearman
 
-def sanity_check_params(explainer, test_loader, T, log_dir="logs"):
+def sanity_check_params(explainer, test_loader, T, illustrate_dir=None, illustrate_n_tasks=0):
     test_loader_pbar = tqdm(
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
@@ -152,18 +163,25 @@ def sanity_check_params(explainer, test_loader, T, log_dir="logs"):
         "pearson": [],
         "spearman": []
     }
+    illustrated_so_far = 0
     for metabatch_id, boT in enumerate(test_loader_pbar):
         # Tasks within a metabatch are independent of each other -> run them
         # concurrently instead of one at a time (only the per-task cascading
         # corruption loop above has to stay sequential).
-        fns = [
-            functools.partial(
+        fns = []
+        for task_id, (support, query) in enumerate(boT):
+            global_idx = illustrated_so_far + task_id
+            illustrate_path = (
+                os.path.join(illustrate_dir, f"sanity_params_task{metabatch_id}-{task_id}_grid.png")
+                if illustrate_dir is not None and global_idx < illustrate_n_tasks
+                else None
+            )
+            fns.append(functools.partial(
                 check_on_task, explainer, theta_0, net_layers,
                 support[0], support[1], query[0], query[1], T,
-                log_dir, metabatch_id, task_id,
-            )
-            for task_id, (support, query) in enumerate(boT)
-        ]
+                illustrate_path, metabatch_id, task_id,
+            ))
+        illustrated_so_far += len(boT)
         task_results = parallel_map(fns, device=explainer.device)
 
         for task_pearson, task_spearman in task_results:

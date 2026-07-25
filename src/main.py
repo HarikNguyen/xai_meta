@@ -88,7 +88,27 @@ def parse_args():
         action="store_true",
         help="Blur the sup_x while explaining. Default: False",
     )
-    
+
+    parser.add_argument(
+        "--illustrate_label",
+        default=None,
+        type=str,
+        help="check_explain only: if set (e.g. 'conv4', 'resnet10'), also save "
+             "illustrative plots (masking grid for biADT, corrupted-layer grid "
+             "for sanity_params, original-vs-perturbed grid for "
+             "sanity_support_set) for the first --illustrate_n_tasks tasks "
+             "into check_explain_storage/<illustrate_label>/<method>/. "
+             "Default: None (no illustration plots saved).",
+    )
+
+    parser.add_argument(
+        "--illustrate_n_tasks",
+        default=3,
+        type=int,
+        help="check_explain only: number of tasks to save illustration plots "
+             "for when --illustrate_label is set. Default: 3",
+    )
+
     # Return args
     return parser.parse_args()
 

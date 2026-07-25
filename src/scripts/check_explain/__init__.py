@@ -18,6 +18,8 @@ def check_explain(
     use_last=True,
     checkpoint_dir="checkpoints",
     log_dir="logs",
+    illustrate_label=None,
+    illustrate_n_tasks=3,
 ):
     if test_loader is None:
         raise ValueError("Test loader is None. Please provide a valid test loader.")
@@ -36,9 +38,22 @@ def check_explain(
     # Define explainer
     explainer = build_explainer(algo, algo_class, algo_mgr, device)
 
+    # Illustrative plots (masking grid / corrupted-layer grid / perturbation
+    # grid) are opt-in via --illustrate_label, since saving one per task would
+    # mean hundreds of images for a full metatest_iterations run. When set,
+    # only the first illustrate_n_tasks tasks get a plot, written to
+    # check_explain_storage/<illustrate_label>/<method>/ regardless of
+    # --log_dir (so runs against different backbones/checkpoints land in the
+    # same top-level folder for side-by-side comparison).
+    illustrate_dir = None
+    if illustrate_label is not None:
+        illustrate_dir = os.path.join("check_explain_storage", illustrate_label, method)
+        os.makedirs(illustrate_dir, exist_ok=True)
+
     if method == "biADT":
         pdas, ndas, combineds = compute_bidirectional_faithfulness(
-            explainer, test_loader, T=T
+            explainer, test_loader, T=T,
+            illustrate_dir=illustrate_dir, illustrate_n_tasks=illustrate_n_tasks,
         )
         res_df = pd.DataFrame({
             "PDAS": pdas,
@@ -48,7 +63,10 @@ def check_explain(
         _save_results_to_csv(res_df, "biADT", log_dir)
 
     elif method == "sanity_params":
-        results = sanity_check_params(explainer, test_loader, T=T, log_dir=log_dir)
+        results = sanity_check_params(
+            explainer, test_loader, T=T,
+            illustrate_dir=illustrate_dir, illustrate_n_tasks=illustrate_n_tasks,
+        )
         res_df = pd.DataFrame(results)
         mean_res_df = pd.DataFrame(res_df.apply(lambda col: np.mean(col.to_list(), axis=0)))
 
@@ -57,7 +75,10 @@ def check_explain(
     elif method == "sanity_support_set":
         if ood_test_loader is None:
             raise ValueError("OOD test loader is None. Please provide a valid OOD test loader.")
-        results = sanity_check_support_set(explainer, test_loader, ood_test_loader, T=T)
+        results = sanity_check_support_set(
+            explainer, test_loader, ood_test_loader, T=T,
+            illustrate_dir=illustrate_dir, illustrate_n_tasks=illustrate_n_tasks,
+        )
         noisy_check_df = pd.DataFrame(results["noisy_check"])
         hard_check_df = pd.DataFrame(results["hard_check"])
         ood_check_df = pd.DataFrame(results["ood_check"])

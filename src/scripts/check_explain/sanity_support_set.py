@@ -1,9 +1,14 @@
 import functools
+import os
 
 import torch
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # plot saving runs on a background thread; GUI backends need the main thread
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from ..utils import correlation_sample_wise, blur_sup, permute_label, parallel_map
+from ..utils import correlation_sample_wise, blur_sup, permute_label, parallel_map, submit_plot_task
 
 def mix_set(task_source, task_another, num_mixed_classes=2):
     (task_ssx, task_ssy), (task_sqx, task_sqy) = task_source
@@ -43,12 +48,14 @@ def mix_set(task_source, task_another, num_mixed_classes=2):
 def check_on_noisy_task(explainer, sup_x, sup_y, que_x, que_y, T, orig_saliency_map):
     sup_y_noisy = permute_label(sup_y, flip_ratio=0.8)
     _, noisy_saliency_map = explainer.interpret(sup_x, sup_y_noisy, que_x, que_y, T)
-    return correlation_sample_wise(orig_saliency_map, noisy_saliency_map)
+    scores = correlation_sample_wise(orig_saliency_map, noisy_saliency_map)
+    return scores, sup_x, noisy_saliency_map
 
 def check_on_hard_task(explainer, sup_x, sup_y, que_x, que_y, T, orig_saliency_map):
     sup_x_hard = blur_sup(sup_x, kernel_size=7, sigma=3.0)
     _, hard_saliency_map = explainer.interpret(sup_x_hard, sup_y, que_x, que_y, T)
-    return correlation_sample_wise(orig_saliency_map, hard_saliency_map)
+    scores = correlation_sample_wise(orig_saliency_map, hard_saliency_map)
+    return scores, sup_x_hard, hard_saliency_map
 
 def check_on_mixed_task(explainer, source_task, another_task, T, orig_saliency_map):
     (sup_x, sup_y, _), (que_x, que_y, _) = source_task
@@ -60,9 +67,53 @@ def check_on_mixed_task(explainer, source_task, another_task, T, orig_saliency_m
             num_mixed_classes=2)
 
     _, mixed_saliency_map = explainer.interpret(ood_sup_x, ood_sup_y, ood_que_x, ood_que_y, T)
-    return correlation_sample_wise(orig_saliency_map, mixed_saliency_map)
+    scores = correlation_sample_wise(orig_saliency_map, mixed_saliency_map)
+    return scores, ood_sup_x, mixed_saliency_map
 
-def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
+
+def save_support_set_grid(orig_sup_x, orig_sal, variants, save_path, alpha=0.5):
+    """One figure: rows = support images, columns = original + each perturbed
+    variant (noisy-label / hard-blurred / OOD-mixed), overlaying that
+    variant's saliency map and annotating the pearson/spearman correlation
+    (vs. the original saliency) in the column title.
+    variants: list of (name, sup_x_variant, saliency_variant, pearson, spearman)
+    """
+    num_rows = orig_sup_x.shape[0]
+    num_cols = 1 + len(variants)
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(3 * num_cols, 3.2 * num_rows))
+    if num_rows == 1:
+        axes = axes[np.newaxis, :]
+
+    def _prep(img_t):
+        img = img_t.squeeze().cpu().detach().numpy()
+        if img.ndim == 3 and img.shape[0] in (1, 3):
+            img = np.transpose(img, (1, 2, 0))
+        lo, hi = img.min(), img.max()
+        if hi - lo > 0:
+            img = (img - lo) / (hi - lo)
+        return img
+
+    for i in range(num_rows):
+        ax0 = axes[i, 0]
+        ax0.imshow(_prep(orig_sup_x[i]))
+        ax0.imshow(orig_sal[i].squeeze().cpu().detach().numpy(), cmap="jet", alpha=alpha)
+        ax0.set_xticks([]); ax0.set_yticks([])
+        if i == 0:
+            ax0.set_title("Original", fontsize=10, fontweight="bold")
+
+        for j, (name, var_sup_x, var_sal, pearson, spearman) in enumerate(variants):
+            ax = axes[i, j + 1]
+            ax.imshow(_prep(var_sup_x[i]))
+            ax.imshow(var_sal[i].squeeze().cpu().detach().numpy(), cmap="jet", alpha=alpha)
+            ax.axis("off")
+            if i == 0:
+                ax.set_title(f"{name}\npearson={pearson:.2f} spearman={spearman:.2f}", fontsize=9)
+
+    fig.subplots_adjust(wspace=0.05, hspace=0.05)
+    plt.savefig(save_path, bbox_inches="tight", dpi=150)
+    plt.close(fig)
+
+def sanity_check_support_set(explainer, test_loader, ood_test_loader, T, illustrate_dir=None, illustrate_n_tasks=0):
     test_loader_pbar = tqdm(
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
@@ -85,6 +136,7 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
     # OOD check silently reused the same batch instead of advancing through
     # ood_test_loader.
     ood_iter = iter(ood_test_loader)
+    illustrated_so_far = 0
 
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(
@@ -107,7 +159,8 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
                 functools.partial(check_on_hard_task, explainer, sup_x, sup_y, que_x, que_y, T, orig_saliency_map),
                 functools.partial(check_on_mixed_task, explainer, (support, query), boT_ood_task, T, orig_saliency_map),
             ]
-            noisy_scores, hard_scores, ood_scores = parallel_map(fns, device=explainer.device)
+            (noisy_scores, noisy_sup_x, noisy_sal), (hard_scores, hard_sup_x, hard_sal), \
+                (ood_scores, ood_sup_x, ood_sal) = parallel_map(fns, device=explainer.device)
 
             noisy_check_results["pearson"].append(noisy_scores["pearson"])
             noisy_check_results["spearman"].append(noisy_scores["spearman"])
@@ -117,6 +170,23 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T):
 
             ood_check_results["pearson"].append(ood_scores["pearson"])
             ood_check_results["spearman"].append(ood_scores["spearman"])
+
+            global_idx = illustrated_so_far + task_id
+            if illustrate_dir is not None and global_idx < illustrate_n_tasks:
+                save_path = os.path.join(illustrate_dir, f"sanity_supportset_task{metabatch_id}-{task_id}.png")
+                variants = [
+                    ("Noisy-label", noisy_sup_x.detach().cpu(), noisy_sal.detach().cpu(),
+                     noisy_scores["pearson"], noisy_scores["spearman"]),
+                    ("Hard (blurred)", hard_sup_x.detach().cpu(), hard_sal.detach().cpu(),
+                     hard_scores["pearson"], hard_scores["spearman"]),
+                    ("OOD-mixed", ood_sup_x.detach().cpu(), ood_sal.detach().cpu(),
+                     ood_scores["pearson"], ood_scores["spearman"]),
+                ]
+                submit_plot_task(
+                    save_support_set_grid,
+                    sup_x.detach().cpu(), orig_saliency_map.detach().cpu(), variants, save_path,
+                )
+        illustrated_so_far += len(boT)
 
     results = {
         "noisy_check": noisy_check_results,

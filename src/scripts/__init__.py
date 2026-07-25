@@ -45,4 +45,8 @@ def run(args):
         explain(args.algo, algo_class, explain_loader, algo_conf, args.use_best, args.use_last, checkpoint_dir, log_dir, args.flip_ratio, args.blur)
 
     elif args.mode == CHECK_EXPLAIN_MODE:
-        check_explain(args.algo, algo_class, explain_loader, ood_explain_loader, algo_conf, args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir)
+        check_explain(
+            args.algo, algo_class, explain_loader, ood_explain_loader, algo_conf,
+            args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir,
+            illustrate_label=args.illustrate_label, illustrate_n_tasks=args.illustrate_n_tasks,
+        )

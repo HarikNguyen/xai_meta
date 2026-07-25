@@ -1,13 +1,17 @@
 import functools
+import os
 
 import torch
 import torchvision.transforms.functional as TF
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # plot saving runs on a background thread; GUI backends need the main thread
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy import ndimage
 from skimage.segmentation import slic
 
-from ..utils import parallel_map, submit_io_task
+from ..utils import parallel_map, submit_io_task, submit_plot_task
 
 
 def _segment_and_score(img_np, sal_np, n_segs, compactness):
@@ -85,12 +89,70 @@ def _interpret_gain(explainer, sup_x_masked, sup_y, que_x, que_y, T):
     return gain
 
 
+def _montage(images_tensor):
+    """Concatenate a (N, C, H, W) tensor of support images side by side into
+    one (H, N*W, C) numpy array in [0,1], for a single-cell preview."""
+    imgs = images_tensor.detach().cpu()
+    n = imgs.shape[0]
+    strip = torch.cat([imgs[i] for i in range(n)], dim=-1)  # (C, H, N*W)
+    arr = strip.permute(1, 2, 0).numpy()
+    lo, hi = arr.min(), arr.max()
+    if hi - lo > 0:
+        arr = (arr - lo) / (hi - lo)
+    return arr
+
+
+def save_biadt_mask_grid(sup_x, mode_step_masked, mode_step_gain, ratios, save_path):
+    """One figure: rows = pos/neg/random deletion modes, columns = original
+    (ratio=0) + a handful of mask ratios -- each cell is a montage of the
+    (masked) support set at that step, with the resulting adaptation gain
+    annotated so the deletion direction's effect is visible both visually and
+    numerically.
+    """
+    modes = ("pos", "neg", "random")
+    mode_titles = {
+        "pos": "pos (remove most helpful first)",
+        "neg": "neg (remove most harmful first)",
+        "random": "random",
+    }
+    cols = [0.0] + ratios
+    fig, axes = plt.subplots(len(modes), len(cols), figsize=(3 * len(cols), 3.2 * len(modes)))
+    if len(modes) == 1:
+        axes = axes[np.newaxis, :]
+
+    orig_montage = _montage(sup_x)
+    for row, mode in enumerate(modes):
+        for col, ratio in enumerate(cols):
+            ax = axes[row, col]
+            if ratio == 0.0:
+                ax.imshow(orig_montage)
+                gain_text = f"gain={mode_step_gain[(mode, 'base')]:.2f}%"
+            else:
+                ax.imshow(_montage(mode_step_masked[(mode, ratio)]))
+                gain_text = f"gain={mode_step_gain[(mode, ratio)]:.2f}%"
+            ax.set_title(gain_text, fontsize=9)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            if col == 0:
+                ax.set_ylabel(mode_titles[mode], fontsize=9, fontweight="bold")
+
+    fig.suptitle("biADT -- deletion direction vs. adaptation gain", fontsize=13, fontweight="bold")
+    fig.subplots_adjust(wspace=0.05, hspace=0.25, top=0.9)
+    plt.savefig(save_path, bbox_inches="tight", dpi=150)
+    plt.close(fig)
+
+
 def compute_bidirectional_faithfulness(
-    explainer, test_loader, T, n_segs=150, compactness=10.0, blur_sigma=5.0, num_steps=10
+    explainer, test_loader, T, n_segs=150, compactness=10.0, blur_sigma=5.0, num_steps=10,
+    illustrate_dir=None, illustrate_n_tasks=0,
 ):
     test_loader_pbar = tqdm(test_loader, desc="BiDAT", position=0, leave=True, unit="boT")
     pdas, ndas, combines = [], [], []
     ratios = [step / num_steps for step in range(1, num_steps + 1)]
+    # A handful of evenly-spaced ratios to actually render (all num_steps would
+    # make the illustration grid unreadably wide).
+    display_ratios = [ratios[i] for i in np.linspace(0, len(ratios) - 1, min(5, len(ratios))).astype(int)]
+    illustrated_count = 0
 
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(boT, desc=f"Batch {metabatch_id}", position=1, leave=False, unit="task")
@@ -105,6 +167,8 @@ def compute_bidirectional_faithfulness(
             # Mode-independent pre-computation, done ONCE (was 3x before)
             rank_bases = compute_rank_bases(sup_x, saliency_map, n_segs, compactness)
             blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
+
+            want_illustration = illustrate_dir is not None and illustrated_count < illustrate_n_tasks
 
             # Flatten pos/neg/random x num_steps into ONE job list for the shared executor
             jobs = []
@@ -121,10 +185,28 @@ def compute_bidirectional_faithfulness(
             gains = parallel_map(fns, device=sup_x.device)
 
             aucs = {}
+            mode_step_gain = {}
+            mode_step_masked = {}
             for mode in ("pos", "neg", "random"):
-                mode_gains = [adapt_gain_base] + [g for (m, _, _), g in zip(jobs, gains) if m == mode]
+                mode_step_gain[(mode, "base")] = adapt_gain_base
+                mode_gains = [adapt_gain_base]
+                for (m, ratio, masked), g in zip(jobs, gains):
+                    if m != mode:
+                        continue
+                    mode_gains.append(g)
+                    if want_illustration and ratio in display_ratios:
+                        mode_step_gain[(mode, ratio)] = g
+                        mode_step_masked[(mode, ratio)] = masked.detach().cpu()
                 mode_ratios = [0.0] + ratios
                 aucs[mode] = np.trapezoid(mode_gains, mode_ratios)
+
+            if want_illustration:
+                save_path = os.path.join(illustrate_dir, f"biadt_task{metabatch_id}-{task_id}.png")
+                submit_plot_task(
+                    save_biadt_mask_grid,
+                    sup_x.detach().cpu(), mode_step_masked, mode_step_gain, display_ratios, save_path,
+                )
+                illustrated_count += 1
 
             pda = aucs["random"] - aucs["pos"]
             nda = aucs["neg"] - aucs["random"]

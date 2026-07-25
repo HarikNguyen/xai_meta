@@ -51,10 +51,10 @@ All commands run from `src/`, driven by a YAML config plus a `--mode`:
 
 ```bash
 cd src
-python main.py --config configs/tiered.yaml --mode train --vmap_chunk_size 4
-python main.py --config configs/tiered.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered --mode test --use_last
-python main.py --config configs/tiered.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered_ex --mode explain --use_last [--flip_ratio 0.75] [--blur]
-python main.py --config configs/explain_test.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method biADT|sanity_params|sanity_support_set
+python main.py --config configs/only_tiered/conv4.yaml --mode train --vmap_chunk_size 4
+python main.py --config configs/only_tiered/conv4.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered --mode test --use_last
+python main.py --config configs/only_tiered/conv4.yaml --checkpoint_dir MAML_tiered_tiered --log_dir tiered_ex --mode explain --use_last [--flip_ratio 0.75] [--blur]
+python main.py --config configs/tiered2cub/explain_test_conv4.yaml --checkpoint_dir MAML_tiered_tiered --mode check_explain --use_last --check_method biADT|sanity_params|sanity_support_set
 ```
 
 `run.sh` documents the canonical set of invocations across all experiment configs (mini2cub, tiered2cub,
@@ -81,7 +81,10 @@ python -m unittest tests.test_loaders.TestLoaderMiniImageNet.test_sampler_logic 
 **Config-driven entry point.** `src/main.py` parses CLI args (`--mode`, `--algo`, `--config`,
 `--checkpoint_dir`, `--log_dir`, `--use_best`/`--use_last`, explain-specific `--flip_ratio`/`--blur`,
 check-explain's `--check_method`) and loads a YAML config with three sections — `dataset`, `dataloader`,
-`algo` (see `src/configs/*.yaml`). It hands off to `run()` in `src/scripts/__init__.py`, which dispatches
+`algo` (see `src/configs/<experiment>/<backbone>.yaml` — configs are grouped into subfolders by dataset
+pairing: `mini2cub/`, `tiered2cub/`, `tiered2strokes_omnig/`, `only_cub/`, `only_tiered/`; each holds one
+YAML per backbone, e.g. `conv4.yaml`/`resnet10.yaml`, plus `explain_test_<backbone>.yaml` variants for
+`check_explain`/OOD-explain runs). It hands off to `run()` in `src/scripts/__init__.py`, which dispatches
 by mode to `run_train` / `run_test` / `explain` / `check_explain`.
 
 **Warm-up builds everything from config.** `src/scripts/warm_up.py` constructs the train/val/test
