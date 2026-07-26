@@ -102,7 +102,7 @@ def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path
     plt.savefig(save_path, bbox_inches='tight', dpi=150)  # higher dpi for a sharper image
     plt.close(fig)
 
-def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T, illustrate_path, metabatch_id, task_id):
+def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T, want_illustration, metabatch_id, task_id):
     # Each concurrent task gets its own shallow copy of the explainer so its
     # theta_0 override doesn't clash with other tasks running at the same time
     # (interpret() reads self.theta_0, and this check works by mutating it).
@@ -112,7 +112,7 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T,
     task_pearson = []
     task_spearman = []
 
-    _, orig_saliency_map = local_explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+    gain, orig_saliency_map = local_explainer.interpret(sup_x, sup_y, que_x, que_y, T)
 
     corrupted_saliencies = []
     corrupted_theta_grouped = copy.deepcopy(net_layers)
@@ -135,23 +135,18 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T,
 
         corrupted_saliencies.append((layer_idx, new_saliency_map, scores["pearson"], scores["spearman"]))
 
-    # illustrate_path is None unless this task fell within the user-requested
-    # illustration budget (see sanity_check_params) -- saving a grid for every
-    # one of e.g. 600 tasks was the problem being fixed here.
-    if illustrate_path is not None:
-        # Detach + move to CPU before queuing -- otherwise every backlogged plot
-        # job (single-worker executor, much slower than GPU inference) keeps its
-        # tensors resident in VRAM until it's actually drawn, growing VRAM usage
-        # monotonically over a long run instead of releasing it per-task.
-        submit_plot_task(
-            save_full_nxm_grid,
-            sup_x.detach().cpu(),                # (N, C, H, W)
-            orig_saliency_map.detach().cpu(),     # (N, H, W)
-            [(layer_idx, sal.detach().cpu(), p, s) for layer_idx, sal, p, s in corrupted_saliencies],
-            illustrate_path,
-            0.5,
-        )
-    return task_pearson, task_spearman
+    # want_illustration only controls whether we bother copying tensors to
+    # CPU for possible plotting -- the caller (sanity_check_params) decides
+    # AFTER seeing every task's gain whether this one is actually the
+    # max/min-gain champion worth saving a plot for.
+    illustration_data = None
+    if want_illustration:
+        illustration_data = {
+            "sup_x": sup_x.detach().cpu(),
+            "orig_saliency_map": orig_saliency_map.detach().cpu(),
+            "corrupted_data": [(layer_idx, sal.detach().cpu(), p, s) for layer_idx, sal, p, s in corrupted_saliencies],
+        }
+    return task_pearson, task_spearman, gain, illustration_data
 
 def sanity_check_params(explainer, test_loader, T, illustrate_dir=None, illustrate_n_tasks=0):
     test_loader_pbar = tqdm(
@@ -163,29 +158,48 @@ def sanity_check_params(explainer, test_loader, T, illustrate_dir=None, illustra
         "pearson": [],
         "spearman": []
     }
-    illustrated_so_far = 0
+    # Illustrate the max-gain and min-gain tasks (highest/lowest raw
+    # adaptation_gain across the whole run), not an arbitrary first-N subset
+    # -- those extremes are what's actually informative to inspect. Only the
+    # current champions' data is kept in memory (replaced whenever a more
+    # extreme task is found).
+    champions = {"max": None, "min": None}
+
     for metabatch_id, boT in enumerate(test_loader_pbar):
         # Tasks within a metabatch are independent of each other -> run them
         # concurrently instead of one at a time (only the per-task cascading
         # corruption loop above has to stay sequential).
-        fns = []
-        for task_id, (support, query) in enumerate(boT):
-            global_idx = illustrated_so_far + task_id
-            illustrate_path = (
-                os.path.join(illustrate_dir, f"sanity_params_task{metabatch_id}-{task_id}_grid.png")
-                if illustrate_dir is not None and global_idx < illustrate_n_tasks
-                else None
-            )
-            fns.append(functools.partial(
+        fns = [
+            functools.partial(
                 check_on_task, explainer, theta_0, net_layers,
                 support[0], support[1], query[0], query[1], T,
-                illustrate_path, metabatch_id, task_id,
-            ))
-        illustrated_so_far += len(boT)
+                illustrate_dir is not None, metabatch_id, task_id,
+            )
+            for task_id, (support, query) in enumerate(boT)
+        ]
         task_results = parallel_map(fns, device=explainer.device)
 
-        for task_pearson, task_spearman in task_results:
+        for task_id, (task_pearson, task_spearman, gain, illustration_data) in enumerate(task_results):
             results["pearson"].append(task_pearson)
             results["spearman"].append(task_spearman)
+
+            if illustration_data is not None:
+                if champions["max"] is None or gain > champions["max"]["gain"]:
+                    champions["max"] = {"gain": gain, "metabatch_id": metabatch_id, "task_id": task_id, **illustration_data}
+                if champions["min"] is None or gain < champions["min"]["gain"]:
+                    champions["min"] = {"gain": gain, "metabatch_id": metabatch_id, "task_id": task_id, **illustration_data}
+
+    if illustrate_dir is not None:
+        for label, champ in champions.items():
+            if champ is None:
+                continue
+            save_path = os.path.join(
+                illustrate_dir,
+                f"sanity_params_{label}gain_task{champ['metabatch_id']}-{champ['task_id']}_grid.png",
+            )
+            submit_plot_task(
+                save_full_nxm_grid,
+                champ["sup_x"], champ["orig_saliency_map"], champ["corrupted_data"], save_path, 0.5,
+            )
 
     return results

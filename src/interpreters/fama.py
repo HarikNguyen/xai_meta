@@ -245,6 +245,61 @@ class FAMAExplainer:
     # ------------------------------------------------------------------
     # Main entry point
     # ------------------------------------------------------------------
+    def _trajectories_and_gain(
+        self, sup_x, sup_y, que_x, que_y, T, num_bootstraps, samples_per_class
+    ):
+        """Shared first half of interpret(): builds both trajectories and the
+        scalar adaptation_gain. This part is cheap (T plain forward+backward
+        steps per trajectory, create_graph=False, plus num_bootstraps
+        no_grad forward passes) relative to the saliency machinery below it
+        (expected-lambda backward passes, HVP adjoint recursion, Grad-CAM
+        projection -- each O(T) *backward-through-backward* calls), so it is
+        split out to let compute_gain_only() get just the gain without
+        paying for saliency it will never use.
+        """
+        sup_x, sup_y, que_x, que_y = put_on_device(
+            self.device, [sup_x, sup_y, que_x, que_y]
+        )
+        bootstrap_query = list(get_stratified_bootstrap_batches(
+            que_x, que_y, num_bootstraps, samples_per_class
+        ))
+
+        head_mask = self._get_head_mask()
+
+        phis = self._compute_trajectory(sup_x, sup_y, T)
+        phi_T = [p.detach() for p in phis[T]]
+
+        phis_freeze = self._compute_trajectory(sup_x, sup_y, T, adapt_mask=head_mask)
+        phi_freeze_T = [p.detach() for p in phis_freeze[T]]
+
+        adaptation_gain = self._compute_adaptation_gain(
+            phi_freeze_T, phi_T, bootstrap_query, num_bootstraps
+        )
+
+        return sup_x, sup_y, phis, phis_freeze, phi_T, phi_freeze_T, bootstrap_query, adaptation_gain
+
+    def compute_gain_only(
+        self,
+        sup_x: torch.Tensor,
+        sup_y: torch.Tensor,
+        que_x: torch.Tensor,
+        que_y: torch.Tensor,
+        T: int,
+        num_bootstraps: int = 100,
+        samples_per_class: int = 3,
+    ) -> float:
+        """Same adaptation_gain value interpret() would return, but skips the
+        entire saliency computation (expected-lambda, adjoint/HVP backward
+        recursion, Grad-CAM projection) -- the dominant cost of interpret().
+        Use this whenever only the scalar gain is needed and the saliency
+        map would be discarded anyway (e.g. biADT's masked-variant sweep,
+        which calls interpret() ~30x per task just to read off gain values).
+        """
+        *_, adaptation_gain = self._trajectories_and_gain(
+            sup_x, sup_y, que_x, que_y, T, num_bootstraps, samples_per_class
+        )
+        return adaptation_gain
+
     def interpret(
         self,
         sup_x: torch.Tensor,
@@ -255,24 +310,8 @@ class FAMAExplainer:
         num_bootstraps: int = 100,
         samples_per_class: int = 3,
     ):
-        # prepare data
-        sup_x, sup_y, que_x, que_y = put_on_device(
-            self.device, [sup_x, sup_y, que_x, que_y]
-        )
-        bootstrap_query_gen = get_stratified_bootstrap_batches(
-            que_x, que_y, num_bootstraps, samples_per_class
-        )
-        bootstrap_query = list(bootstrap_query_gen)
-
-        head_mask = self._get_head_mask()
-
-        # -------- trajectory 1: full adaptation φ (body + head) --------
-        phis = self._compute_trajectory(sup_x, sup_y, T)
-        phi_T = [p.detach() for p in phis[T]]
-
-        # -------- trajectory 2: φ_freeze = {θ0^body, φ*^head} ----------
-        phis_freeze = self._compute_trajectory(sup_x, sup_y, T, adapt_mask=head_mask)
-        phi_freeze_T = [p.detach() for p in phis_freeze[T]]
+        sup_x, sup_y, phis, phis_freeze, phi_T, phi_freeze_T, bootstrap_query, adaptation_gain = \
+            self._trajectories_and_gain(sup_x, sup_y, que_x, que_y, T, num_bootstraps, samples_per_class)
 
         # expected lambda_T for each trajectory (each w.r.t its own φ_T)
         expected_lam_T = self._compute_expected_lambda(
@@ -280,11 +319,6 @@ class FAMAExplainer:
         )
         expected_lam_freeze_T = self._compute_expected_lambda(
             phi_freeze_T, bootstrap_query, num_bootstraps
-        )
-
-        # ΔM = E_Q[L(φ_freeze_T,Q) - L(φ_T,Q)]
-        adaptation_gain = self._compute_adaptation_gain(
-            phi_freeze_T, phi_T, bootstrap_query, num_bootstraps
         )
 
         # adjoint backward pass for each trajectory

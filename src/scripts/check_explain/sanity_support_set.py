@@ -136,7 +136,13 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T, illustr
     # OOD check silently reused the same batch instead of advancing through
     # ood_test_loader.
     ood_iter = iter(ood_test_loader)
-    illustrated_so_far = 0
+
+    # Illustrate the max-gain and min-gain tasks (highest/lowest raw
+    # adaptation_gain across the whole run), not an arbitrary first-N subset
+    # -- those extremes are what's actually informative to inspect. Only the
+    # current champions' data is kept in memory (replaced whenever a more
+    # extreme task is found).
+    champions = {"max": None, "min": None}
 
     for metabatch_id, boT in enumerate(test_loader_pbar):
         boT_pbar = tqdm(
@@ -149,7 +155,7 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T, illustr
 
             # Computed once per task and shared by all 3 checks below (was
             # previously recomputed independently inside each of them).
-            _, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
+            gain, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
 
             boT_ood_task = boT_ood[task_id]
 
@@ -171,9 +177,7 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T, illustr
             ood_check_results["pearson"].append(ood_scores["pearson"])
             ood_check_results["spearman"].append(ood_scores["spearman"])
 
-            global_idx = illustrated_so_far + task_id
-            if illustrate_dir is not None and global_idx < illustrate_n_tasks:
-                save_path = os.path.join(illustrate_dir, f"sanity_supportset_task{metabatch_id}-{task_id}.png")
+            if illustrate_dir is not None:
                 variants = [
                     ("Noisy-label", noisy_sup_x.detach().cpu(), noisy_sal.detach().cpu(),
                      noisy_scores["pearson"], noisy_scores["spearman"]),
@@ -182,11 +186,28 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T, illustr
                     ("OOD-mixed", ood_sup_x.detach().cpu(), ood_sal.detach().cpu(),
                      ood_scores["pearson"], ood_scores["spearman"]),
                 ]
-                submit_plot_task(
-                    save_support_set_grid,
-                    sup_x.detach().cpu(), orig_saliency_map.detach().cpu(), variants, save_path,
-                )
-        illustrated_so_far += len(boT)
+                entry = {
+                    "gain": gain, "metabatch_id": metabatch_id, "task_id": task_id,
+                    "sup_x": sup_x.detach().cpu(), "orig_saliency_map": orig_saliency_map.detach().cpu(),
+                    "variants": variants,
+                }
+                if champions["max"] is None or gain > champions["max"]["gain"]:
+                    champions["max"] = entry
+                if champions["min"] is None or gain < champions["min"]["gain"]:
+                    champions["min"] = entry
+
+    if illustrate_dir is not None:
+        for label, champ in champions.items():
+            if champ is None:
+                continue
+            save_path = os.path.join(
+                illustrate_dir,
+                f"sanity_supportset_{label}gain_task{champ['metabatch_id']}-{champ['task_id']}.png",
+            )
+            submit_plot_task(
+                save_support_set_grid,
+                champ["sup_x"], champ["orig_saliency_map"], champ["variants"], save_path,
+            )
 
     results = {
         "noisy_check": noisy_check_results,
