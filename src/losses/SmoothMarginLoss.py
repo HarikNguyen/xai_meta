@@ -4,13 +4,8 @@ import torch.nn.functional as F
 
 
 class SmoothMarginLoss(nn.Module):
-    """
-    Approximate Margin Loss
-        L = softplus_beta( 1 - z_y + tau * logsumexp_{y'≠y}(z_{y'}/tau) )
-
-    tau  -> 0 : soft-max -> max cứng
-    beta -> ∞ : softplus -> ReLU
-    """
+    """Approximate margin loss: L = softplus_beta(1 - z_y + tau*logsumexp_{y'≠y}(z_{y'}/tau)).
+    tau->0 recovers a hard max; beta->∞ recovers ReLU."""
 
     def __init__(self, tau: float = 0.5, beta: float = 5.0, reduction: str = "mean"):
         super().__init__()
@@ -29,8 +24,7 @@ class SmoothMarginLoss(nn.Module):
         # Remove the correct class from logits (the competition) by setting it to -inf
         logits_masked = logits.masked_fill(mask, float("-inf"))  # [B, C]
 
-        # Calc soft max of the other classes (logsumexp with tau - heat rate)
-        # numerically stable: torch.logsumexp was minus local max
+        # soft max of the other classes (logsumexp with temperature tau, numerically stable)
         soft_max_other = self.tau * torch.logsumexp(logits_masked / self.tau, dim=1)  # [B]
 
         # soft margin: m_tilde = z_y - soft_max_other

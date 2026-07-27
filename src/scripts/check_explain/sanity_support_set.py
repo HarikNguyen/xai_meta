@@ -72,12 +72,8 @@ def check_on_mixed_task(explainer, source_task, another_task, T, orig_saliency_m
 
 
 def save_support_set_grid(orig_sup_x, orig_sal, variants, save_path, alpha=0.5):
-    """One figure: rows = support images, columns = original + each perturbed
-    variant (noisy-label / hard-blurred / OOD-mixed), overlaying that
-    variant's saliency map and annotating the pearson/spearman correlation
-    (vs. the original saliency) in the column title.
-    variants: list of (name, sup_x_variant, saliency_variant, pearson, spearman)
-    """
+    """Grid: rows = support images, columns = original + each perturbed variant
+    (noisy-label/hard-blurred/OOD-mixed), annotated with pearson/spearman."""
     num_rows = orig_sup_x.shape[0]
     num_cols = 1 + len(variants)
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(3 * num_cols, 3.2 * num_rows))
@@ -131,17 +127,10 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T, illustr
         "spearman": []
     }
 
-    # Create the OOD iterator ONCE outside the loop: recreating it every
-    # metabatch (as before) always restarted it from the first batch, so the
-    # OOD check silently reused the same batch instead of advancing through
-    # ood_test_loader.
+    # create the OOD iterator once outside the loop -- recreating it per metabatch always restarted it
     ood_iter = iter(ood_test_loader)
 
-    # Illustrate the max-gain and min-gain tasks (highest/lowest raw
-    # adaptation_gain across the whole run), not an arbitrary first-N subset
-    # -- those extremes are what's actually informative to inspect. Only the
-    # current champions' data is kept in memory (replaced whenever a more
-    # extreme task is found).
+    # track max/min adaptation_gain tasks; only current champions kept in memory
     champions = {"max": None, "min": None}
 
     for metabatch_id, boT in enumerate(test_loader_pbar):
@@ -153,8 +142,7 @@ def sanity_check_support_set(explainer, test_loader, ood_test_loader, T, illustr
             sup_x, sup_y, _ = support
             que_x, que_y, _ = query
 
-            # Computed once per task and shared by all 3 checks below (was
-            # previously recomputed independently inside each of them).
+            # computed once per task, shared by all 3 checks below
             gain, orig_saliency_map = explainer.interpret(sup_x, sup_y, que_x, que_y, T)
 
             boT_ood_task = boT_ood[task_id]

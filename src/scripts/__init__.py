@@ -8,9 +8,7 @@ from .check_explain import check_explain
 from algos.maml import MAML
 
 
-############################################################################################
-### Main Func
-############################################################################################
+# --- Main Func ---
 
 TRAIN_MODE = "train"
 TEST_MODE = "test"

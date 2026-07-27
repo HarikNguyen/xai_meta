@@ -45,18 +45,7 @@ class FewShotDataset(object):
         return len(self.filenames)
 
     def __getitem__(self, index):
-        """Load image and its label by index
-
-        Args
-        ----------
-        index: int
-            Index of datapoint. index must be less than dataset length
-
-        Returns
-        ----------
-        (image, label, img_path) if out_path is True
-        (image, label) if out_path is False
-        """
+        """Load image and label by index; also returns img_path if out_path is True."""
 
         label_name = self.filenames[index].split("/")[-2]
         img_path = self.filenames[index]
@@ -72,17 +61,7 @@ class FewShotDataset(object):
         return img, label_name
 
     def __getitems__(self, indices: List):
-        """Load images and their label for support and query sets
-
-        Args
-        -----------
-        indices: List
-            support indices and query indices from sample_iter
-
-        Returns
-        -----------
-        List[support_set, query_set]
-        """
+        """Load [support_set, query_set] per task from indices (support/query index pairs per task)."""
         batch_task = []
         for task_indices in indices:
             support_indices = task_indices[0]

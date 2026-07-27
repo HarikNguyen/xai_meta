@@ -17,43 +17,9 @@ class MAML(BaseAlgorithm):
         grad_accum_chunk_size=1,
         **kwargs,
     ):
-        """Initialization of MAML
-
-        Parameters
-        ----------
-        train_base_lr: float
-            Inner level learning rate for meta-training
-        base_lr: float
-            Inner level learning rate
-        second_order: bool
-            Whether to use second-order gradient information
-        meta_batch_size: int
-            Number of tasks to compute outer-update
-        grad_accum_tasks: bool
-            If True, MAML.train() loops over the meta_batch_size tasks one at
-            a time (calling backward()+accumulating after each), instead of
-            batching all tasks through a single vmap call + one backward().
-            Mathematically identical result (mean of per-task gradients is
-            linear, so accumulating it one task at a time gives the same
-            total gradient as computing it all at once) -- the only thing
-            that changes is that at most 1 task's full second-order inner-
-            loop graph is ever resident in memory at a time instead of
-            meta_batch_size of them simultaneously. Trades some wall-clock
-            speed (no longer vectorized across tasks) for peak VRAM, useful
-            for backbones too large to fit meta_batch_size tasks at once
-            without lowering meta_batch_size/k_query/T/second_order.
-        grad_accum_chunk_size: int
-            Only used when grad_accum_tasks=True. Instead of looping one task
-            at a time, groups tasks into chunks of this size and batches each
-            group through vmap (regaining some cross-task parallelism),
-            still calling backward()/detaching once per group so at most
-            grad_accum_chunk_size tasks' graphs are resident at once instead
-            of meta_batch_size. 1 (default) is the fully-sequential, lowest
-            memory / lowest speed extreme; raising it trades VRAM back for
-            speed -- tune it up until it OOMs again, then back off by one.
-        **kwargs: dict
-            Keyword arguments that are ignored
-        """
+        """MAML: train_base_lr/base_lr are the inner-loop LR for train vs val/test.
+        grad_accum_tasks trades vectorized speed for lower peak VRAM by looping
+        tasks in grad_accum_chunk_size groups with backward() after each."""
         super().__init__(**kwargs)
         # hyperparameters
         self.train_base_lr = train_base_lr
@@ -71,12 +37,7 @@ class MAML(BaseAlgorithm):
             p.clone().to(self.device).detach().requires_grad_(True) for p in self.baselearner.parameters()
         ]
 
-        # define outer-level optimizer. theta_0 is many small tensors (18 for
-        # Conv4, 50 for ResNet10) updated every one of tens of thousands of
-        # iterations -- fused=True runs the whole step as one CUDA kernel
-        # instead of looping per-tensor in Python, cutting optimizer.step()
-        # overhead. Falls back to the plain call if optim_fn doesn't accept
-        # `fused` (e.g. running on CPU, or a different optimizer class).
+        # fused=True updates theta_0 in one CUDA kernel instead of per-tensor; falls back if unsupported
         try:
             self.outer_optim = self.optim_fn(self.theta_0, lr=self.lr, fused=(self.device == "cuda"))
         except TypeError:
@@ -108,20 +69,9 @@ class MAML(BaseAlgorithm):
         T,
         full_trajectory=True,
     ):
-        """Deploy on single task
-        1. Fast adaptation on support set (sup_x, sup_y) for T steps
-        2. Eval on query set (que_x, que_y) after each update step
-        3. Return losses and preds at each step
-
-        full_trajectory: bool
-            If True (val/test), record support+query loss/pred/acc at every one
-            of the T+1 steps, as before. If False (train), only the LAST step's
-            query loss is ever used by the caller (see MAML.train), so every
-            intermediate query forward pass + accuracy computation is skipped.
-            The support-side forward/grad is never skipped: it feeds the next
-            _fast_weights update and is required by the inner-loop recursion
-            regardless of full_trajectory.
-        """
+        """Fast-adapt on the support set for T steps, evaluating on the query set at
+        each step. full_trajectory=False (train) skips intermediate query
+        forward passes since only the last step's query loss is used."""
         # init fast_weights with theta_0 (phi)
         fast_weights = [p.clone() for p in theta_0]
         learner = self.baselearner
@@ -203,10 +153,7 @@ class MAML(BaseAlgorithm):
         return [(start, min(start + chunk_size, num_tasks)) for start in range(0, num_tasks, chunk_size)]
 
     def _deploy_chunk(self, start, end, sup_x, sup_y, que_x, que_y, train_mode, T, full_trajectory):
-        """Run _deploy on tasks [start, end). A single task is called directly
-        (no vmap); a group of >1 tasks is batched through vmap -- this is the
-        only place grad_accum_tasks regains cross-task parallelism.
-        """
+        """Run _deploy on tasks [start, end): vmap-batched if >1 task, direct call if just 1."""
         if end - start == 1:
             return self._deploy(
                 self.theta_0, sup_x[start], sup_y[start], que_x[start], que_y[start],
@@ -219,12 +166,8 @@ class MAML(BaseAlgorithm):
         )
 
     def _train_grad_accum(self, sup_x, sup_y, que_x, que_y):
-        """Same math as train()'s vmap path (mean of per-task query losses,
-        gradient w.r.t. theta_0), but processes tasks in groups of
-        grad_accum_chunk_size (1 = fully sequential) so at most that many
-        tasks' second-order inner-loop graphs are resident at once, instead
-        of all meta_batch_size of them.
-        """
+        """Same math as train()'s vmap path, but processed in grad_accum_chunk_size
+        groups so at most that many tasks' graphs are resident at once."""
         num_tasks = sup_x.shape[0]
         meta_loss = 0.0
 
@@ -233,10 +176,7 @@ class MAML(BaseAlgorithm):
                 start, end, sup_x, sup_y, que_x, que_y,
                 train_mode=True, T=self.T, full_trajectory=False,
             )
-            # que_losses[-1] is a scalar for a size-1 chunk, shape (end-start,)
-            # for a bigger one -- .sum() handles both, dividing by the TOTAL
-            # num_tasks (not the chunk size) keeps this equal to the mean over
-            # all tasks regardless of how they're grouped into chunks.
+            # .sum() handles scalar or vector shapes; dividing by num_tasks keeps this the mean over all tasks
             chunk_loss = que_losses[-1].sum() / num_tasks
             chunk_loss.backward()
             meta_loss += chunk_loss.item()
@@ -290,16 +230,9 @@ class MAML(BaseAlgorithm):
         return sup_losses, que_losses, sup_accs, que_accs
 
     def _validate_looped(self, sup_x, sup_y, que_x, que_y, T):
-        """Same output as _validate()'s vmap path (per-step tensors of shape
-        (num_tasks,)), but processes tasks in groups of grad_accum_chunk_size
-        (1 = fully sequential) so at most that many tasks' inner-loop graphs
-        are resident at once -- val()/test() never call backward(), but
-        torch.func.grad_and_value still builds a differentiable graph
-        internally for every _deploy call regardless (train or not), so
-        batching num_tasks of them via vmap costs the same peak memory as
-        train() did before grad_accum_tasks. Detaching each group's results
-        immediately lets that graph be freed before the next group starts.
-        """
+        """Same output as _validate()'s vmap path, but chunked like _train_grad_accum
+        so grad_and_value's graphs (built even without backward()) don't all
+        stay resident at once; each chunk is detached before the next runs."""
         num_tasks = sup_x.shape[0]
         chunk_sup_losses, chunk_que_losses = [], []
         chunk_sup_accs, chunk_que_accs = [], []
@@ -310,9 +243,7 @@ class MAML(BaseAlgorithm):
                 train_mode=False, T=T, full_trajectory=True,
             )
             is_single = end - start == 1
-            # a size-1 chunk (no vmap) returns 0-dim scalars; unsqueeze so
-            # every chunk has a leading task-dim of size (end-start), ready
-            # to torch.cat back together below regardless of chunk size.
+            # unsqueeze size-1 chunks (0-dim scalars) so every chunk has a leading task-dim for torch.cat below
             to_group = lambda t: t.detach().unsqueeze(0) if is_single else t.detach()
             to_group_acc = lambda t: t.unsqueeze(0) if is_single else t
 

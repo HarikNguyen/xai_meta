@@ -1,15 +1,7 @@
 import torch
 
 def boT_to_stack(boT, has_outpath=False):
-    """
-    Convert a batch of tasks (boT) to stacked tensors (sup_x, sup_y, que_x, que_y).
-    Parameters
-    ----------
-    boT : list of tasks
-    ----------
-    Returns
-    sup_x, sup_y, que_x, que_y : torch.Tensor
-    """
+    """Convert a batch of tasks (boT) to stacked tensors (sup_x, sup_y, que_x, que_y)."""
     # destructure boT into lists
     supports, queries = zip(*boT)
 

@@ -37,7 +37,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
             # close val bar (remove from screen)
             val_pbar.close()
 
-            # print validation results (Must be printed by tqdm.write to avoid interference with progress bars)
+            # use tqdm.write, not print, to avoid interfering with progress bars
             val_result_str = f"""[Step {id_}] Validation Results
             Pre-update: Sup Loss: {pre_valres["sup_loss"]:.4f}, Que Loss: {pre_valres["que_loss"]:.4f}, Sup Acc: {pre_valres["sup_acc"]:.4f}, Que Acc: {pre_valres["que_acc"]:.4f}
             Post-update: Sup Loss: {post_valres["sup_loss"]:.4f}, Que Loss: {post_valres["que_loss"]:.4f}, Sup Acc: {post_valres["sup_acc"]:.4f}, Que Acc: {post_valres["que_acc"]:.4f}
@@ -62,9 +62,7 @@ def run_train(args, algo_class, train_loader, val_loader, algo_conf, checkpoint_
     torch.save(algo_mgr.dump_state(), checkpoint_path)
 
 
-############################################################################################
-### Helper Funcs
-############################################################################################
+# --- Helper Funcs ---
 
 
 def train_on_metabatch(algo_mgr, boT):

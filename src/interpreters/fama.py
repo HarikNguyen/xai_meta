@@ -1,8 +1,6 @@
 """
-Feature-space Adjoint Meta-Learning Attribution
-====================
-Post-hoc XAI for MAML: Feature Saliency Map of the support set S
-w.r.t. adaptation gain
+Feature-space Adjoint Meta-Learning Attribution (FAMA): post-hoc XAI for MAML,
+saliency of the support set S w.r.t. adaptation gain ΔM.
 
     ΔM = E_{Q~T_i}[ -(L(φ_T, Q) - L(φ_freeze_T, Q)) ]
        = E_{Q~T_i}[ L(φ_freeze_T, Q) - L(φ_T, Q) ]
@@ -13,7 +11,6 @@ where:
                  adapted for T steps (φ_T*^head != φ_T^head, they come from
                  two different trajectories)
 
-──────────────────────────────────────────────────────────────────
 Gradient decomposition (adjoint form), for X ∈ {φ_T, φ_freeze_T} with its
 own trajectory X^(0..T) and its own adjoint λ^(t)(X_T):
 
@@ -43,10 +40,7 @@ from models.utils import get_layer_parameters_map
 
 
 class FAMAExplainer:
-    """
-    Post-hoc XAI for MAML-based
-    Compute Adaptation Gain and Feature Saliency Map.
-    """
+    """Post-hoc XAI for MAML: computes adaptation gain and feature saliency map."""
 
     def __init__(self, algo_mgr, device: Optional[str] = None):
         self.algo_mgr = algo_mgr
@@ -55,20 +49,11 @@ class FAMAExplainer:
         self.theta_0 = self.algo_mgr.theta_0
         self.base_lr = self.algo_mgr.base_lr
 
-    # ------------------------------------------------------------------
-    # Head / body split
-    # ------------------------------------------------------------------
+    # --- Head / body split ---
     def _get_head_mask(self) -> List[bool]:
-        """
-        Boolean mask aligned with self.theta_0: True  -> parameter belongs
-        to the task HEAD (the only part that is adapted in φ_freeze),
-        False -> parameter belongs to the BODY (frozen at θ₀ in φ_freeze).
-
-        By default we assume the LAST parametrized module returned by
-        `get_layer_parameters_map` is the task head (e.g. the final
-        classifier / fc layer). Adjust here if your architecture defines
-        the head differently (e.g. multiple last layers).
-        """
+        """Boolean mask aligned with self.theta_0: True = HEAD param (adapted in
+        φ_freeze), False = BODY param (frozen at θ₀). Assumes the LAST module
+        from `get_layer_parameters_map` is the head."""
         layer_map = get_layer_parameters_map(self.learner, self.theta_0)
         if not layer_map:
             # fallback: nothing frozen, behaves like full adaptation
@@ -78,9 +63,7 @@ class FAMAExplainer:
         head_param_ids = {id(p) for p in head_layer["params"]}
         return [id(p) in head_param_ids for p in self.theta_0]
 
-    # ------------------------------------------------------------------
-    # Trajectories
-    # ------------------------------------------------------------------
+    # --- Trajectories ---
     def _compute_trajectory(
         self,
         sup_x: torch.Tensor,
@@ -88,14 +71,9 @@ class FAMAExplainer:
         T: int,
         adapt_mask: Optional[List[bool]] = None,
     ) -> List[List[torch.Tensor]]:
-        """
-        Compute the parameter trajectory φ^(0) → φ^(T) on the support set.
-
-        If `adapt_mask` is given, parameters with adapt_mask[i] == False are
-        reset back to their θ₀ value after every step (i.e. never actually
-        adapted) -- this produces the φ_freeze trajectory where only the
-        head evolves and the body stays pinned at θ₀^body.
-        """
+        """Compute the parameter trajectory φ^(0) → φ^(T) on the support set.
+        With `adapt_mask`, params where adapt_mask[i]==False are reset to θ₀
+        after every step, producing the φ_freeze trajectory (body pinned)."""
         if adapt_mask is None:
             adapt_mask = [True] * len(self.theta_0)
 
@@ -153,13 +131,8 @@ class FAMAExplainer:
     def _compute_adaptation_gain(
         self, phi_freeze_T, phi_T, bootstrap_query, num_bootstraps
     ) -> float:
-        """
-        ΔM = E_{Q~T_i}[ L(φ_freeze_T, Q) - L(φ_T, Q) ]
-        φ_freeze_T = {θ₀^body, φ_T*^head}  (body frozen, head trained
-        along its own T-step trajectory -- NOT phi_T's head)
-
-        Gain (%) = ΔM / (E_Q[L(φ_T,Q)] + 1e-8) -- relative gain
-        """
+        """ΔM = E_{Q~T_i}[ L(φ_freeze_T, Q) - L(φ_T, Q) ], returned as a
+        relative gain (%) = ΔM / (E_Q[L(φ_T,Q)] + 1e-8)."""
         freeze_sum = 0.0
         post_sum = 0.0
 
@@ -175,9 +148,7 @@ class FAMAExplainer:
 
         return ((freeze_loss - post_loss) / (post_loss + 1e-8)) * 100.0
 
-    # ------------------------------------------------------------------
-    # Saliency
-    # ------------------------------------------------------------------
+    # --- Saliency ---
     def _saliency_core_batched(
         self,
         sup_x: torch.Tensor,
@@ -186,12 +157,8 @@ class FAMAExplainer:
         lambdas: Dict[int, List[torch.Tensor]],
         max_steps: Optional[int] = None,
     ) -> torch.Tensor:
-        """
-        Computes  Σ_t α · λ^(t) · ∂²L(φ^(t-1),S)/∂φ^(t-1)∂S  (Grad-CAM style,
-        upsampled to input resolution) for ONE trajectory (phis, lambdas).
-        Call it once for (φ, λ) and once for (φ_freeze, λ_freeze), then
-        subtract the two results to get ∂ΔM/∂S.
-        """
+        """Computes Σ_t α·λ^(t)·∂²L(φ^(t-1),S)/∂φ^(t-1)∂S (Grad-CAM style,
+        upsampled) for ONE trajectory; call for both and subtract for ∂ΔM/∂S."""
         saliency = torch.zeros_like(sup_x[:, :1])
         T_max = max_steps or len(phis) - 1
 
@@ -242,21 +209,13 @@ class FAMAExplainer:
             ]
         return lambdas
 
-    # ------------------------------------------------------------------
-    # Main entry point
-    # ------------------------------------------------------------------
+    # --- Main entry point ---
     def _trajectories_and_gain(
         self, sup_x, sup_y, que_x, que_y, T, num_bootstraps, samples_per_class
     ):
         """Shared first half of interpret(): builds both trajectories and the
-        scalar adaptation_gain. This part is cheap (T plain forward+backward
-        steps per trajectory, create_graph=False, plus num_bootstraps
-        no_grad forward passes) relative to the saliency machinery below it
-        (expected-lambda backward passes, HVP adjoint recursion, Grad-CAM
-        projection -- each O(T) *backward-through-backward* calls), so it is
-        split out to let compute_gain_only() get just the gain without
-        paying for saliency it will never use.
-        """
+        scalar adaptation_gain -- cheap relative to the saliency machinery
+        below, so split out for compute_gain_only() to skip that cost."""
         sup_x, sup_y, que_x, que_y = put_on_device(
             self.device, [sup_x, sup_y, que_x, que_y]
         )
@@ -288,13 +247,9 @@ class FAMAExplainer:
         num_bootstraps: int = 100,
         samples_per_class: int = 3,
     ) -> float:
-        """Same adaptation_gain value interpret() would return, but skips the
-        entire saliency computation (expected-lambda, adjoint/HVP backward
-        recursion, Grad-CAM projection) -- the dominant cost of interpret().
-        Use this whenever only the scalar gain is needed and the saliency
-        map would be discarded anyway (e.g. biADT's masked-variant sweep,
-        which calls interpret() ~30x per task just to read off gain values).
-        """
+        """Same adaptation_gain interpret() returns, but skips the saliency
+        computation entirely -- use when the saliency map would be discarded
+        anyway (e.g. biADT's masked-variant sweep, ~30 calls/task)."""
         *_, adaptation_gain = self._trajectories_and_gain(
             sup_x, sup_y, que_x, que_y, T, num_bootstraps, samples_per_class
         )

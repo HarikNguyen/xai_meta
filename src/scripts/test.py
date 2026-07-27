@@ -34,9 +34,7 @@ def run_test(args, algo_class, test_loader, algo_conf, use_best=False, use_last=
     save_paths(all_sup_outpaths, "support_paths", log_dir)
     save_paths(all_que_outpaths, "query_paths", log_dir)
 
-############################################################################################
-### Helper Funcs
-############################################################################################
+# --- Helper Funcs ---
 
 def test_on_wholeset(algo_mgr, test_loader):
     all_sup_losses = defaultdict(list)
@@ -96,14 +94,7 @@ def save_details(metrics_dict, num_steps, total_tasks, log_dir="logs"):
         print(f"[*] Saved detailed {metric_name} -> {path}")
 
 def save_paths(all_outpaths, data_type, log_dir="logs"):
-    """
-    Save image paths to a csv file.
-
-    Args:
-        all_outpaths (list): A list of image paths.
-        data_type (str): The type of data (support or query).
-        log_dir (str): The directory to save the csv file.
-    """
+    """Save image paths (support or query) to a csv file."""
     print(f"\n{'='*70}\n SAVING IMAGE PATHS TO {data_type.upper()}\n{'='*70}")
     num_imgs = len(all_outpaths[0]) if all_outpaths else 0
     header = ["task_id"] + [f"img_{i}" for i in range(num_imgs)]

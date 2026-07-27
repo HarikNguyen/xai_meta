@@ -11,18 +11,10 @@ from collections import Counter
 
 from interpreters import FAMAExplainer
 
-# Bounded, shared thread pools reused across explain.py / check_explain/*.py so
-# concurrency stays capped regardless of how many call sites use it (avoids a
-# "pool of pools" explosion). Sized for a single RTX 4080S (16GB VRAM, so GPU
-# work is capped at a handful of concurrent interpret() calls) + 12 CPU cores
-# (IO/CPU-bound work like SLIC segmentation and matplotlib rendering can use more).
+# shared thread pools reused across explain.py / check_explain, sized for one RTX 4080S + 12 cores
 _GPU_WORKERS = 4
 _IO_WORKERS = 8
-# matplotlib's pyplot keeps global figure-manager state (Gcf) that is not
-# thread-safe across concurrent calls, and GUI backends additionally require
-# the main thread -- so plot-saving gets its own single dedicated worker
-# instead of sharing the general IO pool. This still keeps the main loop
-# (GPU inference for the next task) from blocking on rendering/disk I/O.
+# own worker: matplotlib's global figure state isn't thread-safe
 _PLOT_WORKERS = 1
 
 _gpu_executor = None
@@ -42,12 +34,7 @@ def _write_csv(filename, header, rows, log_dir="logs"):
 _csv_handles = {}
 
 def log_to_csv(csv_path, log, header=None):
-    # Training calls this once per iteration (e.g. 60000x for the meta-loss
-    # log) -- reopening + os.path.isfile()-checking the file every single
-    # call adds real, easily-avoidable syscall overhead over a long run.
-    # Keep one open (writer, file) pair per path instead, flushing after each
-    # write so a crash still only loses at most the in-flight row (same
-    # durability as before, just without the repeated open/close).
+    # keep one open (writer, file) pair per path instead of reopening every call (runs 60000x/training)
     cached = _csv_handles.get(csv_path)
     if cached is None:
         file_exists = os.path.isfile(csv_path)
@@ -185,13 +172,8 @@ def shutdown_executors(wait=True):
 _cuda_stream_pool = None
 
 def _get_cuda_stream_pool(n):
-    """Lazily create a small, bounded, REUSED pool of CUDA streams (at most
-    _GPU_WORKERS of them, ever). Streams are cheap to reuse but each fresh
-    torch.cuda.Stream() carries its own allocator bookkeeping -- creating one
-    per task in a long-running loop (e.g. metatest_batch_size=1 -> one brand
-    new stream per metabatch, hundreds/thousands over a run) leaks/fragments
-    VRAM slowly instead of releasing it, since the caching allocator doesn't
-    always eagerly reclaim blocks cached against an abandoned stream."""
+    """Lazily create a small, bounded, reused pool of CUDA streams (at most
+    _GPU_WORKERS) -- creating a fresh one per task would slowly fragment VRAM."""
     global _cuda_stream_pool
     if _cuda_stream_pool is None:
         _cuda_stream_pool = [torch.cuda.Stream() for _ in range(min(n, _GPU_WORKERS))]
@@ -218,9 +200,7 @@ def parallel_map(fns, device):
     each on a reused CUDA stream from a small bounded pool, and return their
     results in submission order."""
     if len(fns) == 1:
-        # Nothing to overlap with a single task -- run inline, skip the
-        # executor/stream machinery entirely (also avoids the per-call stream
-        # churn described above for configs with only 1 task per metabatch).
+        # nothing to overlap with a single task -- run inline, skip the executor/stream machinery
         return [_run_with_stream(fns[0], device, stream=None)]
 
     executor = get_gpu_executor()
@@ -256,25 +236,18 @@ def permute_label(sup_y, flip_ratio=0.6):
 
     flip_indices = np.random.choice(N, num_flip, replace=False)
 
-    # 2. Get the labels at the selected positions
-    # For the optimal-shift algorithm to work, convert labels to integer class ids (0, 1, 2... C-1)
-    # If sup_y_np already holds integer labels (N, 1), skip argmax. Here we assume one-hot format (N, C)
+    # 2. Convert one-hot labels at the selected positions to integer class ids
     labels = np.argmax(sup_y_np[flip_indices], axis=1)
 
-    # 3. Apply the Sort & Shift algorithm
-    # Keep the original index within the flip group so we can map values back
+    # 3. Sort & Shift: sort by label, keeping original index to map values back
     indexed_labels = sorted(enumerate(labels), key=lambda x: x[1])
 
-    # Count occurrences of the most frequent label in this group
+    # shift by the most frequent label's count, to spread identical labels apart
     counts = Counter(labels)
     max_freq = max(counts.values())
-
-    # Circularly shift the sorted array by max_freq positions
-    # This shift pushes identical labels as far apart from each other as possible
     shifted_indexed = indexed_labels[-max_freq:] + indexed_labels[:-max_freq]
 
-    # 4. Write the optimally permuted labels back into sup_y_np
-    # Keep a temporary copy of the original label vectors before they get overwritten
+    # 4. Write the permuted labels back into sup_y_np (temp copy before overwrite)
     temp_targets = sup_y_np[flip_indices].copy()
 
     for i in range(num_flip):

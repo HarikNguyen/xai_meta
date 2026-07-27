@@ -14,6 +14,19 @@ from ..utils import correlation_sample_wise, parallel_map, submit_plot_task
 from models.utils import get_layer_parameters_map
 
 
+def group_layers_by_block(net_layers):
+    """Collapse leaf-module entries (one per conv/bn/linear) into one entry per
+    parent block, matching Adebayo et al. (2018)'s convention of randomizing
+    one whole named block at a time (not its individual conv/bn tensors)."""
+    groups = {}
+    for layer in net_layers:
+        parent = layer["name"].rsplit(".", 1)[0] if "." in layer["name"] else layer["name"]
+        if parent not in groups:
+            groups[parent] = {"name": parent, "params": []}
+        groups[parent]["params"].extend(layer["params"])
+    return list(groups.values())
+
+
 def randomize_layer(weight):
     # apply Kaiming Uniform for weight.dim >= 2
     if weight is None:
@@ -25,22 +38,15 @@ def randomize_layer(weight):
         nn.init.uniform_(weight, -0.1, 0.1)
 
 def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path, alpha=0.5):
-    """
-    Draw a single figure containing an N (images) x M (corruption states) grid.
-    corrupted_data: list of (layer_idx, saliencies, pearson, spearman) -- the
-    two correlation scores (vs. the original/uncorrupted saliency, averaged
-    across the N images) are annotated in each column's title so the numbers
-    are visible right next to the corresponding image, not just in a
-    separate CSV.
-    """
+    """Draw an N (images) x M (corruption states) grid; corrupted_data is a list
+    of (layer_idx, saliencies, pearson, spearman), annotated in each column's title."""
     num_samples = images_tensor.shape[0]        # number of rows (N)
     num_cols = 1 + len(corrupted_data)          # number of columns (M = original + L corrupted layers)
 
-    # 1. Create a large figure. Adjust figsize based on N and number of layers.
-    # e.g. each cell is 3x3 inches.
+    # each cell is roughly 3x3 inches
     fig, axes = plt.subplots(num_samples, num_cols, figsize=(num_cols * 3, num_samples * 3))
 
-    # 2. Handle the case of a single sample or a single column so axes is always a 2D array (num_samples, num_cols)
+    # keep axes a 2D array (num_samples, num_cols) even for a single row/column
     if num_samples == 1 and num_cols == 1:
         axes = np.array([[axes]])
     elif num_samples == 1:
@@ -78,7 +84,7 @@ def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path
             ax_orig.set_yticks([])  # hide Y ticks but keep the Y label
 
         ax_orig.set_xticks([])  # hide X ticks
-        # ax_orig.axis('off')  # using .axis('off') would also hide set_ylabel, so hide manually instead
+        # axis('off') would also hide set_ylabel, so hide ticks manually instead
 
         # --- Following columns: corrupted layers ---
         for j, (layer_idx, all_new_saliencies, pearson, spearman) in enumerate(corrupted_data):
@@ -103,9 +109,7 @@ def save_full_nxm_grid(images_tensor, orig_saliencies, corrupted_data, save_path
     plt.close(fig)
 
 def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T, want_illustration, metabatch_id, task_id):
-    # Each concurrent task gets its own shallow copy of the explainer so its
-    # theta_0 override doesn't clash with other tasks running at the same time
-    # (interpret() reads self.theta_0, and this check works by mutating it).
+    # shallow copy per task so theta_0 overrides don't clash across tasks
     local_explainer = copy.copy(explainer)
     local_explainer.theta_0 = [p.clone().detach() for p in theta_0]
 
@@ -116,8 +120,7 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T,
 
     corrupted_saliencies = []
     corrupted_theta_grouped = copy.deepcopy(net_layers)
-    # Cascading randomization: each step corrupts one more layer on top of the
-    # previous steps' corruption, so this inner loop must stay sequential.
+    # cascading corruption accumulates each step, so this loop must stay sequential
     for layer_idx in range(len(corrupted_theta_grouped) - 1, -1, -1):
         layer = corrupted_theta_grouped[layer_idx]
         # destroy layer
@@ -135,10 +138,7 @@ def check_on_task(explainer, theta_0, net_layers, sup_x, sup_y, que_x, que_y, T,
 
         corrupted_saliencies.append((layer_idx, new_saliency_map, scores["pearson"], scores["spearman"]))
 
-    # want_illustration only controls whether we bother copying tensors to
-    # CPU for possible plotting -- the caller (sanity_check_params) decides
-    # AFTER seeing every task's gain whether this one is actually the
-    # max/min-gain champion worth saving a plot for.
+    # want_illustration only gates CPU copies; caller picks the champion after seeing all gains
     illustration_data = None
     if want_illustration:
         illustration_data = {
@@ -153,22 +153,18 @@ def sanity_check_params(explainer, test_loader, T, illustrate_dir=None, illustra
         test_loader, desc="Sanity Check", position=0, leave=True, unit="boT"
     )
     theta_0 = [p.clone().detach() for p in explainer.algo_mgr.theta_0]
-    net_layers = get_layer_parameters_map(explainer.algo_mgr.baselearner, theta_0)
+    net_layers = group_layers_by_block(
+        get_layer_parameters_map(explainer.algo_mgr.baselearner, theta_0)
+    )
     results = {
         "pearson": [],
         "spearman": []
     }
-    # Illustrate the max-gain and min-gain tasks (highest/lowest raw
-    # adaptation_gain across the whole run), not an arbitrary first-N subset
-    # -- those extremes are what's actually informative to inspect. Only the
-    # current champions' data is kept in memory (replaced whenever a more
-    # extreme task is found).
+    # track max/min adaptation_gain tasks; only current champions kept in memory
     champions = {"max": None, "min": None}
 
     for metabatch_id, boT in enumerate(test_loader_pbar):
-        # Tasks within a metabatch are independent of each other -> run them
-        # concurrently instead of one at a time (only the per-task cascading
-        # corruption loop above has to stay sequential).
+        # tasks in a metabatch are independent -> run concurrently (cascade loop itself stays sequential)
         fns = [
             functools.partial(
                 check_on_task, explainer, theta_0, net_layers,

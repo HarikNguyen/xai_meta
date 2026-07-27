@@ -126,10 +126,7 @@ def main():
     yaml_config = load_config(args.config)
     args.yaml_config = yaml_config
 
-    # n_way/k_shot/k_query/image size are fixed for the whole run, so cuDNN can
-    # safely benchmark and cache the fastest conv algorithm per shape; TF32
-    # lets matmul/conv use Tensor Cores on Ampere+/Ada GPUs at negligible
-    # precision cost.
+    # fixed shapes -> cuDNN caches the fastest conv algo; TF32 uses Tensor Cores cheaply
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True

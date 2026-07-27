@@ -35,8 +35,7 @@ def compute_rank_bases(sup_x, saliency_map, n_segs=150, compactness=10.0):
     for each of the pos/neg/random modes)."""
     imgs_np = sup_x.detach().cpu().numpy().transpose(0, 2, 3, 1)
     sal_np = saliency_map.detach().cpu().squeeze(1).numpy()
-    # SLIC per image is pure numpy/skimage work (no shared mutable state), so
-    # it's safe to fan out across the shared CPU-bound IO pool.
+    # SLIC per image has no shared mutable state, so it's safe to fan out across the shared IO pool
     futures = [
         submit_io_task(_segment_and_score, imgs_np[i], sal_np[i], n_segs, compactness)
         for i in range(sup_x.shape[0])
@@ -70,10 +69,7 @@ def rank_tensor_from_bases(rank_bases, mode, device):
 
 
 def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0):
-    """
-    Build the mask and apply it directly on the GPU using vectorized ops.
-    (No for-loop needed at all.)
-    """
+    """Build the mask and apply it directly on the GPU using vectorized ops (no for-loop)."""
     mask = (rank_tensor <= ratio).float()
 
     if blur_sigma > 0:
@@ -85,13 +81,7 @@ def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0)
 
 
 def _interpret_gain(explainer, sup_x_masked, sup_y, que_x, que_y, T):
-    # Only the scalar gain is used for the AUC/PDAS/NDAS integration -- the
-    # saliency map that plain interpret() would also compute here is never
-    # read, but is the most expensive part of the call (HVP adjoint
-    # recursion + Grad-CAM projection, ~2*T extra backward-through-backward
-    # passes). compute_gain_only() skips that machinery entirely and returns
-    # the identical gain value (verified numerically), which matters a lot
-    # here since this runs ~num_steps*3 times per task.
+    # only the scalar gain is used, so skip interpret()'s expensive saliency machinery
     return explainer.compute_gain_only(sup_x_masked, sup_y, que_x, que_y, T)
 
 
@@ -109,12 +99,8 @@ def _montage(images_tensor):
 
 
 def save_biadt_mask_grid(sup_x, mode_step_masked, mode_step_gain, ratios, save_path):
-    """One figure: rows = pos/neg/random deletion modes, columns = original
-    (ratio=0) + a handful of mask ratios -- each cell is a montage of the
-    (masked) support set at that step, with the resulting adaptation gain
-    annotated so the deletion direction's effect is visible both visually and
-    numerically.
-    """
+    """Grid: rows = pos/neg/random deletion modes, columns = original + a few mask
+    ratios; each cell is a support-set montage annotated with its adaptation gain."""
     modes = ("pos", "neg", "random")
     mode_titles = {
         "pos": "pos (remove most helpful first)",
@@ -152,25 +138,14 @@ def compute_bidirectional_faithfulness(
     explainer, test_loader, T, n_segs=150, compactness=10.0, blur_sigma=5.0, num_steps=10,
     illustrate_dir=None, illustrate_n_tasks=0,
 ):
-    # illustrate_n_tasks is accepted but unused here: biADT always illustrates
-    # exactly the max-gain and min-gain tasks (see `champions` below), not an
-    # arbitrary count, since those extremes are what's actually informative
-    # to inspect. Kept in the signature so check_explain/__init__.py can call
-    # all three check methods uniformly.
+    # illustrate_n_tasks unused: always illustrates max/min-gain tasks, kept for a uniform signature
     test_loader_pbar = tqdm(test_loader, desc="BiDAT", position=0, leave=True, unit="boT")
     pdas, ndas, combines = [], [], []
     ratios = [step / num_steps for step in range(1, num_steps + 1)]
-    # A handful of evenly-spaced ratios to actually render (all num_steps would
-    # make the illustration grid unreadably wide).
+    # a handful of evenly-spaced ratios to render (all of them would make the grid too wide)
     display_ratios = [ratios[i] for i in np.linspace(0, len(ratios) - 1, min(5, len(ratios))).astype(int)]
 
-    # Illustrate the MOST and LEAST beneficial tasks (highest / lowest raw
-    # adaptation_gain across the whole run), not just whichever tasks happen
-    # to come first in the loader -- those extremes are what's actually
-    # informative to look at. Only the current best-max / best-min task's
-    # display data is kept in memory at any time (replaced whenever a more
-    # extreme task is found), so this costs no extra interpret() calls and
-    # negligible memory (a handful of small tensors, not all 600 tasks').
+    # track the max/min adaptation_gain tasks; only their display data is kept in memory
     champions = {"max": None, "min": None}
 
     for metabatch_id, boT in enumerate(test_loader_pbar):

@@ -38,13 +38,7 @@ def check_explain(
     # Define explainer
     explainer = build_explainer(algo, algo_class, algo_mgr, device)
 
-    # Illustrative plots (masking grid / corrupted-layer grid / perturbation
-    # grid) are opt-in via --illustrate_label, since saving one per task would
-    # mean hundreds of images for a full metatest_iterations run. When set,
-    # only the first illustrate_n_tasks tasks get a plot, written to
-    # check_explain_storage/<illustrate_label>/<method>/ regardless of
-    # --log_dir (so runs against different backbones/checkpoints land in the
-    # same top-level folder for side-by-side comparison).
+    # opt-in via --illustrate_label: saves only the max/min-gain tasks
     illustrate_dir = None
     if illustrate_label is not None:
         illustrate_dir = os.path.join("check_explain_storage", illustrate_label, method)
@@ -90,8 +84,7 @@ def check_explain(
     else:
         raise NotImplementedError(f"Method {method} not implemented.")
 
-    # Wait for any pending background plot-saving jobs (sanity_params) to
-    # finish writing to disk before the process exits.
+    # wait for any pending background plot-saving jobs to finish before exiting
     shutdown_executors()
 
 def _save_results_to_csv(res_df, name, log_dir, mean_df=None):

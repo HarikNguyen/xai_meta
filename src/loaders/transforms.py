@@ -14,15 +14,8 @@ _pil_interpolation_to_str = {
 
 
 class ToTensor(object):
-    """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
-
-    Converts a PIL Image or numpy.ndarray (H x W x C) in the range
-    [0, 255] to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0]
-    if the PIL Image belongs to one of the modes (L, LA, P, I, F, RGB, YCbCr, RGBA, CMYK, 1)
-    or if the numpy.ndarray has dtype = np.uint8
-
-    In the other cases, tensors are returned without scaling.
-    """
+    """Convert a (H x W x C) PIL Image / uint8 ndarray in [0, 255] to a
+    (C x H x W) float tensor in [0.0, 1.0]; other dtypes are left unscaled."""
 
     def __call__(self, image, color=True):
         if image.ndim == 2:
@@ -41,8 +34,7 @@ class Rotate(object):
         self.degrees = degrees
 
     def __call__(self, img):
-        # Note: img must be tensor
-        # Random rotation with k*deg
+        # img must be tensor; random rotation by a multiple of self.degrees
         if self.degrees == 0:
             return img
         max_k = 360 // self.degrees

@@ -26,8 +26,7 @@ def resize_all_images(dataset_name, size=(84, 84)):
                 img_path = os.path.join(class_dir, img_name)
                 try:
                     with Image.open(img_path) as im:
-                        # Note: From Pillow 10.0.0 onwards, use Image.Resampling.LANCZOS
-                        # For backwards compatibility, getattr is used here.
+                        # getattr fallback for Pillow <10.0.0, where Image.Resampling doesn't exist yet
                         im = im.resize(size, getattr(Image, 'Resampling', Image).LANCZOS)
                         im.save(img_path)
                 except Exception as e:

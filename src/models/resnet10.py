@@ -4,12 +4,9 @@ from collections import OrderedDict
 
 
 class BasicBlock(nn.Module):
-    """Standard ResNet BasicBlock (He et al. 2015): 2x(conv3x3 + BN) on the
-    main path, a 1x1 conv+BN projection shortcut, ReLU. Downsampling is done
-    via stride=2 in the first conv (and the shortcut), not a separate pooling
-    layer -- so only the first conv reads the full-resolution input; the
-    second conv already operates on the halved spatial size.
-    """
+    """Standard ResNet BasicBlock (He et al. 2015): 2x(conv3x3+BN) main path,
+    1x1 conv+BN shortcut, ReLU. Downsampling via stride=2 in the first conv
+    (and shortcut), not a separate pooling layer."""
 
     def __init__(self, device, indim, outdim, stride):
         super().__init__()
@@ -56,11 +53,8 @@ class BasicBlock(nn.Module):
 
 
 class ResNet10(nn.Module):
-    """ResNet-10 backbone (4 BasicBlocks, channels 64-128-256-512), the
-    shallowest member of the ResNet family used as a "deep" contrast to
-    Conv4 in few-shot learning literature (Chen et al. 2019, "A Closer Look
-    at Few-Shot Classification").
-    """
+    """ResNet-10 (4 BasicBlocks, channels 64-128-256-512): shallowest ResNet
+    variant, used as a "deep" contrast to Conv4 (Chen et al. 2019)."""
 
     def __init__(self, device, criterion, train_classes, channels=(64, 128, 256, 512)):
         super().__init__()

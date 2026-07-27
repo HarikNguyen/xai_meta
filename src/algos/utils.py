@@ -6,8 +6,7 @@ def put_on_device(dev, tensors):
     """
     for i in range(len(tensors)):
         if not tensors[i] is None:
-            # non_blocking is only actually async when the source tensor is
-            # pinned memory (DataLoader's pin_memory=True already provides that)
+            # non_blocking only helps with pinned memory (DataLoader's pin_memory=True provides that)
             tensors[i] = tensors[i].to(dev, non_blocking=True)
     return tensors
 

@@ -18,35 +18,9 @@ class BaseAlgorithm:
         operator=max,
         **kwargs
     ):
-        """Initialization of the meta-learning algorithm
-
-        Parameters
-        ----------
-        baselearner_fn: constructor function
-
-        baselearner_args: dict
-
-        optim_fn: constructor function
-
-        T: int
-
-        T_val: int
-
-        T_test: int
-
-        lr: float
-
-        device: str
-
-        batching_eps: bool
-
-        test_adam: bool
-            Optimize weights with Adam, LR = 0.001 at test time.
-        operator: function = max
-            Objective function. In case of RMSE, it is a minimization objective (min function),
-            in case of accuracy the maximization objective (max function)
-
-        """
+        """Base class for meta-learning algorithms; subclasses implement train/val/test.
+        test_adam: use Adam (lr=0.001) instead of plain SGD at test time.
+        operator: max for accuracy-like metrics, min for RMSE-like losses."""
 
         # Constructor function for the baselearner
         self.baselearner_fn = baselearner_fn

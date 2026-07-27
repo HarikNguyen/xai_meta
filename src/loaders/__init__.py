@@ -22,26 +22,15 @@ def encode_labels(labels, mapping=None):
 
     indices_tensor = torch.tensor(indices)
 
-    # 3. Convert indices to One-Hot vectors
-    # F.one_hot returns a tensor of shape [N, num_classes]
+    # 3. Convert indices to one-hot vectors, shape [N, num_classes]
     one_hot_tensor = F.one_hot(indices_tensor, num_classes=num_classes)
 
     return one_hot_tensor.float()
 
 
 def _task_collate(batch):
-    """Collate function that handles collection type of element
-    within batch_support and batch_query in each batch.
-
-    Args
-    ----------
-    batch: List[batch_support, batch_query]
-        A batch to be collated
-
-    Returns
-    ----------
-    Tuple[batch_support_collated, batch_query_collated]
-    """
+    """Collate a batch of (batch_support, batch_query) task tuples, one-hot
+    encoding labels within each task separately."""
     task_batches_collated = []
     for task_batch in batch:
         batch_support = task_batch[0]
