@@ -14,8 +14,16 @@ from interpreters import FAMAExplainer
 # shared thread pools reused across explain.py / check_explain, sized for one RTX 4080S + 12 cores
 _GPU_WORKERS = 4
 _IO_WORKERS = 8
+
 # own worker: matplotlib's global figure state isn't thread-safe
 _PLOT_WORKERS = 1
+
+def set_gpu_workers(n):
+    """Override the GPU worker/stream pool size; no-op if n is falsy. Must be
+    called before the first get_gpu_executor()/parallel_map() call to take effect."""
+    global _GPU_WORKERS
+    if n:
+        _GPU_WORKERS = n
 
 _gpu_executor = None
 _io_executor = None

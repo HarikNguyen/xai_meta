@@ -5,6 +5,7 @@ from .train import run_train
 from .test import run_test
 from .explain import explain
 from .check_explain import check_explain
+from .utils import set_gpu_workers
 from algos.maml import MAML
 
 
@@ -20,6 +21,13 @@ def run(args):
         algo_class = MAML
     else:
         raise NotImplementedError(f"Algorithm {args.algo} not implemented.")
+
+    # explain/check_explain never call vmap, so vmap_chunk_size is otherwise unused
+    # there -- repurpose it as the task-concurrency knob: batch more tasks per boT
+    # and widen the GPU worker/stream pool to match (no-op if left unset).
+    if args.mode in (EXPLAIN_MODE, CHECK_EXPLAIN_MODE) and args.vmap_chunk_size:
+        args.yaml_config["dataloader"]["metatest_batch_size"] = args.vmap_chunk_size
+        set_gpu_workers(args.vmap_chunk_size)
 
     # warm up
     train_loader, val_loader, test_loader, explain_loader, ood_explain_loader, algo_conf = warm_up(args.yaml_config)

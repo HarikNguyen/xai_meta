@@ -47,7 +47,9 @@ def parse_args():
         "--vmap_chunk_size",
         default=None,
         type=int,
-        help="Chunk size for vmap. Default: Equal to meta_batch_size",
+        help="train/val/test: chunk size for vmap (default: equal to meta_batch_size). "
+             "explain/check_explain (no vmap there): overrides metatest_batch_size and "
+             "the GPU worker/stream pool size, i.e. how many tasks run concurrently.",
     )
 
     parser.add_argument(
@@ -96,7 +98,7 @@ def parse_args():
         help="check_explain only: if set (e.g. 'conv4', 'resnet10'), also save "
              "illustrative plots (masking grid for biADT, corrupted-layer grid "
              "for sanity_params, original-vs-perturbed grid for "
-             "sanity_support_set) for the first --illustrate_n_tasks tasks "
+             "sanity_support_set) for the max-gain and min-gain tasks "
              "into check_explain_storage/<illustrate_label>/<method>/. "
              "Default: None (no illustration plots saved).",
     )
