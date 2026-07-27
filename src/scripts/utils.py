@@ -39,17 +39,28 @@ def _write_csv(filename, header, rows, log_dir="logs"):
         writer.writerows(rows)
     return csv_path
 
-def log_to_csv(csv_path, log, header=None):
-    file_exists = os.path.isfile(csv_path)
-    with open(csv_path, mode='a', newline='') as f:
-        writer = csv.writer(f)
+_csv_handles = {}
 
-        # write header if file does not exist and header is provided
+def log_to_csv(csv_path, log, header=None):
+    # Training calls this once per iteration (e.g. 60000x for the meta-loss
+    # log) -- reopening + os.path.isfile()-checking the file every single
+    # call adds real, easily-avoidable syscall overhead over a long run.
+    # Keep one open (writer, file) pair per path instead, flushing after each
+    # write so a crash still only loses at most the in-flight row (same
+    # durability as before, just without the repeated open/close).
+    cached = _csv_handles.get(csv_path)
+    if cached is None:
+        file_exists = os.path.isfile(csv_path)
+        f = open(csv_path, mode='a', newline='')
+        writer = csv.writer(f)
         if not file_exists and header is not None:
             writer.writerow(header)
+        _csv_handles[csv_path] = (f, writer)
+    else:
+        f, writer = cached
 
-        # write log values
-        writer.writerow(log)
+    writer.writerow(log)
+    f.flush()
 
 def compute_stats(data):
     """Compute mean, std, ci95 for a list of numbers."""

@@ -71,8 +71,16 @@ class MAML(BaseAlgorithm):
             p.clone().to(self.device).detach().requires_grad_(True) for p in self.baselearner.parameters()
         ]
 
-        # define outer-level optimizer
-        self.outer_optim = self.optim_fn(self.theta_0, lr=self.lr)
+        # define outer-level optimizer. theta_0 is many small tensors (18 for
+        # Conv4, 50 for ResNet10) updated every one of tens of thousands of
+        # iterations -- fused=True runs the whole step as one CUDA kernel
+        # instead of looping per-tensor in Python, cutting optimizer.step()
+        # overhead. Falls back to the plain call if optim_fn doesn't accept
+        # `fused` (e.g. running on CPU, or a different optimizer class).
+        try:
+            self.outer_optim = self.optim_fn(self.theta_0, lr=self.lr, fused=(self.device == "cuda"))
+        except TypeError:
+            self.outer_optim = self.optim_fn(self.theta_0, lr=self.lr)
 
     def _fast_weights(self, params, gradients, train_mode=False):
         """Compute task-specific weights using the gradients (theta_t)
