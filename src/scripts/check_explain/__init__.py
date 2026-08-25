@@ -20,6 +20,7 @@ def check_explain(
     log_dir="logs",
     illustrate_label=None,
     illustrate_n_tasks=3,
+    del_type="blur",
 ):
     if test_loader is None:
         raise ValueError("Test loader is None. Please provide a valid test loader.")
@@ -48,6 +49,7 @@ def check_explain(
         pdas, ndas, combineds = compute_bidirectional_faithfulness(
             explainer, test_loader, T=T,
             illustrate_dir=illustrate_dir, illustrate_n_tasks=illustrate_n_tasks,
+            del_type=del_type,
         )
         res_df = pd.DataFrame({
             "PDAS": pdas,

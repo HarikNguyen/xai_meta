@@ -1,0 +1,31 @@
+% iclr2026_conference.sty only loads fancyhdr + natbib itself; everything
+% else the paper needs is loaded explicitly here. (amsmath itself is loaded
+% in main.tex, before cleveref, which requires that ordering.)
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{multirow}
+\usepackage{xspace}
+\usepackage{enumitem}
+
+\theoremstyle{plain}
+\newtheorem{assumption}{Assumption}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+
+% ------------------------------------------------------------------ %
+% Notation shorthands (kept identical to the derivation in the paper) %
+% ------------------------------------------------------------------ %
+\newcommand{\fama}{\textsc{Fama}\xspace}
+\newcommand{\biadt}{\textsc{bi-ADT}\xspace}
+\newcommand{\deltaM}{\Delta M}
+\newcommand{\PhiFama}{\Phi_{\mathrm{FAMA}}}
+\newcommand{\R}{\mathbb{R}}
+
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}

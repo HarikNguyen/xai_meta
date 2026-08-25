@@ -1,0 +1,32 @@
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Heterogeneous tasks and negative transfer.}
+Most meta-learning methods assume the task distribution is homogeneous enough that one shared $\theta_0$ suffices \citep{finn2017model,snell2017prototypical,vinyals2016matching,santoro2016meta}. When this breaks, several lines of work customize prior knowledge per task cluster: HSML/ARML \citep{yao2019hierarchically,yao2020automated} organize tasks hierarchically; HetMAML \citep{chen2021hetmaml} extends heterogeneity to input modality; IFSL \citep{yue2020interventional} models pretrained knowledge as a confounder; HeTRoM \citep{si2025meta} reweights tasks by difficulty; HSFM \citep{parast2026hsfm} edits frozen support embeddings. All detect negative transfer through an accuracy symptom or correct it by editing representations; none produces a human-interpretable map of \emph{which} support features are the cause.
+
+\paragraph{Gradient- and perturbation-based post-hoc XAI.}
+Vanilla gradients \citep{simonyan2014visualising} and Guided Backprop \citep{springenberg2014striving} attribute predictions per pixel; CAM \citep{zhou2016learning} and Grad-CAM \citep{selvaraju2020grad} instead pool gradients at the last conv layer, trading pixel granularity for spatial coherence. A parallel family perturbs the input directly: Integrated Gradients \citep{sundararajan2017axiomatic}, SmoothGrad \citep{smilkov2017smoothgrad}, LIME \citep{ribeiro2016lime}, SHAP \citep{lundberg2017unified}, RISE \citep{petsiuk2018rise}. Every one is defined at a single, static parameter state; none aggregates a signal across a sequence of updates -- exactly what fast adaptation is.
+
+\paragraph{XAI for meta-learning and few-shot models.}
+TL-XML \citep{mitsuka2025tlxml} extends influence functions to task level via a Gauss-Newton Hessian approximation, scoring how much each \emph{meta-training task} shaped adaptation -- but treats the inner-loop update as an opaque unit and needs the full meta-training corpus at explanation time. Architecture-coupled alternatives apply Grad-CAM or learned matchers \emph{after} adaptation completes, e.g.\ expert-guided saliency for medical few-shot diagnosis \citep{uddin2025expert} and MTUNet's patch matcher \citep{wang2021mtunet}; both explain the converged predictor $f_{\phi_i^*}$, not the $\theta_0\!\to\!\phi_i^*$ transition.
+
+\paragraph{Attribution along optimization trajectories.}
+Influence functions \citep{koh2017understanding} and representer-point selection \citep{yeh2018representer} attribute a prediction to training points at a single converged $\hat\theta$, needing a tractable inverse-Hessian or limited to the last linear layer respectively. TracIn \citep{pruthi2020estimating} \emph{sums} gradient alignment across checkpoints instead, showing trajectory-level attribution is tractable for long-horizon training, not short meta-test adaptation. A-MAML \citep{li2023adjointmaml} uses the same adjoint machinery we build on, but to make MAML's \emph{meta-training} cheaper, not to explain an already-trained model.
+
+\begin{table}[t]
+\centering\small
+\caption{Positioning against the closest post-hoc explainers. \emph{Spatial}: localizes to image regions, not just a task/example score. \emph{Traj.}: aggregates a signal over the full trajectory, not one static state. \emph{No MT data}: needs no meta-training corpus at explanation time.}
+\label{tab:related_compare}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Method & Spatial & Traj. & No MT data \\
+\midrule
+TL-XML \citep{mitsuka2025tlxml}                          & $\times$ & $\times$ & $\times$ \\
+Post-adapt.\ Grad-CAM \citep{uddin2025expert,wang2021mtunet} & $\checkmark$ & $\times$ & $\checkmark$ \\
+TracIn \citep{pruthi2020estimating}                       & $\times$ & $\checkmark$ & $\times$ \\
+\fama (ours)                                             & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:related_compare} makes the gap concrete: no prior explainer is simultaneously spatial, trajectory-aggregated, and independent of meta-training data.

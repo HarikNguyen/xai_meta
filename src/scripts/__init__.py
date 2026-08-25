@@ -55,4 +55,5 @@ def run(args):
             args.algo, algo_class, explain_loader, ood_explain_loader, algo_conf,
             args.check_method, args.use_best, args.use_last, checkpoint_dir, log_dir,
             illustrate_label=args.illustrate_label, illustrate_n_tasks=args.illustrate_n_tasks,
+            del_type=args.del_type,
         )

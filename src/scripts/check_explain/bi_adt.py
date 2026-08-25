@@ -68,7 +68,18 @@ def rank_tensor_from_bases(rank_bases, mode, device):
     return torch.from_numpy(rank_maps).unsqueeze(1).to(device)
 
 
-def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0):
+def compute_deletion_baseline(sup_x, del_type="blur"):
+    """The replacement value for masked-out regions. "blur" softens the image
+    (still carries some local structure); "mean" flattens each image to its
+    own per-channel average color (a constant, structure-free baseline)."""
+    if del_type == "blur":
+        return TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
+    if del_type == "mean":
+        return sup_x.mean(dim=(2, 3), keepdim=True).expand_as(sup_x)
+    raise ValueError(f"Unknown del_type: {del_type!r} (expected 'blur' or 'mean')")
+
+
+def apply_mask_fast(sup_x, baseline, rank_tensor, ratio, blur_sigma=5.0):
     """Build the mask and apply it directly on the GPU using vectorized ops (no for-loop)."""
     mask = (rank_tensor <= ratio).float()
 
@@ -77,7 +88,7 @@ def apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma=5.0)
         mask = TF.gaussian_blur(mask, kernel_size=[ksize, ksize], sigma=[blur_sigma, blur_sigma])
         mask = torch.clamp(mask, 0.0, 1.0)
 
-    return sup_x * (1 - mask) + blurred_baseline * mask
+    return sup_x * (1 - mask) + baseline * mask
 
 
 def _interpret_gain(explainer, sup_x_masked, sup_y, que_x, que_y, T):
@@ -136,7 +147,7 @@ def save_biadt_mask_grid(sup_x, mode_step_masked, mode_step_gain, ratios, save_p
 
 def compute_bidirectional_faithfulness(
     explainer, test_loader, T, n_segs=150, compactness=10.0, blur_sigma=5.0, num_steps=10,
-    illustrate_dir=None, illustrate_n_tasks=0,
+    illustrate_dir=None, illustrate_n_tasks=0, del_type="blur",
 ):
     # illustrate_n_tasks unused: always illustrates max/min-gain tasks, kept for a uniform signature
     test_loader_pbar = tqdm(test_loader, desc="BiDAT", position=0, leave=True, unit="boT")
@@ -160,14 +171,14 @@ def compute_bidirectional_faithfulness(
 
             # Mode-independent pre-computation, done ONCE (was 3x before)
             rank_bases = compute_rank_bases(sup_x, saliency_map, n_segs, compactness)
-            blurred_baseline = TF.gaussian_blur(sup_x, kernel_size=[11, 11], sigma=[5.0, 5.0])
+            baseline = compute_deletion_baseline(sup_x, del_type)
 
             # Flatten pos/neg/random x num_steps into ONE job list for the shared executor
             jobs = []
             for mode in ("pos", "neg", "random"):
                 rank_tensor = rank_tensor_from_bases(rank_bases, mode, sup_x.device)
                 for ratio in ratios:
-                    masked = apply_mask_fast(sup_x, blurred_baseline, rank_tensor, ratio, blur_sigma)
+                    masked = apply_mask_fast(sup_x, baseline, rank_tensor, ratio, blur_sigma)
                     jobs.append((mode, ratio, masked))
 
             fns = [

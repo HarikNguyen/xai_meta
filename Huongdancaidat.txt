@@ -1,0 +1,93 @@
+============================================================
+ HƯỚNG DẪN CÀI ĐẶT
+ Đề tài: Giải thích Negative Transfer trong Meta-Learning
+ (Độ lợi thích ứng Delta M và phương pháp FAMA)
+============================================================
+
+1. YÊU CẦU HỆ THỐNG
+------------------------------------------------------------
+- Hệ điều hành: Linux (đã kiểm thử trên Ubuntu/Debian). Các lệnh
+  shell (.sh) trong dự án giả định môi trường Linux/bash.
+- Python 3.13 (cài qua Miniconda, xem mục 3).
+- GPU NVIDIA + driver CUDA (khuyến nghị, không bắt buộc). Nếu không
+  có GPU, chương trình vẫn chạy được trên CPU nhưng sẽ rất chậm,
+  đặc biệt ở chế độ "explain" / "check_explain" (phải tính đạo hàm
+  bậc hai - Hessian-vector product - qua nhiều bước gradient).
+- Dung lượng ổ đĩa trống: tối thiểu ~30 GB (riêng tieredImageNet
+  sau khi giải nén đã chiếm hàng chục GB).
+- RAM: khuyến nghị từ 16 GB trở lên.
+
+2. CÔNG CỤ CẦN CÓ SẴN TRÊN MÁY (cài trước khi chạy setup_env.sh)
+------------------------------------------------------------
+- wget, unzip, tar   (tải và giải nén dữ liệu/Miniconda)
+- git                (nếu clone lại mã nguồn từ repo)
+- (Tùy chọn) nvidia-smi phải chạy được nếu muốn dùng GPU - đây là
+  cách setup_env.sh tự động nhận diện phiên bản CUDA để cài đúng
+  bản PyTorch tương ứng.
+
+3. CÀI ĐẶT MÔI TRƯỜNG PYTHON (Miniconda + PyTorch)
+------------------------------------------------------------
+Từ thư mục gốc của mã nguồn (thư mục chứa setup_env.sh), chạy:
+
+    bash setup_env.sh
+
+Script này sẽ tự động:
+  a) Tải và cài đặt Miniconda vào $HOME/miniconda3 (chế độ im lặng).
+  b) Tạo môi trường conda tên "py13" với Python 3.13.
+  c) Kích hoạt môi trường "py13".
+  d) Kiểm tra có nvidia-smi hay không:
+       - Nếu CÓ: đọc phiên bản CUDA hiện có và cài đặt
+         torch + torchvision bản tương ứng (ví dụ CUDA 12.4 ->
+         cài bản cu124 qua index-url của PyTorch).
+       - Nếu KHÔNG: cài bản PyTorch cho CPU.
+
+Sau khi script chạy xong, mỗi lần mở terminal mới cần kích hoạt lại
+môi trường trước khi chạy chương trình:
+
+    conda activate py13
+
+4. CÀI CÁC THƯ VIỆN PYTHON CÒN LẠI
+------------------------------------------------------------
+Dự án không có sẵn file requirements.txt / pyproject.toml. Ngoài
+torch/torchvision đã được cài ở bước 3, cần cài thêm các thư viện
+sau (đã rà soát trực tiếp từ toàn bộ import trong mã nguồn):
+
+    pip install pyyaml tqdm pandas numpy Pillow matplotlib seaborn \
+                scipy scikit-image
+
+Ghi chú:
+  - "yaml"    -> gói PyPI là "pyyaml"
+  - "PIL"     -> gói PyPI là "Pillow"
+  - "skimage" -> gói PyPI là "scikit-image"
+  - Các phần còn lại (argparse, os, math, csv, unittest, ...) là
+    thư viện chuẩn của Python, không cần cài thêm.
+
+5. CHUẨN BỊ DỮ LIỆU (BẮT BUỘC TRƯỚC KHI CHẠY train/test/explain)
+------------------------------------------------------------
+Dữ liệu KHÔNG được đính kèm trong file nén mã nguồn này (dung lượng
+quá lớn). Phải tải về trước khi chạy chương trình. Tất cả lệnh chạy
+từ thư mục src/:
+
+    cd src
+
+  5.1. Tải dữ liệu thô (chọn bộ dữ liệu cần dùng):
+
+    ./download_miniimagenet.sh      # -> tạo thư mục miniImagenet/
+    ./download_tiered.sh            # -> tạo thư mục tiered_imagenet/
+                                     #    (có thể truyền số job tải song
+                                     #    song, mặc định 4: ./download_tiered.sh 4)
+    ./download_cub200.sh            # -> tạo thư mục cub_200/ (dùng cho
+                                     #    thí nghiệm cross-domain / OOD)
+
+  5.2. Tiền xử lý (resize ảnh về 84x84, chia train/val/test):
+
+    python prepare_dataset.py       # cho miniImagenet / tieredImagenet
+    python prepare_cub.py           # cho CUB-200-2011
+    python prepare_strokes_omniglot.py   # (nếu dùng bộ Omniglot-strokes)
+
+Sau bước này, các thư mục dữ liệu (miniImagenet/, tiered_imagenet/,
+cub_200/, ...) phải nằm ngay trong thư mục src/ (cùng cấp với
+main.py) thì chương trình mới đọc được - đường dẫn dữ liệu được
+cấu hình trong các file YAML trong thư mục configs/.
+
+Xem file Huongdansudung.txt để biết cách chạy train / test / explain.

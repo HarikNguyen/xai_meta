@@ -1,0 +1,182 @@
+============================================================
+ HƯỚNG DẪN SỬ DỤNG
+ Đề tài: Giải thích Negative Transfer trong Meta-Learning
+ (Độ lợi thích ứng Delta M và phương pháp FAMA)
+============================================================
+
+Trước khi thực hiện các bước dưới đây, phải hoàn tất cài đặt môi
+trường và dữ liệu theo file Huongdancaidat.txt.
+
+Tất cả các lệnh trong hướng dẫn này đều chạy từ thư mục src/:
+
+    conda activate py13
+    cd src
+
+------------------------------------------------------------
+1. CẤU TRÚC THƯ MỤC MÃ NGUỒN (src/)
+------------------------------------------------------------
+  main.py             Điểm vào chính của chương trình (CLI).
+  configs/            File cấu hình YAML, chia theo từng cặp
+                      dataset nguồn->đích, ví dụ:
+                        configs/only_tiered/conv4.yaml
+                        configs/mini2cub/conv4.yaml
+                        configs/tiered2cub/explain_test_conv4.yaml
+                      Mỗi thư mục con có 1 file YAML / backbone
+                      (conv4.yaml, resnet10.yaml) và bản
+                      explain_test_<backbone>.yaml dành cho chế
+                      độ explain/check_explain cross-domain.
+  algos/               Thuật toán meta-learning (MAML).
+  models/              Kiến trúc backbone (Conv4, ResNet10, ...).
+  loaders/             Đọc dữ liệu, lấy mẫu tác vụ N-way K-shot.
+  losses/              Hàm mất mát (CrossEntropy, SmoothMargin, ...).
+  interpreters/        Phương pháp giải thích FAMA (fama.py).
+  scripts/             Logic điều phối train/test/explain/
+                      check_explain, trong đó scripts/check_explain/
+                      chứa 3 phép kiểm chứng: bi_adt.py,
+                      sanity_params.py, sanity_support_set.py.
+  tests/               Unit test (chạy bằng unittest).
+  run.sh               Ví dụ tập hợp các lệnh chạy cho toàn bộ
+                      cấu hình thí nghiệm (tham khảo cách đặt
+                      tham số, KHÔNG nên chạy nguyên cả file vì
+                      giả định checkpoint đã có sẵn và rất tốn
+                      thời gian).
+  download_*.sh,
+  prepare_*.py         Script tải và tiền xử lý dữ liệu (xem
+                      Huongdancaidat.txt mục 5).
+
+Kết quả chạy sẽ được ghi vào 2 thư mục do --checkpoint_dir và
+--log_dir chỉ định (mặc định là "checkpoints" và "logs"), KHÔNG
+nằm sẵn trong mã nguồn nộp lại (thư mục .checkpoints/ và .logs/
+trong máy làm việc gốc chỉ là ví dụ/kết quả đã chạy, không đính
+kèm trong file nén này vì dung lượng lớn).
+
+------------------------------------------------------------
+2. CÁC CHẾ ĐỘ CHẠY (--mode)
+------------------------------------------------------------
+Cú pháp chung:
+
+    python main.py --config <đường_dẫn_file_yaml> --mode <chế_độ> [tham_số_khác]
+
+Có 5 chế độ:
+
+  a) train  - Huấn luyện meta-training từ đầu.
+
+     python main.py --config configs/only_tiered/conv4.yaml \
+         --mode train --vmap_chunk_size 4
+
+  b) test   - Đánh giá mô hình đã huấn luyện trên tập test.
+
+     python main.py --config configs/only_tiered/conv4.yaml \
+         --checkpoint_dir MAML_tiered_tiered --log_dir tiered \
+         --mode test --use_last
+
+  c) val    - Đánh giá trên tập validation (cú pháp tương tự test,
+              đổi --mode val).
+
+  d) explain - Chạy phương pháp FAMA để sinh bản đồ quy kết
+              (attribution map) trên một số tác vụ mẫu.
+
+     python main.py --config configs/tiered2cub/explain_test_conv4.yaml \
+         --checkpoint_dir MAML_tiered_tiered --log_dir tiered_ex \
+         --mode explain --use_last [--flip_ratio 0.75] [--blur]
+
+  e) check_explain - Chạy các phép kiểm chứng tính trung thực của
+              FAMA (BiADT hoặc 2 loại sanity check).
+
+     python main.py --config configs/tiered2cub/explain_test_conv4.yaml \
+         --checkpoint_dir MAML_tiered_tiered --mode check_explain \
+         --use_last --check_method biADT
+     python main.py --config configs/tiered2cub/explain_test_conv4.yaml \
+         --checkpoint_dir MAML_tiered_tiered --mode check_explain \
+         --use_last --check_method sanity_params
+     python main.py --config configs/tiered2cub/explain_test_conv4.yaml \
+         --checkpoint_dir MAML_tiered_tiered --mode check_explain \
+         --use_last --check_method sanity_support_set
+
+------------------------------------------------------------
+3. GIẢI THÍCH CÁC THAM SỐ DÒNG LỆNH CHÍNH
+------------------------------------------------------------
+  --mode               train | val | test | explain | check_explain
+                       (mặc định: train)
+  --algo               Thuật toán. Hiện chỉ hỗ trợ "maml" (mặc định).
+  --config             Đường dẫn file YAML cấu hình (dataset,
+                       dataloader, algo). Bắt buộc chọn đúng file
+                       phù hợp với thí nghiệm (xem mục 4).
+  --checkpoint_dir     Thư mục lưu/đọc checkpoint (mặc định:
+                       "checkpoints"). Checkpoint được lưu tại
+                       <checkpoint_dir>/<TênLớpThuậtToán>/
+                       {best,last}_checkpoint.pt
+  --log_dir            Thư mục lưu log/biểu đồ (mặc định: "logs").
+  --use_best           Dùng checkpoint tốt nhất (best_checkpoint.pt).
+  --use_last           Dùng checkpoint cuối cùng (last_checkpoint.pt).
+                       (Chọn 1 trong 2 khi mode là test/val/explain/
+                       check_explain; không chọn gì sẽ báo lỗi vì
+                       không biết đọc checkpoint nào.)
+  --vmap_chunk_size    train/val/test: kích thước chunk cho vmap
+                       (mặc định bằng meta_batch_size trong YAML).
+                       explain/check_explain: số tác vụ chạy đồng
+                       thời (không dùng vmap ở 2 chế độ này).
+  --check_method       Chỉ dùng với --mode check_explain. Chọn:
+                       biADT | sanity_params | sanity_support_set
+                       (mặc định: biADT)
+  --del_type           Chỉ dùng với check_explain --check_method
+                       biADT. Giá trị thay thế vùng ảnh bị xóa:
+                       blur (làm mờ, mặc định) hoặc mean (màu trung
+                       bình từng kênh).
+  --flip_ratio         Chỉ dùng với --mode explain. Tỷ lệ hoán vị
+                       nhãn (mô phỏng nhãn nhiễu). Mặc định: không
+                       dùng (None).
+  --blur               Chỉ dùng với --mode explain. Nếu bật, làm mờ
+                       ảnh tập hỗ trợ trước khi giải thích (mô
+                       phỏng tác vụ khó).
+  --illustrate_label   Chỉ dùng với --mode check_explain. Nếu đặt
+                       (ví dụ "conv4"), lưu thêm ảnh minh họa vào
+                       check_explain_storage/<nhãn>/<check_method>/.
+  --illustrate_n_tasks Chỉ dùng với --illustrate_label. Số tác vụ
+                       minh họa (mặc định: 3).
+
+------------------------------------------------------------
+4. VÍ DỤ MỘT QUY TRÌNH CHẠY ĐẦY ĐỦ (tieredImageNet, backbone Conv4)
+------------------------------------------------------------
+    cd src
+
+    # 1) Huấn luyện
+    python main.py --config configs/only_tiered/conv4.yaml \
+        --mode train --checkpoint_dir MAML_tiered_tiered \
+        --vmap_chunk_size 4
+
+    # 2) Đánh giá độ chính xác
+    python main.py --config configs/only_tiered/conv4.yaml \
+        --checkpoint_dir MAML_tiered_tiered --log_dir tiered \
+        --mode test --use_last
+
+    # 3) Sinh bản đồ giải thích FAMA (chuyển miền sang CUB-200-2011)
+    python main.py --config configs/tiered2cub/explain_test_conv4.yaml \
+        --checkpoint_dir MAML_tiered_tiered --log_dir tiered_ex \
+        --mode explain --use_last
+
+    # 4) Kiểm chứng tính trung thực của FAMA
+    python main.py --config configs/tiered2cub/explain_test_conv4.yaml \
+        --checkpoint_dir MAML_tiered_tiered --mode check_explain \
+        --use_last --check_method biADT
+
+File src/run.sh liệt kê đầy đủ tổ hợp lệnh cho tất cả các cặp
+dataset (only_mini, only_cub, only_tiered, mini2cub, tiered2cub,
+cub2mini, cub2tiered, tiered2strokes_omnig) và cả 2 backbone (conv4,
+resnet10) - dùng để tham khảo cách đặt tên checkpoint_dir/log_dir,
+KHÔNG nên chạy thẳng vì giả định các checkpoint train ở bước 1 đã
+tồn tại sẵn.
+
+
+------------------------------------------------------------
+6. GHI CHÚ THÊM
+------------------------------------------------------------
+- Các cấu hình cross-domain (mini2cub, tiered2cub, cub2mini,
+  cub2tiered, tiered2strokes_omnig) huấn luyện trên một bộ dữ liệu
+  và explain/test trên bộ dữ liệu khác - đây là thiết kế chủ định
+  của thí nghiệm (khảo sát hành vi giải thích khi có dịch chuyển
+  miền dữ liệu), không phải lỗi cấu hình.
+- Nếu chạy trên máy không có GPU, nên giảm --vmap_chunk_size và số
+  lượng tác vụ lấy mẫu trong file YAML (vd. metatest_batch_size)
+  để tránh quá tải bộ nhớ / thời gian chạy quá lâu, đặc biệt ở chế
+  độ explain/check_explain.

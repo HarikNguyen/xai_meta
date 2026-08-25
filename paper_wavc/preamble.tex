@@ -1,0 +1,25 @@
+% Additional packages and macros (cvpr.sty already loads amsmath, amssymb,
+% graphicx, booktabs, natbib, caption/subcaption).
+
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{multirow}
+\usepackage{xspace}
+\usepackage{amsthm}
+
+\theoremstyle{plain}
+\newtheorem{assumption}{Assumption}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+
+% ------------------------------------------------------------------ %
+% Notation shorthands (kept identical to the derivation in the paper) %
+% ------------------------------------------------------------------ %
+\newcommand{\fama}{\textsc{Fama}\xspace}
+\newcommand{\biadt}{\textsc{bi-ADT}\xspace}
+\newcommand{\deltaM}{\Delta M}
+\newcommand{\PhiFama}{\Phi_{\mathrm{FAMA}}}
+\newcommand{\R}{\mathbb{R}}
+
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}

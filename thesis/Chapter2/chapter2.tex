@@ -32,7 +32,7 @@ Cụ thể, để giải quyết bài toán \acrlong{fsl}, \acrshort{maml} dựa
 Dựa trên cơ chế đó, \acrshort{maml} giải quyết bài toán \acrlong{fsl} thông qua một quá trình tối ưu gồm hai tầng (Hình \ref{fig:meta_learning_obj}). Với tầng lặp trong (inner loop), mô hình học xuất phát từ tham số khởi tạo chung $\theta_0$ thực hiện $T$ bước cập nhật gradient trên hàm mất mát tính trên tập hỗ trợ $S_i$ của tác vụ $\mathcal{T}_i$, theo phương trình \ref{eq:inner_loop}.
 \begin{equation}
     \centering
-    \phi_j = \phi_{j-1} - \alpha \nabla_{\phi} \mathcal{L}_{S_i}(\phi_{j-1}), \qquad j = 1, 2, \dots, T, \quad \phi{0} = \theta_0
+    \phi_j = \phi_{j-1} - \alpha \nabla_{\phi} \mathcal{L}_{S_i}(\phi_{j-1}), \qquad j = 1, 2, \dots, T, \quad \phi_{0} = \theta_0
     \label{eq:inner_loop}
 \end{equation}
 Trong đó $\alpha$ là tốc độ học của inner loop, và nghiệm sau $T$ bước được ký hiệu là $\phi_i^* := \phi_T$. Sau đó, ở tầng lặp ngoài (outer loop), tham số khởi tạo chung $\theta_0$ sẽ được cập nhật theo phương trình \ref{eq:outer_loop} sao cho tổng (hoặc trung bình) giá hàm mất mát trên các tập truy vấn $Q_i$, tính tại nghiệm đã thích ứng $\phi_i^*$, được tối thiểu hoá trên toàn bộ phân phối tác vụ.
@@ -47,7 +47,7 @@ Trong đó, $\beta$ là tốc độ học của outer loop, $\mathcal{L}_{Q_i}$ 
     \centering
     \includegraphics[width=0.8\textwidth]{../images/meta_learning_obj.png}
     \caption{Quá trình \acrshort{maml} tìm kiếm vị trí khởi tạo thuận lợi cho tham số $\theta_0$ trong giai đoạn meta-training.}
-    \label{fig:meta_learning_process}
+    \label{fig:meta_learning_obj}
 \end{figure}
 
 Để lý giải cơ thích ứng nhanh của \acrshort{maml}, Raghu và các cộng sự \cite{raghu2019rapid} đã thực hiện thí nghiệm đóng băng phần thân trích xuất đặc trưng (backbone) $\theta_0^{b}$ và chỉ cho phép phần đầu phân loại (head) $\theta_0^{h}$ cập nhật trong inner loop - thuật toán ANIL (Almost No Inner Loop). Bằng cách so sánh biểu diễn của backbone trước và sau thích ứng thông qua CCA và CKA, nhóm tác giả cho thấy các lớp tích chập gần như không dịch chuyển, trong khi chỉ riêng head thay đổi đáng kể. Từ đó, đi tới kết luận rằng hiệu quả của \acrshort{maml} chủ yếu đến từ việc $\theta_0$ đã sẵn mang những đặc trưng tổng quát, có thể tái sử dụng nguyên trạng các đặc trưng này cho hầu hết tác vụ mới (feature reuse). Trạng thái này được khái quát hóa tại Hình \ref{fig:repr_space} A, trong đó không gian biểu diễn sau thích ứng ($\phi_i^*$) duy trì sự đồng nhất gần như tuyệt đối với không gian tiền nghiệm ($\theta_0$). Cũng đồng nghĩa với việc vai trò thực sự của $S_i$, trong trường hợp này, chỉ là căn chỉnh lại ranh giới quyết định ở phần đầu phân loại (head) cho phù hợp với từng tác vụ cụ thể.
@@ -101,7 +101,7 @@ Gần đây, Si và các cộng sự đề xuất phương pháp \acrfull{hetero
 
 Nhìn chung, các nghiên cứu giải quyết bài toán tác vụ không đồng nhất cho thấy một xu hướng nhất quán. Cộng đồng ngày càng thừa nhận tính không đồng nhất là nguyên nhân cốt lõi gây suy giảm hiệu năng thích ứng, và các giải pháp đang đi sâu vào can thiệp ở cấp độ biểu diễn (embeddings). Tuy nhiên, không một phương pháp nào trong chuỗi này hướng đến việc \emph{diễn giải tường minh} cơ chế mà $S_i$ đã định hướng sai ở đâu trong không gian đặc trưng chung. Tất cả các nghiên cứu hiện hành đều dừng lại ở mức phát hiện qua biểu hiện của các chỉ số (thường là độ chính xác suy giảm) hoặc sửa chữa qua tối ưu hóa lại biểu diễn, mà chưa cung cấp một bản đồ phân bổ (attribution) trực quan nào có thể chẩn đoán được nguyên nhân của sự chệch hướng trong quá trình thích ứng.
 
-\subsection{Các phương pháp giải thích hậu nghiệm dựa trên gradients và nhiễu loạn}
+\subsection{Các phương pháp hậu diễn giải dựa trên gradients và nhiễu loạn}
 \label{subsec:background_post_hoc}
 
 Ngoài các kiến trúc diễn giải nội tại như Class Activation Mapping đã trình bày ở Mục~\ref{subsec:xai_bg}, cộng đồng nghiên cứu XAI đã phát triển các phương pháp \textbf{hậu diễn giải} (\emph{post-hoc}) tổng quát. Các kỹ thuật này không bị giới hạn bởi cấu trúc kiến trúc mạng cụ thể, cho phép phân tích hành vi của mô hình một cách linh hoạt hơn. Có thể chia các phương pháp này thành hai nhánh chính dựa trên cơ chế tác động.
@@ -150,7 +150,7 @@ Phương pháp này tách biệt đóng góp \emph{kích thích} ($\alpha_i > 0$
 \end{equation}
 Trực giác cốt lõi của TracIn là xấp xỉ tổng mức giảm loss trên mẫu kiểm thử, tích luỹ qua toàn bộ quá trình huấn luyện, mỗi khi mẫu huấn luyện $z_i$ được sử dụng để cập nhật tham số. Về bản chất, đây là một phép tích luỹ (aggregation) tín hiệu attribution qua \emph{nhiều trạng thái tham số liên tiếp} $\{\theta_e\}_{e=1}^{E}$, thay vì chỉ tại một trạng thái duy nhất như hai phương pháp ở trên. Nhờ vậy, TracIn không đòi hỏi điều kiện hội tụ hay tối ưu bậc nhất, và có thể áp dụng cho bất kỳ mô hình nào huấn luyện bằng SGD hoặc biến thể của nó.
 
-Mặt khác, khái niệm quỹ đạo tham số trong bối cảnh gradient-based meta-learning cũng đã được khai thác bởi Li và cộng sự thông qua A-MAML \cite{li2023adjointmaml}, phương pháp xem quá trình gradient descent của inner-loop như một phương trình vi phân thường (ODE) và dùng phương pháp liên hợp (adjoint method) để tính hiệu quả gradient của $\theta_0$ mà không cần lưu trữ đồ thị tính toán trung gian. Tuy nhiên, mục tiêu của A-MAML hoàn toàn khác với hướng tiếp cận của đề tài này: đây là một kỹ thuật nhằm \emph{tối ưu hóa hiệu quả tính toán lúc meta-training}, không phải một phương pháp \emph{diễn giải hậu nghiệm} (post-hoc) cho một mô hình đã huấn luyện xong. Điểm tương đồng duy nhất giữa hai hướng là cùng sử dụng công cụ toán học liên hợp (adjoint/Pearlmutter HVP), trong khi bài toán được giải quyết là hoàn toàn khác biệt.
+Mặt khác, khái niệm quỹ đạo tham số trong bối cảnh gradient-based meta-learning cũng đã được khai thác bởi Li và cộng sự thông qua A-MAML \cite{li2023adjointmaml}, phương pháp xem quá trình gradient descent của inner-loop như một phương trình vi phân thường (ODE) và dùng phương pháp liên hợp (adjoint method) để tính hiệu quả gradient của $\theta_0$ mà không cần lưu trữ đồ thị tính toán trung gian. Tuy nhiên, mục tiêu của A-MAML hoàn toàn khác với hướng tiếp cận của đề tài này: đây là một kỹ thuật nhằm \emph{tối ưu hóa hiệu quả tính toán lúc meta-training}, không phải một phương pháp \emph{hậu diễn giải} (post-hoc) cho một mô hình đã huấn luyện xong. Điểm tương đồng duy nhất giữa hai hướng là cùng sử dụng công cụ toán học liên hợp (adjoint/Pearlmutter HVP), trong khi bài toán được giải quyết là hoàn toàn khác biệt.
 
 \subsection{Tổng hợp và định vị nghiên cứu}
 \label{subsec:relatedwork_synthesis}

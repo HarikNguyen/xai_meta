@@ -1,0 +1,67 @@
+% FAMA paper -- built on the official CVPR/ICCV/WACV author kit
+% (https://github.com/cvpr-org/author-kit), retargeted to WACV.
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE  - switch when moving from submission to camera-ready
+\usepackage[review]{cvpr}      % (1) REVIEW / anonymized version -- default
+% \usepackage{cvpr}            % (2) CAMERA-READY version: uncomment this line,
+                                %     comment out the [review] line above, and
+                                %     fill in \paperID below.
+% \usepackage[pagenumbers]{cvpr} % (3) arXiv-style version with page numbers
+
+\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+\usepackage[pagebackref,breaklinks,colorlinks,allcolors=cvprblue]{hyperref}
+
+% Load cleveref here -- after hyperref (required), before \input{preamble}
+% defines the assumption/proposition/lemma theorem environments below -- so
+% it auto-hooks \newtheorem and picks up sensible cross-reference names for
+% them; cvpr.sty also loads it later via \AtEndPreamble, a harmless no-op.
+\usepackage[capitalize]{cleveref}
+
+\input{preamble}
+
+%%%%%%%%% PAPER ID / VENUE
+\def\paperID{*****} % assigned by the venue at submission time
+\def\confName{WACV}
+\def\confYear{2027}
+
+%%%%%%%%% TITLE
+\title{\fama: Feature-Space Adjoint Attribution for Explaining\\ Negative Transfer in Gradient-Based Meta-Learning}
+
+%%%%%%%%% AUTHORS
+\author{
+Tuan-Khai Le-Nguyen\\
+Faculty of Information Technology, University of Science, VNU-HCM\\
+{\tt\small nltkhai@student.hcmus.edu.vn}
+\and
+Hoai-Bac Le\\
+Faculty of Information Technology, University of Science, VNU-HCM\\
+{\tt\small lhbac@fit.hcmus.edu.vn}
+}
+
+\begin{document}
+\maketitle
+
+\input{sec/0_abstract}
+\input{sec/1_intro}
+\input{sec/2_related}
+\input{sec/3_method}
+\input{sec/4_protocols}
+\input{sec/5_experiments}
+\input{sec/6_discussion}
+\input{sec/7_conclusion}
+
+{
+    \small
+    \bibliographystyle{ieeenat_fullname}
+    \bibliography{main}
+}
+
+% NOTE (kept from the official author kit): supplementary pages are normally
+% submitted as a SEPARATE file. Delete or comment out the line below before
+% uploading to the venue's submission system; it is kept inline here so this
+% build is a single self-contained PDF.
+\input{sec/X_suppl}
+
+\end{document}

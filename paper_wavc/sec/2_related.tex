@@ -1,0 +1,32 @@
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Heterogeneous tasks and negative transfer.}
+Most meta-learning methods assume the task distribution is homogeneous enough that one shared $\theta_0$ suffices~\cite{finn2017model,snell2017prototypical,vinyals2016matching,santoro2016meta}. When this assumption breaks, several lines of work customize prior knowledge per task cluster: HSML~\cite{yao2019hierarchically} and its automated successor ARML~\cite{yao2020automated} organize tasks hierarchically; HetMAML~\cite{chen2021hetmaml} extends heterogeneity to the input modality itself. From a causal viewpoint, IFSL~\cite{yue2020interventional} models pretrained knowledge as a confounder that opens backdoor paths to spurious features, while HeTRoM~\cite{si2025meta} reweights tasks by difficulty and HSFM~\cite{parast2026hsfm} directly edits frozen support embeddings to suppress spurious correlations. All of these either detect negative transfer through an accuracy symptom or correct it by editing representations; none produces a human-interpretable map of \emph{which} support features are the cause.
+
+\paragraph{Gradient- and perturbation-based post-hoc XAI.}
+Vanilla gradients~\cite{simonyan2014visualising} and Guided Backprop~\cite{springenberg2014striving} attribute predictions per pixel; CAM~\cite{zhou2016learning} and its post-hoc generalization Grad-CAM~\cite{selvaraju2020grad} instead pool gradients at the last convolutional layer, trading pixel granularity for spatial coherence. A parallel family perturbs the input directly: Integrated Gradients~\cite{sundararajan2017axiomatic}, SmoothGrad~\cite{smilkov2017smoothgrad}, LIME~\cite{ribeiro2016lime}, SHAP~\cite{lundberg2017unified}, and RISE~\cite{petsiuk2018rise}. Every one of these methods, gradient- or perturbation-based, is defined at a single, static parameter state; none aggregates a signal across a sequence of updates, which is exactly what fast adaptation is.
+
+\paragraph{XAI for meta-learning and few-shot models.}
+TL-XML~\cite{mitsuka2025tlxml} extends influence functions to task level, using a Gauss-Newton Hessian approximation to score how much each \emph{meta-training task} shaped adaptation on a target task -- but it still treats the inner-loop update as an opaque unit and needs the full meta-training corpus at explanation time. Architecture-coupled alternatives apply Grad-CAM or learned matchers only \emph{after} adaptation completes, e.g.\ expert-guided saliency for medical few-shot diagnosis~\cite{uddin2025expert} and the patch matcher in MTUNet~\cite{wang2021mtunet}; both explain the converged predictor $f_{\phi_i^*}$, not the $\theta_0\!\to\!\phi_i^*$ transition itself.
+
+\paragraph{Attribution along optimization trajectories.}
+Influence functions~\cite{koh2017understanding} and representer-point selection~\cite{yeh2018representer} both attribute a prediction to training points at a single converged $\hat\theta$, the former needing a tractable inverse-Hessian, the latter limited to the last linear layer. TracIn~\cite{pruthi2020estimating} instead \emph{sums} gradient alignment across training checkpoints, establishing that trajectory-level attribution is tractable, but for long-horizon training, not short meta-test adaptation. A-MAML~\cite{li2023adjointmaml} uses the same adjoint machinery we build on, but to make MAML's \emph{meta-training} cheaper, not to explain an already-trained model -- a different problem that happens to share our mathematical toolkit.
+
+\begin{table}[t]
+\centering\small
+\caption{Positioning against the closest post-hoc explainers. \emph{Spatial}: localizes to image regions, not just a task/example score. \emph{Traj.}: aggregates a signal over the full multi-step trajectory rather than one static state. \emph{No MT data}: needs no access to the meta-training corpus at explanation time.}
+\label{tab:related_compare}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Method & Spatial & Traj. & No MT data \\
+\midrule
+TL-XML~\cite{mitsuka2025tlxml}                          & $\times$ & $\times$ & $\times$ \\
+Post-adapt.\ Grad-CAM~\cite{uddin2025expert,wang2021mtunet} & $\checkmark$ & $\times$ & $\checkmark$ \\
+TracIn~\cite{pruthi2020estimating}                       & $\times$ & $\checkmark$ & $\times$ \\
+\fama (ours)                                             & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:related_compare} makes the gap concrete: no prior explainer is simultaneously spatial, trajectory-aggregated, and independent of meta-training data. The negative-transfer correction methods above (HSML/ARML/IFSL/HeTRoM/HSFM) are omitted from the table on different grounds -- they target the same failure mode but act by \emph{editing} representations or objectives, not by producing a human-facing explanation, so they are not commensurable with the three columns above.

@@ -1,0 +1,21 @@
+[0] Config.pm:306> INFO - This is Biber 2.18
+[1] Config.pm:309> INFO - Logfile is 'output/main.blg'
+[192] biber:340> INFO - === Thu Aug 20, 2026, 09:56:23
+[223] Biber.pm:418> INFO - Reading 'output/main.bcf'
+[427] Biber.pm:978> INFO - Found 54 citekeys in bib section 0
+[458] Biber.pm:4401> INFO - Processing section 0
+[481] Biber.pm:4592> INFO - Looking for bibtex file 'References/references.bib' for section 0
+[488] bibtex.pm:1713> INFO - LaTeX decoding ...
+[638] bibtex.pm:1518> INFO - Found BibTeX data source 'References/references.bib'
+[1747] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[1747] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[1748] Biber.pm:4221> INFO - Sorting list 'nty/global//global/global' of type 'entry' with template 'nty' and locale 'en-US'
+[1748] Biber.pm:4227> INFO - No sort tailoring available for locale 'en-US'
+[1907] bbl.pm:654> INFO - Writing 'output/main.bbl' with encoding 'UTF-8'
+[1986] bbl.pm:757> INFO - Output to output/main.bbl
+[1986] Biber.pm:130> WARN - Duplicate entry key: 'nichol2018first' in file 'References/references.bib', skipping ...
+[1986] Biber.pm:130> WARN - Duplicate entry key: 'rajeswaran2019meta' in file 'References/references.bib', skipping ...
+[1986] Biber.pm:130> WARN - legacy month field 'apr' in entry 'eu2019trustworthy' is not an integer - this will probably not sort properly.
+[1987] Biber.pm:130> WARN - I didn't find a database entry for 'smilkov2017smoothgrad' (section 0)
+[1987] Biber.pm:130> WARN - I didn't find a database entry for 'ribeiro2016lime' (section 0)
+[1987] Biber.pm:132> INFO - WARNINGS: 5

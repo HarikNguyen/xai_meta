@@ -79,6 +79,17 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--del_type",
+        default="blur",
+        type=str,
+        choices=["blur", "mean"],
+        help="check_explain biADT only: replacement value for masked-out support "
+             "regions. 'blur': gaussian-blurred version of the image (keeps some "
+             "local structure). 'mean': flat per-channel average color of the "
+             "image (constant, structure-free baseline). Default: blur",
+    )
+
+    parser.add_argument(
         "--flip_ratio",
         default=None,
         type=float,

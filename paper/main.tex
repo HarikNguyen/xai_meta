@@ -1,0 +1,46 @@
+% FAMA paper -- ICLR 2027 format, built on the official ICLR Master Template
+% (https://github.com/ICLR/Master-Template/tree/master/iclr2026).
+
+\documentclass{article}
+
+% Submission (anonymized) vs camera-ready:
+\usepackage{iclr2026_conference,times}
+% \iclrfinalcopy % uncomment ONLY for camera-ready, together with filling in \author{} for real
+
+% cleveref requires amsmath to be loaded before it, and requires being loaded
+% itself before the assumption/proposition/lemma \newtheorem calls in
+% preamble.tex (so \Cref can name them) -- hence amsmath here, then hyperref,
+% then cleveref, then preamble.tex for everything else.
+\usepackage{amsmath}
+\usepackage[pagebackref,breaklinks,colorlinks,allcolors=blue]{hyperref}
+\usepackage[capitalize]{cleveref}
+
+\input{preamble}
+
+\title{\fama: Feature-Space Adjoint Attribution for Explaining\\ Negative Transfer in Gradient-Based Meta-Learning}
+
+\author{
+Tuan-Khai Le-Nguyen \& Hoai-Bac Le \\
+Faculty of Information Technology, University of Science, VNU-HCM \\
+\texttt{\{nltkhai,lhbac\}@fit.hcmus.edu.vn}
+}
+
+\begin{document}
+\maketitle
+
+\input{sec/0_abstract}
+\input{sec/1_intro}
+\input{sec/2_related}
+\input{sec/3_method}
+\input{sec/4_protocols}
+\input{sec/5_experiments}
+\input{sec/6_discussion}
+\input{sec/7_conclusion}
+
+\bibliography{main}
+\bibliographystyle{iclr2026_conference}
+
+\appendix
+\input{sec/X_suppl}
+
+\end{document}

@@ -67,8 +67,8 @@ Bên cạnh các chỉ số định lượng, chúng tôi khai thác hai tình h
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|c|c|c|c|}
 \hline
-\textbf{Bộ dữ liệu} & $\mathrm{ABC}_\downarrow$ (mean $\pm$ std) & $p$-value & $\mathrm{ABC}_\uparrow$ (mean $\pm$ std) & $p$-value \\ \hline
-tieredImageNet & \texttt{0.1861 $\pm$ 0.109} & \texttt{$1.99\times10^{-4}$ (< 0.001)} & \texttt{0.289 $\pm$ 0.122} & \texttt{$7.01\time 10^{-7}$ (< 0.001)} \\ \hline
+\textbf{Bộ dữ liệu} & $\mathrm{ABC}_\downarrow$ (mean $\pm$ MoE) & $p$-value & $\mathrm{ABC}_\uparrow$ (mean $\pm$ MoE) & $p$-value \\ \hline
+tieredImageNet & \texttt{0.1861 $\pm$ 0.109} & \texttt{$1.99\times10^{-4}$ (< 0.001)} & \texttt{0.289 $\pm$ 0.122} & \texttt{$7.01\times10^{-7}$ (< 0.001)} \\ \hline
 \end{tabular}%
 }
 \end{table}
@@ -80,26 +80,22 @@ tieredImageNet & \texttt{0.1861 $\pm$ 0.109} & \texttt{$1.99\times10^{-4}$ (< 0.
 
 \begin{table}[H]
 \centering
-\caption{Hệ số tương quan giữa $\Phi_{\text{FAMA}}$ gốc và $\Phi_{\text{FAMA}}^{(\ell)}$ theo mức độ phá hủy các tầng của $\theta_0^b$ và $\theta_0^h$}
+\caption{Hệ số tương quan giữa $\Phi_{\text{FAMA}}$ gốc và $\Phi_{\text{FAMA}}^{(\ell)}$ theo mức độ phá hủy các khối của $\theta_0^b$ (Mean $\pm$ MoE, $N=600$)}
 \label{tab:sanity_theta0_results}
-\begin{tabular}{|l|l|c|c|}
+\begin{tabular}{|l|c|c|}
 \hline
-\textbf{Khối bị phá} & \textbf{Lớp} & \textbf{Spearman} & \textbf{Pearson} \\ \hline
-- & linear & $0.085 \pm 0.016$ & $0.087 \pm 0.016$ \\ \hline
-\multirow{2}{*}{conv\_block 4} & bn4 & $-0.006 \pm 0.013$ & $-0.006 \pm 0.014$ \\ \cline{2-4} 
- & conv4 & $-0.010 \pm 0.012$ & $-0.012 \pm 0.012$ \\ \hline
-\multirow{2}{*}{conv\_block 3} & bn3 & $-0.001 \pm 0.012$ & $-0.001 \pm 0.012$ \\ \cline{2-4} 
- & conv3 & $-0.008 \pm 0.012$ & $-0.007 \pm 0.013$ \\ \hline
-\multirow{2}{*}{conv\_block 2} & bn2 & $0.000 \pm 0.012$ & $0.000 \pm 0.012$ \\ \cline{2-4} 
- & conv2 & $-0.013 \pm 0.012$ & $-0.013 \pm 0.012$ \\ \hline
-\multirow{2}{*}{conv\_block 1} & bn1 & $-0.003 \pm 0.012$ & $-0.002 \pm 0.012$ \\ \cline{2-4} 
- & conv1 & $-0.006 \pm 0.012$ & $-0.005 \pm 0.012$ \\ \hline
+\textbf{Khối bị phá ($\ell$)} & \textbf{Spearman} & \textbf{Pearson} \\ \hline
+$\ell=0$ -- Head (linear) & $0.108 \pm 0.016$ & $0.111 \pm 0.017$ \\ \hline
+$\ell=1$ -- Block 1 (gần đầu ra nhất) & $-0.007 \pm 0.012$ & $-0.008 \pm 0.013$ \\ \hline
+$\ell=2$ -- Block 2 & $0.003 \pm 0.012$ & $0.004 \pm 0.012$ \\ \hline
+$\ell=3$ -- Block 3 & $-0.006 \pm 0.012$ & $-0.008 \pm 0.012$ \\ \hline
+$\ell=4$ -- Block 4 (toàn bộ backbone) & $-0.010 \pm 0.012$ & $-0.009 \pm 0.012$ \\ \hline
 \end{tabular}
 \end{table}
 
-\textbf{Nhận xét.} Kết quả thực nghiệm cho thấy, hệ số tương quan sụt giảm rất mạnh ngay từ mức phá hủy đầu tiên. Cụ thể, khi chỉ ngẫu nhiên hóa khối tích chập gần đầu ra nhất (conv\_block 4, $\ell=1$), mức tương quan đã giảm mạnh từ khoảng $0.085$--$0.087$ xuống gần như bằng 0 (từ $-0.010$ đến $-0.006$). Và nếu tiếp tục phá hủy các khối sâu hơn, tương quan chỉ dao động quanh mức nền $[-0.013, 0.000]$.
+\textbf{Nhận xét.} Kết quả thực nghiệm cho thấy, hệ số tương quan sụt giảm rất mạnh ngay từ mức phá hủy đầu tiên. Cụ thể, khi chỉ ngẫu nhiên hóa khối gần đầu ra nhất (Block 1, $\ell=1$), mức tương quan đã giảm mạnh từ khoảng $0.108$--$0.111$ xuống gần như bằng 0 (khoảng $-0.008$ đến $-0.007$). Và nếu tiếp tục phá hủy các khối sâu hơn, tương quan chỉ dao động quanh mức nền $[-0.010, 0.004]$.
 
-Do đó, để xác định xem liệu hành vi này là một hạn chế của \acrshort{fama} hay là một đặc tính tất yếu của chính thiết kế, chúng tôi tiến hành đối chiếu với một đại lượng đối chứng $\Delta M' := \mathbb{E}_{Q_i}[\mathcal{L}(Q_i,\theta_0) - \mathcal{L}(Q_i,\phi_T)]$. Đồng nghĩa với việc so sánh trực tiếp trạng thái \emph{hoàn toàn chưa thích ứng} $\theta_0$ với trạng thái thích ứng đầy đủ $\phi_T$, thay cho định nghĩa gốc của \textbf{độ lợi thích nghi} được định nghĩa bởi phép toán~\eqref{eq:adaptation_gain}.
+Do đó, để xác định xem liệu hành vi này là một hạn chế của \acrshort{fama} hay là một đặc tính tất yếu của chính thiết kế, chúng tôi tiến hành đối chiếu với một đại lượng đối chứng $\Delta M' := \mathbb{E}_{Q_i}[\mathcal{L}(Q_i,\theta_0) - \mathcal{L}(Q_i,\phi_T)]$. Đồng nghĩa với việc so sánh trực tiếp trạng thái \emph{hoàn toàn chưa thích ứng} $\theta_0$ với trạng thái thích ứng đầy đủ $\phi_T$, thay cho định nghĩa gốc của \textbf{độ lợi thích nghi} được định nghĩa bởi phép toán~\eqref{eq:adaptation_gain}. Thí nghiệm đối chứng này được thực hiện trên checkpoint Conv4/tieredImageNet gốc ở thang phá hủy chi tiết 9 mức (tách riêng lớp batch-norm và lớp tích chập trong từng khối); mục đích của bảng~\ref{tab:sanity_theta0_results_another} thuần túy mang tính minh họa nguyên lý thiết kế (đối lập giữa suy giảm mượt và sụp đổ tức thời), không nhằm so sánh trực tiếp số liệu với bảng~\ref{tab:sanity_theta0_results}.
 
 Với kết quả ở bảng~\ref{tab:sanity_theta0_results_another} ta có thể thấy được qua các mức phá hủy $\ell=0,\dots,8$, hệ số tương quan dẫn xuất từ $\Delta M'$ suy giảm một cách \emph{mượt mà và đơn điệu}, hoàn toàn trái ngược với sự sụt gãy của $\Delta M$ gốc.
 
@@ -140,23 +136,19 @@ Tuy nhiên, kết quả thực nghiệm cũng có thể cho thấy hạn chế �
 \begin{tabular}{|l|c|c|}
 \hline
 \textbf{Kịch bản can thiệp} & \textbf{Spearman} & \textbf{Pearson} \\ \hline
-(Trộn tác vụ) OOD task & $0.330 \pm 0.018$ & $0.340 \pm 0.018$ \\ \hline
-(Hoán vị lớp) Noisy task & $0.250 \pm 0.023$ & $0.258 \pm 0.024$ \\ \hline
-(Tăng độ khó tác vụ) Hard task & $0.258 \pm 0.016$ & $0.266 \pm 0.016$ \\ \hline
+(Trộn tác vụ) OOD task & $0.351 \pm 0.015$ & $0.361 \pm 0.015$ \\ \hline
+(Hoán vị lớp) Noisy task & $0.425 \pm 0.019$ & $0.439 \pm 0.019$ \\ \hline
+(Tăng độ khó tác vụ) Hard task & $0.263 \pm 0.013$ & $0.272 \pm 0.013$ \\ \hline
 \end{tabular}
 \end{table}
-% [GHI CHÚ]: nếu có sẵn, có thể bổ sung thêm một cột Delta M -> Delta M' (mean +- std) để đối chiếu trực tiếp
-% với giả thuyết "cả ba can thiệp đều đẩy Delta M về phía tiêu cực" đã nêu ở Mục~\ref{subsec:sanity_support}.
 
-\textbf{Nhận xét.} Kết quả cho thấy cả ba kịch bản can thiệp đều cho hệ số tương quan ở mức thấp--trung bình (Spearman và Pearson nằm trong khoảng $0.25$--$0.34$), thấp hơn đáng kể so với mức gần tuyệt đối mà một bản đồ "trơ" (không phụ thuộc nội dung $S_i$). Điều này nhất quán với việc kết luận ở Mục~\ref{subsec:sanity_theta0_results}, khi \acrshort{fama} có xu hướng loại bỏ tốt phần tín hiệu mang tính cấu trúc chung, và chỉ giữ lại phần thực sự phụ thuộc vào nội dung dẫn dắt quá trình thích ứng.
+\textbf{Nhận xét.} Kết quả cho thấy cả ba kịch bản can thiệp đều cho hệ số tương quan ở mức thấp--trung bình (Spearman và Pearson nằm trong khoảng $0.26$--$0.44$), thấp hơn đáng kể so với mức gần tuyệt đối mà một bản đồ "trơ" (không phụ thuộc nội dung $S_i$). Điều này nhất quán với việc kết luận ở Mục~\ref{subsec:sanity_theta0_results}, khi \acrshort{fama} có xu hướng loại bỏ tốt phần tín hiệu mang tính cấu trúc chung, và chỉ giữ lại phần thực sự phụ thuộc vào nội dung dẫn dắt quá trình thích ứng.
 
-Tuy nhiên, dù cả ba can thiệp đều hiệu quả, mức độ nhạy cảm của phương pháp lại đi ngược với trực giác ban đầu. Cụ thể, việc hoán vị nhãn (Noisy task, $0.250 \pm 0.023$) và tăng độ khó (Hard task, $0.258 \pm 0.016$) lại gây ra sự xáo trộn bản đồ mạnh nhất. Trong khi đó, kịch bản đưa dữ liệu hoàn toàn ngoài phân phối (OOD task), vốn được kỳ vọng là hành động phá hoại mạnh nhất, lại cho mức tương quan cao nhất ($0.330 \pm 0.018$).
+Trong ba kịch bản, mức độ nhạy cảm của bản đồ quy kết có thứ tự Hard task ($0.263$) $<$ OOD task ($0.351$) $<$ Noisy task ($0.425$) -- tức can thiệp làm mờ ảnh (Hard) gây xáo trộn bản đồ mạnh nhất, còn hoán vị nhãn (Noisy) gây xáo trộn ít nhất, dù trực giác ban đầu có thể kỳ vọng chiều ngược lại.
 
-Mà sự khác biệt này chính là bắt nguồn từ bản chất tác động của từng loại can thiệp. Khác với Mục~\ref{subsec:sanity_theta0_results}, ở đây trạng thái khởi tạo $\theta_0^b$ được giữ nguyên và thứ thay đổi chính là tín hiệu của quá trình cập nhật.
+Sự khác biệt này bắt nguồn từ việc mỗi kịch bản can thiệp vào một thành phần khác nhau của $S_i$. Kịch bản Hard làm biến dạng trực tiếp \emph{nội dung điểm ảnh} mà mọi bước trích xuất đặc trưng trong toàn bộ quỹ đạo thích ứng đều phụ thuộc vào, nên phá vỡ tín hiệu định vị không gian mà $\Phi_{\text{FAMA}}$ dựa vào một cách nghiêm trọng nhất. Ngược lại, kịch bản Noisy chỉ hoán vị \emph{nhãn}, giữ nguyên toàn bộ nội dung hình ảnh gốc của $S_i$; vì bản đồ $\Phi_{\text{FAMA}}$ được chiếu lên không gian đặc trưng trích xuất trực tiếp từ ảnh (Mục~\ref{subsec:attribution_target}), cấu trúc không gian (vị trí, kết cấu, hình dạng đối tượng) mà backbone khai thác gần như không đổi, dù ranh giới phân lớp ở phần đầu (head) đã bị lệch hướng do nhãn sai -- khiến hệ số tương quan không gian bị ảnh hưởng ít hơn hẳn hai kịch bản còn lại. Kịch bản OOD nằm ở giữa: toàn bộ đối tượng quan sát bị thay đổi hoàn toàn (ảnh từ một tác vụ khác), nhưng từng ảnh vẫn "nguyên vẹn" về mặt điểm ảnh (không bị méo/mờ như Hard), nên tác động kém trực tiếp hơn Hard.
 
-Với kịch bản Noisy và Hard, can thiệp đánh trực tiếp vào \emph{tín hiệu giám sát}. Việc tính toán gradient ở mọi bước $t$ đều dựa trên nhãn sai hoặc đặc trưng bị làm nhiễu, khiến quỹ đạo tối ưu của chuỗi $\{\lambda_t\}$ bị chệch hướng có hệ thống và liên tục. Ngược lại, kịch bản OOD chỉ thay đổi \emph{miền dữ liệu} (domain), nhưng cặp ảnh-nhãn vẫn nhất quán với nhau về mặt logic. Do đó, quá trình thích ứng cục bộ ở từng bước vẫn diễn ra "hợp lệ" về mặt toán học, khiến bản đồ không bị biến dạng quá nghiêm trọng. Đây là sự khác biệt về bản chất của phép can thiệp, chứ không phải đến từ lỗi thiết kế của phương pháp.
-
-Ngoài ra, việc can thiệp OOD chưa tạo ra độ lệch đủ mạnh còn có thể xuất phát từ sự tương đồng về thống kê thị giác cấp thấp giữa hai bộ dữ liệu. Backbone Conv4 là một mạng nông, chủ yếu nhạy cảm với các đặc trưng cấu trúc cơ bản (bộ dò cạnh, kết cấu). Mặc dù \emph{CUB-200-2011} (ảnh chim cận cảnh) và \emph{tieredImageNet} rất khác nhau về \emph{ngữ nghĩa} lớp, chúng lại khá tương đồng về \emph{cấu trúc hình ảnh} (vật thể chính nằm giữa khung hình, tương phản rõ với nền). Sự tương đồng này vẫn đủ để kích hoạt các bộ lọc cấp thấp của Conv4 một cách tương tự nhau, khiến $\Phi_{\text{FAMA}}$ không dịch chuyển mạnh như kỳ vọng. Điều này mở ra định hướng tinh chỉnh kịch bản OOD trong tương lai: đối với các mạng nông, việc sử dụng các tập dữ liệu OOD phi-vật-thể (như Places hoặc ảnh texture) sẽ tạo ra phép thử khắc nghiệt và chính xác hơn.
+Ngoài ra, mức độ nhạy cảm của kịch bản OOD (chưa phải mạnh nhất trong ba kịch bản) cũng có thể một phần xuất phát từ sự tương đồng về thống kê thị giác cấp thấp giữa hai bộ dữ liệu. Backbone Conv4 là một mạng nông, chủ yếu nhạy cảm với các đặc trưng cấu trúc cơ bản (bộ dò cạnh, kết cấu). Mặc dù \emph{CUB-200-2011} (ảnh chim cận cảnh) và \emph{tieredImageNet} rất khác nhau về \emph{ngữ nghĩa} lớp, chúng lại khá tương đồng về \emph{cấu trúc hình ảnh} (vật thể chính nằm giữa khung hình, tương phản rõ với nền). Sự tương đồng này vẫn đủ để kích hoạt các bộ lọc cấp thấp của Conv4 một cách tương tự nhau, khiến $\Phi_{\text{FAMA}}$ không dịch chuyển mạnh như có thể kỳ vọng ở một phép can thiệp thay đổi toàn bộ đối tượng quan sát. Điều này mở ra định hướng tinh chỉnh kịch bản OOD trong tương lai: đối với các mạng nông, việc sử dụng các tập dữ liệu OOD phi-vật-thể (như Places hoặc ảnh texture) sẽ tạo ra phép thử khắc nghiệt và chính xác hơn.
 
 \section{Kết quả định tính}
 \label{sec:qual_results}
