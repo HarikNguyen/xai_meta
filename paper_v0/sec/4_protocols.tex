@@ -1,0 +1,30 @@
+\section{Faithfulness and Sanity Protocols}
+\label{sec:protocols}
+
+An attribution map is only useful if \emph{faithful} to the model's actual mechanism and \emph{sensitive} to the factors that should govern it \citep{eu2019trustworthy}. Both are normally tested on a single static prediction \citep{samek2016evaluating,petsiuk2018rise,adebayo2018sanity}; since \fama explains a multi-step trajectory and a signed scalar $\Delta M$ rather than a class score, we adapt both principles to that setting.
+
+\subsection{Bidirectional Attribution Deletion Test (\biadt)}
+\label{sec:biadt}
+
+Classical deletion tests \citep{samek2016evaluating,petsiuk2018rise} check one direction: does removing the top-ranked region degrade a prediction faster than a random one? $\Phi_{\mathrm{FAMA}}$ carries a \emph{sign} (\Cref{eq:fama_final}), so a faithful map must be validated in \emph{both} directions at once.
+
+For each $x_k^S$, we segment it into $P$ SLIC superpixels \citep{achanta2012slic} $\{s_p\}$, score each by its mean attribution $\bar\Phi(s_p)$, and sort ascending. Given a deletion ratio $\rho\in[0,1]$ and an order $\pi\in\{\texttt{desc},\texttt{asc},\texttt{rand}\}$ (most-positive-first, most-negative-first, or a random permutation averaged over repeats), we replace the first $\lfloor\rho P\rfloor$ superpixels with a blurred baseline to get $S_i^{(\rho,\pi)}$, recompute $\Delta M(\rho,\pi)$, and integrate the gap to the random control:
+\begin{equation}
+\begin{split}
+    \mathrm{ABC}_{\downarrow} &:= \textstyle\int_0^1\!\big[\Delta M(\rho,\texttt{rand}){-}\Delta M(\rho,\texttt{desc})\big]d\rho,\\
+    \mathrm{ABC}_{\uparrow} &:= \textstyle\int_0^1\!\big[\Delta M(\rho,\texttt{asc}){-}\Delta M(\rho,\texttt{rand})\big]d\rho.
+\end{split}
+\label{eq:abc_metric}
+\end{equation}
+A faithful map passes \biadt only if \emph{both} $\mathrm{ABC}_\downarrow$ (deleting the most helpful regions collapses $\Delta M$ faster than chance) and $\mathrm{ABC}_\uparrow$ (deleting the most harmful regions raises $\Delta M$ faster than chance) are positive and significant -- stricter than single-direction tests, matching that $\Phi_{\mathrm{FAMA}}$ makes two claims (helpful \emph{and} harmful), not one.
+
+\subsection{Sanity Checks}
+\label{sec:sanity}
+
+Passing \biadt shows $\Phi_{\mathrm{FAMA}}$ is causally linked to $\Delta M$ through $S_i$, but not that it reflects what $\theta_0$ actually \emph{learned} rather than architecture alone -- the failure mode \citet{adebayo2018sanity}'s parameter-randomization test was designed to catch.
+
+\paragraph{(a) Cascading randomization of $\theta_0$.} We reinitialize the backbone's last $\ell$ layers to fresh random weights, $\ell=1,\dots,L$, recompute $\Phi_{\mathrm{FAMA}}^{(\ell)}$, and correlate it against the unperturbed map (Spearman/Pearson, pixel-wise). A faithful map should decay toward the correlation of two independent random maps as $\ell$ grows; one that stays highly correlated regardless of $\ell$ is a disguised edge detector, insensitive to $\theta_0$.
+
+\paragraph{(b) Intervention on $S_i$.} In parallel, we perturb the \emph{content} of $S_i$ under three canonical forms of task heterogeneity \citep{si2025meta}: \emph{(i) label permutation} (noisy task); \emph{(ii) Gaussian blur} (hard task); \emph{(iii) OOD task mixing} -- replace $S_i$ wholesale with a different task's support set, keeping $Q_i$ fixed. Each should push $\Delta M$ toward negative transfer; a faithful $\Phi_{\mathrm{FAMA}}'$ should diverge from $\Phi_{\mathrm{FAMA}}$ accordingly, while a map whose correlation stays near 1 despite a semantically destructive edit has decoupled from $S_i$'s content.
+
+Both checks are repeated over a large sample of meta-test tasks and reported as mean $\pm$ margin of error against the appropriate control, rather than on a handful of illustrative tasks (\Cref{sec:experiments}).

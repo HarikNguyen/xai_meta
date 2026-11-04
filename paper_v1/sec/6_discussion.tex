@@ -1,0 +1,12 @@
+\section{Discussion and Limitations}
+\label{sec:limitations}
+
+\begin{itemize}[leftmargin=*,itemsep=2pt,topsep=2pt]
+\item \textbf{Backbone depth.} Every limitation traces back to Conv4's shallow, low-resolution feature grid: it widens \biadt's margins (\Cref{tab:biadt}a), causes spatial bleeding for small objects (\Cref{fig:case_study}), and leaves the randomization sweep (\Cref{tab:sanity}a) too coarse (5 levels) to localize where the signal disappears. These are resolution artifacts, not faithfulness failures -- \Cref{sec:quant_results} confirms this directly with ResNet-10.
+
+\item \textbf{Single configuration, no explainer baseline.} All three quantitative checks are now confirmed on two backbones (\Cref{tab:biadt,tab:sanity}), though qualitative case studies remain Conv4-only. Nor have we compared $\Phi_{\mathrm{FAMA}}$, under \biadt, against static Grad-CAM at $\phi_T$, TL-XML \citep{mitsuka2025tlxml}, or a TracIn-style \citep{pruthi2020estimating} sum without the curvature term -- the strongest open question, but compute-gated, since all three reuse trajectories \fama already computes.
+
+\item \textbf{OOD sensitivity, architectural scope.} OOD (\Cref{tab:sanity}b) is our weakest signal since CUB-200-2011 and tieredImageNet, though disjoint, share low-level statistics. \fama's upsampling assumes spatial correspondence as in CNNs; extending to Transformers and other MAML variants (ANIL, BOIL, Meta-SGD) is future work.
+
+\item \textbf{From diagnosis to curation.} $\Phi_{\mathrm{FAMA}}(x_k^S)$ gives a per-image score $s_k := \sum_{i,j}\Phi_{\mathrm{FAMA}}(x_k^S)_{i,j}$ to down-weight $x_k^S$'s gradient in \Cref{eq:inner_loop} or flag low-$s_k$ images -- future work.
+\end{itemize}

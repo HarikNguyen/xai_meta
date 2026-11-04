@@ -1,0 +1,75 @@
+This appendix gives the proofs deferred from \Cref{sec:method} (\Cref{app:taylor,app:adjoint}) and an additional qualitative figure (\Cref{app:qual}).
+
+\section{Proof of \Cref{prop:decomposition} (Backbone Dominance)}
+\label{app:taylor}
+
+Write $\theta_0=(\theta_0^b,\theta_0^h)$ and $L(\phi):=\mathbb{E}_{Q_i}[\mathcal{L}(Q_i,\phi)]$, twice continuously differentiable in a neighborhood containing $\theta_0$ and the full trajectory. Let $g_b,g_h,H_{bb},H_{bh},H_{hh}$ be the gradient/Hessian blocks of $L$ at $\theta_0$, and $\Delta b_T:=\phi_T^b-\theta_0^b$, $\Delta h_T:=\phi_T^h-\theta_0^h$, $\Delta h_T^f:=\phi_T^{f,h}-\theta_0^h$ (the frozen branch has $\Delta b_T^f=0$ by construction).
+
+\paragraph{Second-order expansion.} Suppose in addition that the Hessian of $L$ is $M$-Lipschitz on this neighborhood. Taylor's theorem expands each branch with a third-order remainder bounded by $M\|\Delta\phi\|^3/6$. Subtracting the two expansions (the $L(\theta_0)$ terms cancel) yields \Cref{eq:decomposition}: $C_b$ collects the displayed terms touched by $\Delta b_T$, $R_h$ the displayed head-difference terms, and $\varepsilon_3$ the difference of the two Taylor remainders.
+
+\begin{lemma}[Displacement is $O(T\alpha)$]
+\label{lem:displacement}
+If $\|\nabla_\phi\mathcal{L}(\phi,S_i)\|\le G$ along the trajectory, then $\|\Delta b_T\|,\|\Delta h_T\|,\|\Delta h_T^f\|=O(T\alpha)$.
+\end{lemma}
+\begin{proof}
+Each inner-loop step moves the parameters by at most $\alpha G$ (\Cref{eq:inner_loop}); summing $T$ steps via the triangle inequality bounds the total displacement by $T\alpha G$, for both branches and both parameter blocks.
+\end{proof}
+
+\begin{lemma}[Head divergence is $O((T\alpha)^2)$]
+\label{lem:head_div}
+Let $\delta_j:=\Delta h_j-\Delta h_j^f$. If $\nabla_h\mathcal{L}(\cdot,S_i)$ is $L$-Lipschitz in $\phi$, then $\delta_1=0$ exactly, and $\delta_T=O((T\alpha)^2)$.
+\end{lemma}
+\begin{proof}
+At $j{=}1$ both branches share $\phi_0=\phi_0^f=\theta_0$, so their first head-gradient step coincides exactly: $\delta_1=0$. For $j\ge2$, $\delta_j=\delta_{j-1}-\alpha[\nabla_h\mathcal{L}(\phi_{j-1},S_i)-\nabla_h\mathcal{L}(\phi_{j-1}^f,S_i)]$; the two arguments differ by $\Delta b_{j-1}=O((j{-}1)\alpha)$ in the backbone (\Cref{lem:displacement}) and $\delta_{j-1}$ in the head, so Lipschitzness gives $\|\delta_j\|\le(1{+}\alpha L)\|\delta_{j-1}\|+O((j{-}1)\alpha^2)$. Unrolling from $\delta_1=0$ under $T\alpha\ll1$ (Assumption~\ref{asm:fast_adaptation}, so $(1+\alpha L)^{T}=1+O(T\alpha)$ stays bounded) gives $\|\delta_T\|\le O(\alpha^2)\sum_{k=1}^{T-1}k\cdot(1+O(T\alpha))=O(\alpha^2T^2)=O((T\alpha)^2)$.
+\end{proof}
+
+\noindent\textbf{Conclusion.} By \Cref{lem:displacement}, $C_b=O(T\alpha)$ (its linear term may vanish on an individual task, in which case this is only an upper-order statement). By \Cref{lem:head_div}, $R_h=O((T\alpha)^2)$; and the Lipschitz-Hessian remainder satisfies $\varepsilon_3=O((T\alpha)^3)$. Hence $\Delta M=-C_b+O((T\alpha)^2)$, proving \Cref{prop:decomposition}. At $T{=}1$, $\delta_1{=}0$ exactly, so $R_h{=}0$ exactly (not merely to leading order). A sign conclusion additionally requires the magnitude of $C_b$ to exceed a bound on the displayed higher-order terms.
+
+\section{Adjoint Equivalence and Stability}
+\label{app:adjoint}
+
+\begin{proposition}[Exactness of the adjoint recursion]
+\label{prop:supp_exact}
+The sequence $\{\lambda_t\}$ defined by \Cref{eq:adjoint_recursion} satisfies $\lambda_t=\partial L(\phi_T)/\partial\phi_t$ for every $t=0,\dots,T$, with no approximation beyond \Cref{eq:inner_loop} itself.
+\end{proposition}
+\begin{proof}
+By backward induction on $t$. \emph{Base case} ($t{=}T$): by definition, $\lambda_T=\nabla_\phi L(\phi_T)=\partial L(\phi_T)/\partial\phi_T$. \emph{Step}: assume $\lambda_t=\partial L(\phi_T)/\partial\phi_t$. Since $\phi_T$ depends on $\phi_{t-1}$ only through $\phi_t$, the chain rule and the step-Jacobian $\partial\phi_t/\partial\phi_{t-1}=I-\alpha H_{t-1}$ (\Cref{eq:step_jacobian}, exact since \Cref{eq:inner_loop} is a literal function, not a discretized ODE) give $\partial L(\phi_T)/\partial\phi_{t-1}=(I-\alpha H_{t-1})^\top\lambda_t$. $H_{t-1}$ is a Hessian, hence symmetric, so this equals $\lambda_t-\alpha H_{t-1}\lambda_t=\lambda_{t-1}$ by \Cref{eq:adjoint_recursion}, completing the induction.
+\end{proof}
+Summing $\partial\Psi_t/\partial S_i\big|_{\phi_{t-1}}$ (the direct-dependence Jacobian of one inner-loop step on $S_i$) contracted with $\lambda_t$ over $t=1,\dots,T$, via the total-derivative rule for a parameter shared across a chain of composed functions, yields \Cref{eq:trajectory_expansion} directly from \Cref{prop:supp_exact}.
+
+\begin{proposition}[Finite-horizon adjoint sensitivity]
+\label{prop:supp_stability}
+Let $\kappa_t:=\|I-\alpha H_t\|_{\mathrm{op}}$. Then the exact discrete adjoint satisfies
+\begin{equation}
+\|\lambda_0\|\le\Big(\prod_{t=0}^{T-1}\kappa_t\Big)\|\lambda_T\|.
+\end{equation}
+If every $H_t$ is positive semidefinite and $0\le\alpha\le2/\lambda_{\max}(H_t)$, then $\kappa_t\le1$ and the recursion is non-expansive. Without this positive-semidefinite condition, the finite-horizon bound is the applicable guarantee.
+\end{proposition}
+\begin{proof}
+$\|\lambda_t\|\le\kappa_t\|\lambda_{t+1}\|$ follows from \Cref{eq:adjoint_recursion}; iterating gives the product bound. For the special case, symmetry and positive semidefiniteness give eigenvalues $\mu_i\in[0,\lambda_{\max}]$, hence $1-\alpha\mu_i\in[-1,1]$ and $\kappa_t\le1$. An indefinite Hessian can have a negative eigenvalue, for which $|1-\alpha\mu_i|>1$.
+\end{proof}
+
+\begin{proposition}[HVP error bound]
+\label{prop:supp_error}
+If the HVP error in the transition from $t$ to $t{-}1$ is at most $\varepsilon_t$, then
+\begin{equation}
+\|\hat\lambda_0-\lambda_0\|\le \alpha\sum_{t=1}^{T}\varepsilon_t\prod_{r=0}^{t-2}\kappa_r,
+\end{equation}
+where an empty product is one. Under the positive-semidefinite non-expansive special case of \Cref{prop:supp_stability} and $\varepsilon_t\le\varepsilon$, this reduces to $T\alpha\varepsilon$.
+\end{proposition}
+\begin{proof}
+Let $e_t:=\hat\lambda_t-\lambda_t$ (with $e_T=0$). From the approximate and exact recursions, $e_{t-1}=(I-\alpha H_{t-1})e_t-\alpha(\widehat{H_{t-1}\lambda_t}-H_{t-1}\lambda_t)$. Thus $\|e_{t-1}\|\le\kappa_{t-1}\|e_t\|+\alpha\varepsilon_t$; unrolling gives the stated bound.
+\end{proof}
+\Cref{prop:supp_error} makes the finite-horizon amplification explicit. The bootstrap sample count controlling $\varepsilon_t$ should be chosen in relation to this amplification; fast adaptation alone does not imply non-expansiveness for an indefinite Hessian.
+
+\section{Additional Qualitative Example}
+\label{app:qual}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/mini2cub_lmag.png}
+    \caption{$\Phi_{\mathrm{FAMA}}$ on the most positive- (top) and most negative-transfer (bottom) mini2cub tasks (red: helpful, blue: harmful). Compare to \Cref{fig:case_study} (tiered2cub): the same contextual-bias and spatial-bleeding patterns appear, at visibly smaller magnitude and extent.}
+    \label{fig:supp_mini2cub}
+\end{figure}
+
+\Cref{fig:supp_mini2cub} shows the mini2cub counterpart of \Cref{fig:case_study}. The same three patterns from \Cref{sec:qual_results} recur at smaller magnitude, consistent with miniImageNet's narrower, less category-abstracted prior producing milder adaptation swings than tieredImageNet (\Cref{fig:delta_m_dist}).
